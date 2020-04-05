@@ -93,8 +93,9 @@ class Position:
 ######################
 
 TT_INT              = 'INT'
-TT_KEYWORD          = 'TT_KEYWORD'
-TT_IDENTIFIER       = 'TT_IDENTIFIER'
+TT_STRING           = 'STRING'
+TT_KEYWORD          = 'KEYWORD'
+TT_IDENTIFIER       = 'IDENTIFIER'
 TT_FLOAT            = "FLOAT"
 TT_PLUS             = 'PLUS'
 TT_MINUS            = "MINUS"
@@ -170,6 +171,8 @@ class Lexer:
                 tokens.append(self.make_number())
             elif self.current_char in LETTERS:
                 tokens.append(self.make_identifier())
+            elif self.current_char in ["'", '"']:
+                tokens.append(self.make_string())
             elif self.current_char == '+':
                 tokens.append(Token(TT_PLUS, pos_start=self.pos))
                 self.advance()
@@ -215,6 +218,31 @@ class Lexer:
 
         tokens.append(Token(TT_EOF, pos_start=self.pos))
         return tokens, None
+
+    def make_string(self):
+        string = ''
+        pos_start = self.pos.copy()
+        escape_character = False
+        self.advance()
+
+        escape_characters = {
+            'n': '\n',
+            't': '\t'
+        }
+
+        while self.current_char != None and (self.current_char not in ["'", '"'] or escape_character):
+            if escape_character:
+                string += escape_characters.get(self.current_char, self.current_char)
+            else:
+                if self.current_char == '\\':
+                    escape_character = True
+                else:
+                    string += self.current_char
+            self.advance()
+            escape_character = False
+
+        self.advance()
+        return Token(TT_STRING, string, pos_start, self.pos)
 
     def make_number(self):
         num_str = ''
@@ -381,7 +409,7 @@ class Value:
         return None, self.illegal_operation(other)
 
     def notted(self):
-        return None, self.illegal_operation(other)
+        return None, self.illegal_operation()
 
     def execute(self, args):
         return RTResult().failure(self.illegal_operation())
@@ -553,6 +581,40 @@ class Function(Value):
     def __repr__(self):
         return f"<function {self.name}>"
 
+
+class String(Value):
+    def __init__(self, value):
+        self.value = value
+
+    def added_to(self, other):
+        if isinstance(other, String):
+            return String(
+                self.value + other.value
+            ).set_context(self.context), None
+        else:
+            return None, Value.illegal_operation(self, other)
+
+    def multed_by(self, other):
+        if isinstance(other, Number):
+            return String(
+                self.value * other.value
+            ).set_context(self.context), None
+        else:
+            return None, Value.illegal_operation(self, other)
+
+    def is_true(self):
+        return len(self.value) > 0
+
+    def copy(self):
+        copy = String(self.value)
+        copy.set_pos(self.pos_start, self.pos_end)
+        copy.set_context(self.context)
+        return copy
+
+    def __repr__(self):
+        return f'"{self.value}"'
+
+
 ######################
 # CONTEXT
 ######################
@@ -604,6 +666,11 @@ class Interpreter:
             Number(node.tok.value).set_pos(node.pos_start, node.pos_end).set_context(context)
         )
 
+    def visit_StringNode(self, node, context):
+        return RTResult().success(
+            String(node.tok.value).set_context(context).set_pos(node.pos_start, node.pos_end)
+        )
+
     def visit_VarAccessNode(self, node, context):
         res =  RTResult()
         var_name = node.var_name_tok.value
@@ -637,15 +704,15 @@ class Interpreter:
         if res.error: return res
 
         if node.op_tok.type == TT_PLUS:
-            result, error = left.added_to(right)
+            result, error = left.added_by(right)
         elif node.op_tok.type == TT_MINUS:
-            result, error = left.subbed_to(right)
+            result, error = left.subbed_by(right)
         elif node.op_tok.type == TT_MUL:
-            result, error = left.multed_to(right)
+            result, error = left.multed_by(right)
         elif node.op_tok.type == TT_DIV:
-            result, error = left.dived_to(right)
+            result, error = left.dived_by(right)
         elif node.op_tok.type == TT_POW:
-            result, error = left.powed_to(right)
+            result, error = left.powed_by(right)
         elif node.op_tok.type == TT_EE:
             result, error = left.get_comparison_eq(right)
         elif node.op_tok.type == TT_NE:
@@ -676,7 +743,7 @@ class Interpreter:
         error = None
 
         if node.op_tok.type == TT_MINUS:
-            number, error = number.multed_to(Number(-1))
+            number, error = number.multed_by(Number(-1))
         elif node.op_tok.matches(TT_KEYWORD, 'not'):
             number, error = number.notted()
 
@@ -748,6 +815,14 @@ class NumberNode:
     def __repr__(self):
         return f'{self.tok}'
 
+class StringNode:
+    def __init__(self, tok):
+        self.tok = tok
+        self.pos_start = tok.pos_start
+        self.pos_end = tok.pos_end
+
+    def __repr__(self):
+        return f'{self.tok}'
 
 class VarAccessNode:
     def __init__(self, var_name_tok):
@@ -1005,6 +1080,11 @@ class Parser:
             res.register_advancement()
             self.advance()
             return res.success(NumberNode(tok))
+
+        elif tok.type == TT_STRING:
+            res.register_advancement()
+            self.advance()
+            return res.success(StringNode(tok))
 
         elif tok.type == TT_IDENTIFIER:
             res.register_advancement()
