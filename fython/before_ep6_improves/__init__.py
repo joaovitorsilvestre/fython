@@ -704,7 +704,7 @@ class Interpreter:
         if res.error: return res
 
         if node.op_tok.type == TT_PLUS:
-            result, error = left.added_by(right)
+            result, error = left.added_to(right)
         elif node.op_tok.type == TT_MINUS:
             result, error = left.subbed_by(right)
         elif node.op_tok.type == TT_MUL:
