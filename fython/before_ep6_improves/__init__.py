@@ -115,7 +115,11 @@ TT_EOF              = 'EOF'
 KEYWORDS = [
     'and',
     'or',
-    'not'
+    'not',
+    'if',
+    'then',
+    'elif',
+    'else'
 ]
 
 class Token:
@@ -392,6 +396,9 @@ class Number:
     def notted(self):
         return Number(1 if self.value == 0 else 0).set_context(self.context), None
 
+    def is_true(self):
+        return self.value != 0
+
     def copy(self):
         copy = Number(self.value)
         copy.set_pos(self.pos_start, self.pos_end)
@@ -533,6 +540,26 @@ class Interpreter:
 
         return res.success(number.set_pos(node.pos_start, node.pos_end))
 
+    def visit_IfNode(self, node, context):
+        res = RTResult()
+
+        for condition, expr in node.cases:
+            condition_value = res.register(self.visit(condition, context))
+            if res.error: return res
+
+            if condition_value.is_true():
+                expr_value = res.register(self.visit(expr, context))
+                if res.error: return res
+                return res.success(expr_value)
+
+        if node.else_case:
+            else_value = res.register(self.visit(node.else_case, context))
+            if res.error: return res
+            return res.success(else_value)
+
+        return res.success(None)
+
+
 ######################
 # Node
 ######################
@@ -590,6 +617,15 @@ class UnaryOpNode:
 
     def __repr__(self):
         return f'({self.op_tok}, {self.node})'
+
+class IfNode:
+	def __init__(self, cases, else_case):
+		self.cases = cases
+		self.else_case = else_case
+
+		self.pos_start = self.cases[0][0].pos_start
+		self.pos_end = (self.else_case or self.cases[len(self.cases) - 1][0]).pos_end
+
 
 #######################################
 # PARSE RESULT
@@ -660,6 +696,65 @@ class Parser:
 
         return res
 
+    def if_expr(self):
+        res = ParseResult()
+        cases = []
+        else_case = None
+
+        if not self.current_tok.matches(TT_KEYWORD, 'if'):
+            return res.failure(InvalidSyntaxError(
+                self.current_tok.pos_start, self.current_tok.pos_end,
+                f"Expected 'if'"
+            ))
+
+        res.register_advancement()
+        self.advance()
+
+        condition = res.register(self.expr())
+        if res.error: return res
+
+        if not self.current_tok.matches(TT_KEYWORD, 'then'):
+            return res.failure(InvalidSyntaxError(
+                self.current_tok.pos_start, self.current_tok.pos_end,
+                f"Expected 'then'"
+            ))
+
+        res.register_advancement()
+        self.advance()
+
+        expr = res.register(self.expr())
+        if res.error: return res
+        cases.append((condition, expr))
+
+        while self.current_tok.matches(TT_KEYWORD, 'elif'):
+            res.register_advancement()
+            self.advance()
+
+            condition = res.register(self.expr())
+            if res.error: return res
+
+            if not self.current_tok.matches(TT_KEYWORD, 'then'):
+                return res.failure(InvalidSyntaxError(
+                    self.current_tok.pos_start, self.current_tok.pos_end,
+                    f"Expected 'then'"
+                ))
+
+            res.register_advancement()
+            self.advance()
+
+            expr = res.register(self.expr())
+            if res.error: return res
+            cases.append((condition, expr))
+
+        if self.current_tok.matches(TT_KEYWORD, 'else'):
+            res.register_advancement()
+            self.advance()
+
+            else_case = res.register(self.expr())
+            if res.error: return res
+
+        return res.success(IfNode(cases, else_case))
+
     def atom(self):
         res = ParseResult()
         tok = self.current_tok
@@ -689,6 +784,12 @@ class Parser:
                     self.current_tok.pos_start, self.current_tok.pos_end,
                     "Expected ')'"
                 ))
+
+        elif tok.matches(TT_KEYWORD, 'if'):
+            if_expr = res.register(self.if_expr())
+            if res.error:
+                return res
+            return res.success(if_expr)
 
         return res.failure(InvalidSyntaxError(
             tok.pos_start, tok.pos_end,
