@@ -113,7 +113,6 @@ TT_RPAREN           = "RPAREN"
 TT_EOF              = 'EOF'
 
 KEYWORDS = [
-    'VAR',
     'and',
     'or',
     'not'
@@ -424,7 +423,7 @@ class SymbolTable:
 
     def get(self, name):
         value = self.symbols.get(name, None)
-        if value is None:
+        if value is None and self.parent:
             return self.parent.get(name)
         return value
 
@@ -637,6 +636,19 @@ class Parser:
 
         return self.current_tok
 
+    def get_next_token(self):
+        # this function doest modify any state
+        # it is useful to get the next toke info when
+        # you cant use advance
+
+        tok_index = self.tok_index + 1
+        current_tok = self.current_tok
+
+        if tok_index < len(self.tokens):
+            current_tok = self.tokens[tok_index]
+
+        return current_tok
+
     ###################
     def parse(self):
         res = self.expr()
@@ -730,29 +742,24 @@ class Parser:
     def arith_expr(self):
         return self.bin_op(self.term, (TT_PLUS, TT_MINUS))
 
-
     def expr(self):
         res = ParseResult()
 
-        if self.current_tok.matches(TT_KEYWORD, 'VAR'):
-            res.register_advancement()
-            self.advance()
+        next_token = self.get_next_token()
 
-            if self.current_tok.type != TT_IDENTIFIER:
-                return res.failure(InvalidSyntaxError(
-                    self.current_tok.pos_start, self.current_tok.pos_end,
-                    "Expected identifier"
-                ))
-
+        if self.current_tok.type == TT_IDENTIFIER and (next_token.type in [TT_EQ, TT_EOF]):
             var_name = self.current_tok
             res.register_advancement()
             self.advance()
 
             if self.current_tok.type != TT_EQ:
-                return res.failure(InvalidSyntaxError(
-                    self.current_tok.pos_start, self.current_tok.pos_end,
-                    "Expected '='"
-                ))
+                if self.current_tok.type == TT_EOF:
+                    return res.success(VarAccessNode(var_name))
+                else:
+                    return res.failure(InvalidSyntaxError(
+                        self.current_tok.pos_start, self.current_tok.pos_end,
+                        "Expected '='"
+                    ))
 
             res.register_advancement()
             self.advance()

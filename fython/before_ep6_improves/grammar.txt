@@ -1,4 +1,4 @@
-expr        : KEYWORD:VAR IDENTIFIER EQ expr
+expr        : IDENTIFIER EQ expr
             : comp-expr ((KEYWORD:and|KEYWORD:or) comp-expr)*
 
 comp-expr   : KEYWORD:not comp-expr
