@@ -26,4 +26,4 @@ if-expr     : KEYWORD:if expr KEYWORD:then expr
 
 func-def    : KEYWORD:def IDENTIFIER?
               LPAREN (IDENTIFIER (COMMA IDENTIFIER)*)? RPAREN
-              ARROW expr
+              DO expr

@@ -109,7 +109,7 @@ TT_LT               = "LT"
 TT_GTE              = "GTE"
 TT_LTE              = "LTE"
 TT_COMMA            = "COMMA"
-TT_ARROW            = "ARROW"
+TT_DO               = "DO"
 TT_LPAREN           = "LPAREN"
 TT_RPAREN           = "RPAREN"
 TT_EOF              = 'EOF'
@@ -203,6 +203,9 @@ class Lexer:
                 self.advance()
             elif self.current_char == ',':
                 tokens.append(Token(TT_COMMA, pos_start=self.pos))
+                self.advance()
+            elif self.current_char == ':':
+                tokens.append(Token(TT_DO, pos_start=self.pos))
                 self.advance()
             else:
                 pos_start = self.pos.copy()
@@ -1212,10 +1215,10 @@ class Parser:
         res.register_advancement()
         self.advance()
 
-        if self.current_tok.type != TT_ARROW:
+        if self.current_tok.type != TT_DO:
             return res.failure(InvalidSyntaxError(
                 self.current_tok.pos_start, self.current_tok.pos_end,
-                f"Expected ->"
+                f"Expected :"
             ))
 
         res.register_advancement()
