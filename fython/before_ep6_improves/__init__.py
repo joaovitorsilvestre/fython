@@ -175,6 +175,8 @@ class Lexer:
             elif self.current_char == ':':
                 tokens.append(Token(TT_DO, pos_start=self.pos))
                 self.advance()
+            elif self.current_char == '#':
+                self.skip_comment()
             elif self.current_char in ';\n':
                 tokens.append(Token(TT_NEWLINE, pos_start=self.pos))
                 self.advance()
@@ -343,7 +345,15 @@ class Lexer:
 
         return Token(toke_type, pos_start=pos_start, pos_end=self.pos)
 
+    def skip_comment(self):
+        # TODO fixx
 
+        self.advance()
+
+        while self.current_char != '\n' and not self.pos.col == len(self.text) - 1:
+            self.advance()
+
+        self.advance()
 
 ######################
 # RUNTIME RESULT
