@@ -4,7 +4,10 @@ legend:
     ()?     optional
     |       or
 
-statements  : NEWLINE* expr (NEWLINE+ expr) NEWLINE*
+statements  : NEWLINE* statement (NEWLINE+ statement) NEWLINE*
+
+statement   : KEYWORD:return expr?
+            : expr
 
 expr        : IDENTIFIER EQ expr
             : comp-expr ((KEYWORD:and|KEYWORD:or) comp-expr)*
