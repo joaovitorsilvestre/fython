@@ -1061,8 +1061,6 @@ class Parser:
                 res.register_advancement()
                 self.advance()
             else:
-                # TODO THIS IS LIKE THE ONE IN LIST_EXPR
-                # MAKE IT REUSABLE IN ONLY ONE FUNCTION
                 arg_nodes.append(res.register(self.expr()))
                 if res.error:
                     return res.failure(InvalidSyntaxError(
@@ -1209,19 +1207,20 @@ class Parser:
         more_statements = True
 
         while True:
-            new_line_count = 0
+            newline_count = 0
+
             while self.current_tok.type == TT_NEWLINE:
                 res.register_advancement()
                 self.advance()
-                new_line_count += 1
+                newline_count += 1
 
-            if new_line_count == 0:
+            if newline_count == 0:
                 more_statements = False
 
             if not more_statements:
                 break
-
             statement = res.try_register(self.statement())
+
             if not statement:
                 self.reverse(res.to_reverse_count)
                 more_statements = False
@@ -1600,6 +1599,7 @@ global_symbol_table = SymbolTable()
 global_symbol_table.set("None", Number.null)
 global_symbol_table.set("True", Number.true)
 global_symbol_table.set("False", Number.false)
+
 
 def run(fn, text):
     # generate tokens
