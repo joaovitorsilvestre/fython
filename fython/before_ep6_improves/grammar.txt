@@ -1,3 +1,11 @@
+legend:
+    *       0 or more
+    +       1 or more
+    ()?     optional
+    |       or
+
+statements  : NEWLINE* expr (NEWLINE+ expr) NEWLINE*
+
 expr        : IDENTIFIER EQ expr
             : comp-expr ((KEYWORD:and|KEYWORD:or) comp-expr)*
 
@@ -29,4 +37,5 @@ if-expr     : KEYWORD:if expr KEYWORD:then expr
 
 func-def    : KEYWORD:def IDENTIFIER?
               LPAREN (IDENTIFIER (COMMA IDENTIFIER)*)? RPAREN
-              DO expr
+              (DO expr)
+            | (NEWLINE statements KEYWORD:end)
