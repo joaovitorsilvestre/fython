@@ -132,9 +132,10 @@ KEYWORDS = [
 ]
 
 class Token:
-    def __init__(self, type, value=None, pos_start=None, pos_end=None):
+    def __init__(self, type, ident, value=None, pos_start=None, pos_end=None):
         self.type = type
         self.value = value
+        self.ident = ident
         if pos_start:
             self.pos_start = pos_start.copy()
             self.pos_end = pos_start.copy()
@@ -147,7 +148,8 @@ class Token:
         return self.type == type_ and self.value == value
 
     def __repr__(self):
-        if self.value is not None: return f'{self.type}:{self.value}'
+        if self.value is not None:
+            return f'{self.type}:{self.value}'
         return self.type
 
 
@@ -161,6 +163,7 @@ class Lexer:
         self.pos = Position(-1, 0, -1, fn, text)
         self.current_char = None
         self.advance()
+        self.current_ident_level = 0
 
     def advance(self):
         self.pos.advance(self.current_char)
@@ -170,16 +173,34 @@ class Lexer:
         tokens = []
 
         while self.current_char != None:
-            if self.current_char in ' \t':
+            if self.current_char == ' ' and (len(tokens) and tokens[-1].type == TT_NEWLINE):
+                total_spaces = 0
+                pos_start = self.pos.copy()
+
+                while self.current_char == ' ':
+                    total_spaces += 1
+                    self.advance()
+
+                if total_spaces == 1:
+                    total_spaces = 0
+
+                if total_spaces % 4 != 0:
+                    return [], InvalidSyntaxError(
+                        pos_start, self.pos, "Identation problem"
+                    )
+                self.current_ident_level = total_spaces
+
+            elif self.current_char in ';\n':
+                self.current_ident_level -= 4
+                tokens.append(Token(TT_NEWLINE, self.current_ident_level, pos_start=self.pos))
+                self.advance()
+            elif self.current_char in ' \t':
                 self.advance()
             elif self.current_char == ':':
-                tokens.append(Token(TT_DO, pos_start=self.pos))
+                tokens.append(Token(TT_DO, self.current_ident_level, pos_start=self.pos))
                 self.advance()
             elif self.current_char == '#':
                 self.skip_comment()
-            elif self.current_char in ';\n':
-                tokens.append(Token(TT_NEWLINE, pos_start=self.pos))
-                self.advance()
             elif self.current_char in DIGISTS:
                 tokens.append(self.make_number())
             elif self.current_char in LETTERS:
@@ -187,27 +208,27 @@ class Lexer:
             elif self.current_char in ["'", '"']:
                 tokens.append(self.make_string())
             elif self.current_char == '+':
-                tokens.append(Token(TT_PLUS, pos_start=self.pos))
+                tokens.append(Token(TT_PLUS, self.current_ident_level, pos_start=self.pos))
                 self.advance()
             elif self.current_char == '-':
-                tokens.append(Token(TT_MINUS, pos_start=self.pos))
+                tokens.append(Token(TT_MINUS, self.current_ident_level, pos_start=self.pos))
                 self.advance()
             elif self.current_char == '*':
                 tokens.append(self.make_mul_or_power())
             elif self.current_char == '/':
-                tokens.append(Token(TT_DIV, pos_start=self.pos))
+                tokens.append(Token(TT_DIV, self.current_ident_level, pos_start=self.pos))
                 self.advance()
             elif self.current_char == '(':
-                tokens.append(Token(TT_LPAREN, pos_start=self.pos))
+                tokens.append(Token(TT_LPAREN, self.current_ident_level, pos_start=self.pos))
                 self.advance()
             elif self.current_char == ')':
-                tokens.append(Token(TT_RPAREN, pos_start=self.pos))
+                tokens.append(Token(TT_RPAREN, self.current_ident_level, pos_start=self.pos))
                 self.advance()
             elif self.current_char == '[':
-                tokens.append(Token(TT_LSQUARE, pos_start=self.pos))
+                tokens.append(Token(TT_LSQUARE, self.current_ident_level, pos_start=self.pos))
                 self.advance()
             elif self.current_char == ']':
-                tokens.append(Token(TT_RSQUARE, pos_start=self.pos))
+                tokens.append(Token(TT_RSQUARE, self.current_ident_level, pos_start=self.pos))
                 self.advance()
             elif self.current_char == '!':
                 tok, error = self.make_not_equals()
@@ -224,7 +245,7 @@ class Lexer:
                 tokens.append(self.make_greater_than())
                 self.advance()
             elif self.current_char == ',':
-                tokens.append(Token(TT_COMMA, pos_start=self.pos))
+                tokens.append(Token(TT_COMMA, self.current_ident_level, pos_start=self.pos))
                 self.advance()
             else:
                 pos_start = self.pos.copy()
@@ -232,7 +253,7 @@ class Lexer:
                 self.advance()
                 return [], IllegalCharError(pos_start, self.pos, "'" + char + "'")
 
-        tokens.append(Token(TT_EOF, pos_start=self.pos))
+        tokens.append(Token(TT_EOF, self.current_ident_level, pos_start=self.pos))
         return tokens, None
 
     def make_string(self):
@@ -258,7 +279,7 @@ class Lexer:
             escape_character = False
 
         self.advance()
-        return Token(TT_STRING, string, pos_start, self.pos)
+        return Token(TT_STRING, self.current_ident_level, string, pos_start, self.pos)
 
     def make_number(self):
         num_str = ''
@@ -275,9 +296,9 @@ class Lexer:
             self.advance()
 
         if dot_count == 0:
-            return Token(TT_INT, int(num_str), pos_start, self.pos)
+            return Token(TT_INT, self.current_ident_level, int(num_str), pos_start, self.pos)
         else:
-            return Token(TT_FLOAT, float(num_str), pos_start, self.pos)
+            return Token(TT_FLOAT, self.current_ident_level, float(num_str), pos_start, self.pos)
 
     def make_identifier(self):
         id_str = ''
@@ -288,7 +309,7 @@ class Lexer:
             self.advance()
 
         tok_type = TT_KEYWORD if id_str in KEYWORDS else TT_IDENTIFIER
-        return Token(tok_type, id_str, pos_start, self.pos)
+        return Token(tok_type, self.current_ident_level, id_str, pos_start, self.pos)
 
     def make_mul_or_power(self):
         token_type = TT_MUL
@@ -299,7 +320,7 @@ class Lexer:
             self.advance()
             token_type = TT_POW
 
-        return Token(token_type, pos_start=pos_start)
+        return Token(token_type, self.current_ident_level, pos_start=pos_start)
 
     def make_not_equals(self):
         pos_start = self.pos.copy()
@@ -307,7 +328,7 @@ class Lexer:
 
         if self.current_char == '=':
             self.advance()
-            return Token(TT_NE, pos_start=pos_start, pos_end=self.pos), None
+            return Token(TT_NE, self.current_ident_level, pos_start=pos_start, pos_end=self.pos), None
 
         self.advance()
         return None, ExpectedCharError(pos_start, self.pos, "'=' (after '!')")
@@ -321,7 +342,7 @@ class Lexer:
             self.advance()
             toke_type = TT_EE
 
-        return Token(toke_type, pos_start=pos_start, pos_end=self.pos)
+        return Token(toke_type, self.current_ident_level, pos_start=pos_start, pos_end=self.pos)
 
     def make_less_than(self):
         toke_type = TT_LT
@@ -332,7 +353,7 @@ class Lexer:
             self.advance()
             toke_type = TT_LTE
 
-        return Token(toke_type, pos_start=pos_start, pos_end=self.pos)
+        return Token(toke_type, self.current_ident_level, pos_start=pos_start, pos_end=self.pos)
 
     def make_greater_than(self):
         toke_type = TT_GT
@@ -343,7 +364,7 @@ class Lexer:
             self.advance()
             toke_type = TT_GTE
 
-        return Token(toke_type, pos_start=pos_start, pos_end=self.pos)
+        return Token(toke_type, self.current_ident_level, pos_start=pos_start, pos_end=self.pos)
 
     def skip_comment(self):
         # TODO fixx
