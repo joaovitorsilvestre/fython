@@ -1,3 +1,6 @@
 def add(a, b):
-    a = a + b
-    return a end
+    a = a + 2
+
+add(1, 2)
+
+if 8 == 0 then 9 else 8

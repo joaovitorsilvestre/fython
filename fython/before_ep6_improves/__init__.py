@@ -188,10 +188,10 @@ class Lexer:
                     return [], InvalidSyntaxError(
                         pos_start, self.pos, "Identation problem"
                     )
-                self.current_ident_level = total_spaces
+                self.current_ident_level = max(0, total_spaces)
 
             elif self.current_char in ';\n':
-                self.current_ident_level -= 4
+                self.current_ident_level = max(0, self.current_ident_level - 4)
                 tokens.append(Token(TT_NEWLINE, self.current_ident_level, pos_start=self.pos))
                 self.advance()
             elif self.current_char in ' \t':
@@ -1228,9 +1228,14 @@ class Parser:
         more_statements = True
 
         while True:
+            prev_tok_ident = self.tokens[self.tok_index - 1].ident if self.tok_index > 0 else 0
+
+            #if self.current_tok.ident != 0 and prev_tok and self.current_tok.ident < prev_tok.ident:
+            #    break
+
             newline_count = 0
 
-            while self.current_tok.type == TT_NEWLINE:
+            while self.current_tok.type == TT_NEWLINE and self.current_tok.ident >= prev_tok_ident:
                 res.register_advancement()
                 self.advance()
                 newline_count += 1
@@ -1415,11 +1420,11 @@ class Parser:
         body = res.register(self.statements())
         if res.error: return res
 
-        if not self.current_tok.matches(TT_KEYWORD, 'end'):
-            return res.failure(InvalidSyntaxError(
-                self.current_tok.pos_start, self.current_tok.pos_end,
-                f"Expected 'end'"
-            ))
+        #if not self.current_tok.matches(TT_KEYWORD, 'end'):
+        #    return res.failure(InvalidSyntaxError(
+        #        self.current_tok.pos_start, self.current_tok.pos_end,
+        #        f"Expected 'end'"
+        #    ))
 
         res.register_advancement()
         self.advance()
