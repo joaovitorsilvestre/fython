@@ -1129,9 +1129,19 @@ class Parser:
         elif tok.type == TT_LPAREN:
             res.register_advancement()
             self.advance()
+
+            while self.current_tok.type == TT_NEWLINE:
+                res.register_advancement()
+                self.advance()
+
             expr = res.register(self.expr())
             if res.error:
                 return res
+
+            while self.current_tok.type == TT_NEWLINE:
+                res.register_advancement()
+                self.advance()
+
             if self.current_tok.type == TT_RPAREN:
                 res.register_advancement()
                 self.advance()
@@ -1230,9 +1240,6 @@ class Parser:
         while True:
             prev_tok_ident = self.tokens[self.tok_index - 1].ident if self.tok_index > 0 else 0
 
-            #if self.current_tok.ident != 0 and prev_tok and self.current_tok.ident < prev_tok.ident:
-            #    break
-
             newline_count = 0
 
             while self.current_tok.type == TT_NEWLINE and self.current_tok.ident >= prev_tok_ident:
@@ -1240,10 +1247,11 @@ class Parser:
                 self.advance()
                 newline_count += 1
 
-            if newline_count == 0:
+            if newline_count == 0 and \
+                    (self.get_next_token() != self.current_tok and not self.get_next_token().ident != self.current_tok.ident):
                 more_statements = False
 
-            if not more_statements:
+            if not more_statements or self.get_next_token().type == TT_EOF:
                 break
             statement = res.try_register(self.statement())
 
@@ -1264,6 +1272,10 @@ class Parser:
         res = ParseResult()
         pos_start = self.current_tok.pos_start.copy()
 
+        while self.current_tok.type == TT_NEWLINE:
+            res.register_advancement()
+            self.advance()
+
         if self.current_tok.matches(TT_KEYWORD, 'return'):
             res.register_advancement()
             self.advance()
@@ -1274,6 +1286,10 @@ class Parser:
             return res.success(ReturnNode(
                 expr, pos_start, self.current_tok.pos_start.copy()
             ))
+
+        while self.current_tok.type == TT_NEWLINE:
+            res.register_advancement()
+            self.advance()
 
         expr = res.register(self.expr())
         if res.error:
