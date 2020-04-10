@@ -1,7 +1,7 @@
 from fython.core.lexer.tokens import TT_POW, TT_PLUS, TT_MINUS, TT_MUL, TT_DIV, TT_LTE, TT_LT, TT_GTE, TT_GT, TT_EE, \
     TT_KEYWORD
 from fython.core.parser import NumberNode, ListNode, BinOpNode, \
-    UnaryOpNode, VarAccessNode, VarAssignNode, StatementsNode, IfNode
+    UnaryOpNode, VarAccessNode, VarAssignNode, StatementsNode, IfNode, FuncDefNode
 
 
 class ElixirAST:
@@ -36,24 +36,15 @@ class EModule(ElixirAST):
         return "{:__aliases__, " + self.line + ", [:" + self.module_name + "]}"
 
     def __repr__(self):
-        return str(Conversor().convert(self.node))
-
-
-class EStatement(ElixirAST):
-    def __init__(self, node: StatementsNode):
-        self.nodes = node.statement_nodes
-        self.content = None
-        self.parse_content()
-
-    def parse_content(self):
-        self.content = [Conversor().convert(i) for i in self.nodes]
-
-    def __repr__(self):
-        if len(self.nodes) == 1:
-            return str(self.content[0])
-
-        return "{:__block__, [],\
-         [" + ', '.join(self.content) + "]}"
+        # return str(Conversor().convert(self.node))
+        return "{:defmodule, [line: 1],\
+         [\
+           {:__aliases__, [line: 1],\
+            [:" + self.module_name + "]},\
+           [\
+             do: " + Conversor().convert(self.node) + "\
+           ]\
+         ]}"
 
 
 class Conversor:
@@ -69,7 +60,14 @@ class Conversor:
         return str(node.tok.value)
 
     def convert_StatementsNode(self, node: StatementsNode):
-        return EStatement(node)
+        line = Line(node.pos_start.ln)
+        content = [Conversor().convert(i) for i in node.statement_nodes]
+
+        if len(content) == 1:
+            return str(content[0])
+
+        return "{:__block__, " + line + ",\
+         [" + ', '.join(content) + "]}"
 
     def convert_ListNode(self, node: ListNode):
         return "[" + ", ".join(self.convert(i) for i in node.element_nodes) + "]"
@@ -120,3 +118,12 @@ class Conversor:
             return "{{:., [], [:math, :pow]}, [], [" + a + ", " + b + "]}"
         else:
             raise Exception(f"Invalid BinOpType: {node.op_tok.type}")
+
+    def convert_FuncDefNode(self, node: FuncDefNode):
+        statements_node = node.body_node
+
+        return "{:def, [line: 2],\
+         [\
+           {:add, [line: 2], []},\
+           [do: " + self.convert(statements_node) + "]\
+         ]}"
