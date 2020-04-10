@@ -64,7 +64,6 @@ class Compiler:
 def execute_in_elixir(compiled: str):
     command = f'elixir -e "IO.inspect(Code.eval_quoted({compiled}))"'
 
-    print('running command', command)
     stream = os.popen(command)
     output = stream.read()
     print(output)

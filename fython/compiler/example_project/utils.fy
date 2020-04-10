@@ -1,1 +1,1 @@
-4 == 4
+not not False

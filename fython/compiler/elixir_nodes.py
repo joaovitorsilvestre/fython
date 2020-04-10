@@ -1,4 +1,5 @@
-from fython.core.lexer.tokens import TT_POW, TT_PLUS, TT_MINUS, TT_MUL, TT_DIV, TT_LTE, TT_LT, TT_GTE, TT_GT, TT_EE
+from fython.core.lexer.tokens import TT_POW, TT_PLUS, TT_MINUS, TT_MUL, TT_DIV, TT_LTE, TT_LT, TT_GTE, TT_GT, TT_EE, \
+    TT_KEYWORD
 from fython.core.parser import NumberNode, ListNode, BinOpNode, \
     UnaryOpNode, VarAccessNode, VarAssignNode
 
@@ -84,12 +85,21 @@ class Conversor:
                 ", " + self.convert(node.value_node) + "]}"
 
     def convert_VarAccessNode(self, node: VarAccessNode):
+        if node.var_name_tok.value == 'False':
+            return "false"
+        elif node.var_name_tok.value == 'True':
+            return "true"
+
         return "{:" + node.var_name_tok.value + ", [], Elixir}"
 
     def convert_UnaryOpNode(self, node: UnaryOpNode):
         value = self.convert(node.node)
-        op = ({TT_PLUS: '+', TT_MINUS: '-'})[node.op_tok.type]
-        return "{:" + op + ", [context: Elixir, import: Kernel], [" + value + "]}"
+
+        if node.op_tok.matches(TT_KEYWORD, 'not'):
+            return "{:__block__, [], [{:!, [context: Elixir, import: Kernel], [" + value + "]}]}"
+        else:
+            op = ({TT_PLUS: '+', TT_MINUS: '-'})[node.op_tok.type]
+            return "{:" + op + ", [context: Elixir, import: Kernel], [" + value + "]}"
 
     def convert_BinOpNode(self, node: BinOpNode):
         a, b = self.convert(node.left_node), self.convert(node.right_node)
@@ -97,7 +107,7 @@ class Conversor:
         simple_ops = {
             TT_PLUS: '+', TT_MINUS: '-', TT_MUL: '*', TT_DIV: '/',
             TT_GT: '>', TT_GTE: '>=', TT_LT: '<', TT_LTE: '<=',
-            TT_EE: '=='
+            TT_EE: '==',
         }
 
         if node.op_tok.type in simple_ops:
