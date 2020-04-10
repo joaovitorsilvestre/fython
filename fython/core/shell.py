@@ -1,4 +1,4 @@
-from fython.before_ep6_improves import run
+from fython.core.run import run
 
 while True:
     text = input('fyton> ')

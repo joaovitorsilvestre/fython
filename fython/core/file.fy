@@ -5,4 +5,4 @@ def add(a, b):
 
 add(4, 2)
 
-if 8 == 0 then 9 else 8
+if 8 == 0 then 9 else 1

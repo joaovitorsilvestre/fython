@@ -1,4 +1,4 @@
-from fython.before_ep6_improves import run
+from fython.core.run import run
 
 with open('file.fy') as f:
     lines = f.read()
