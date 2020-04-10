@@ -103,7 +103,7 @@ class Conversor:
         a, b = self.convert(node.left_node), self.convert(node.right_node)
 
         op = (
-            {TT_PLUS: '+', TT_MINUS: '+', TT_MUL: '+', TT_DIV: '+'}
+            {TT_PLUS: '+', TT_MINUS: '-', TT_MUL: '*', TT_DIV: '/'}
         )[node.op_tok.type]
 
-        return "{:"+op+", [context: Elixir, import: Kernel], ["+a+", "+b+"]}"
+        return "{:"+op+", [context: Elixir, import: Kernel], ["+ a +", "+ b +"]}"
