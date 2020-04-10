@@ -1,5 +1,5 @@
 from fython.core.parser import NumberNode, ListNode, FuncDefNode, BinOpNode, TT_PLUS, TT_MINUS, TT_MUL, TT_DIV, \
-    UnaryOpNode
+    UnaryOpNode, VarAccessNode, VarAssignNode
 
 
 class ElixirAST:
@@ -76,6 +76,14 @@ class Conversor:
 
     def convert_ListNode(self, node: ListNode):
         return EList(node)
+
+    def convert_VarAssignNode(self, node: VarAssignNode):
+        # probably the pattern match core is here
+        return "{:=, [], [{:" + node.var_name_tok.value + ", [], Elixir}" \
+                ", " + self.convert(node.value_node) + "]}"
+
+    def convert_VarAccessNode(self, node: VarAccessNode):
+        return "{:" + node.var_name_tok.value + ", [], Elixir}"
 
     def convert_UnaryOpNode(self, node: UnaryOpNode):
         value = self.convert(node.node)
