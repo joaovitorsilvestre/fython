@@ -1,4 +1,4 @@
-from fython.core.parser import NumberNode, ListNode, FuncDefNode
+from fython.core.parser import NumberNode, ListNode, FuncDefNode, BinOpNode, TT_PLUS, TT_MINUS, TT_MUL, TT_DIV
 
 
 class ElixirAST:
@@ -33,23 +33,12 @@ class EModule(ElixirAST):
         return "{:__aliases__, " + self.line + ", [:" + self.module_name + "]}"
 
     def __repr__(self):
-        formated_statements = Conversor().convert(self.node)
-
-        if len(self.node.element_nodes) == 0:
-            return "{:defmodule, " + self.line + ", \
-             [" + self.alias() + ", \
-               [do: {:__block__, [], []}] \
-             ]}"
-        else:
-            return "{:defmodule, " + self.line + ", \
-             [" + self.alias() + ", \
-               [do: {:__block__, [], []}] \
-             ]}"
+        return str(Conversor().convert(self.node))
 
 
 class EList(ElixirAST):
-    def __init__(self, nodes):
-        self.nodes = nodes
+    def __init__(self, node: ListNode):
+        self.nodes = node.element_nodes
         self.content = None
         self.parse_content()
 
@@ -57,10 +46,12 @@ class EList(ElixirAST):
         self.content = [Conversor().convert(i) for i in self.nodes]
 
     def __repr__(self):
-        if len(self.content) == 1:
+        if len(self.nodes) == 1:
             return str(self.content[0])
-        else:
-            return "[\n" + ",\n".join(map(str, self.content)) + "\n]"
+
+        return "{:__block__, [],\
+         [" + ', '.join(self.content) + "]}"
+
 
 
 class EFuncDef(ElixirAST):
@@ -78,7 +69,7 @@ class EFuncDef(ElixirAST):
         return "do: {:def, " + self.line + ", \n  \
           [                           \n  \
             {:" + self.func_name + ", " + self.line + ", []}, \n  \
-            [do: " + self.content + "] \n \
+            " + self.content + " \n \
           ]}"
 
 
@@ -106,4 +97,13 @@ class Conversor:
         return EFuncDef(node)
 
     def convert_ListNode(self, node: ListNode):
-        return EList(node.element_nodes)
+        return EList(node)
+
+    def convert_BinOpNode(self, node: BinOpNode):
+        a, b = self.convert(node.left_node), self.convert(node.right_node)
+
+        op = (
+            {TT_PLUS: '+', TT_MINUS: '+', TT_MUL: '+', TT_DIV: '+'}
+        )[node.op_tok.type]
+
+        return "{:"+op+", [context: Elixir, import: Kernel], ["+a+", "+b+"]}"
