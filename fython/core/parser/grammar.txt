@@ -4,7 +4,7 @@ legend:
     ()?     optional
     |       or
 
-statements  : NEWLINE* statement (NEWLINE+ statement) NEWLINE*
+statements  : NEWLINE* IDENT* statement (NEWLINE+ statement) NEWLINE*
 
 statement   : KEYWORD:return expr?
             : expr
