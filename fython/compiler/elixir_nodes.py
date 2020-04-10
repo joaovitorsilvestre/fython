@@ -1,4 +1,4 @@
-from fython.core.lexer.tokens import TT_POW, TT_PLUS, TT_MINUS, TT_MUL, TT_DIV
+from fython.core.lexer.tokens import TT_POW, TT_PLUS, TT_MINUS, TT_MUL, TT_DIV, TT_LTE, TT_LT, TT_GTE, TT_GT, TT_EE
 from fython.core.parser import NumberNode, ListNode, BinOpNode, \
     UnaryOpNode, VarAccessNode, VarAssignNode
 
@@ -94,10 +94,14 @@ class Conversor:
     def convert_BinOpNode(self, node: BinOpNode):
         a, b = self.convert(node.left_node), self.convert(node.right_node)
 
-        math_ops = ({TT_PLUS: '+', TT_MINUS: '-', TT_MUL: '*', TT_DIV: '/'})
+        simple_ops = {
+            TT_PLUS: '+', TT_MINUS: '-', TT_MUL: '*', TT_DIV: '/',
+            TT_GT: '>', TT_GTE: '>=', TT_LT: '<', TT_LTE: '<=',
+            TT_EE: '=='
+        }
 
-        if node.op_tok.type in math_ops:
-            op = math_ops[node.op_tok.type]
+        if node.op_tok.type in simple_ops:
+            op = simple_ops[node.op_tok.type]
             return "{:" + op + ", [context: Elixir, import: Kernel], [" + a + ", " + b + "]}"
         elif node.op_tok.type == TT_POW:
             return "{{:., [], [:math, :pow]}, [], [" + a + ", " + b + "]}"
