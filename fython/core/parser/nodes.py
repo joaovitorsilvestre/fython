@@ -79,12 +79,13 @@ class UnaryOpNode:
 
 
 class IfNode:
-    def __init__(self, cases, else_case):
-        self.cases = cases
-        self.else_case = else_case
+    def __init__(self, comp_expr, true_case, false_case):
+        self.comp_expr = comp_expr
+        self.true_case = true_case
+        self.false_case = false_case
 
-        self.pos_start = self.cases[0][0].pos_start
-        self.pos_end = (self.else_case or self.cases[len(self.cases) - 1][0]).pos_end
+        self.pos_start = self.comp_expr.pos_start
+        self.pos_end = self.false_case.pos_end
 
 
 class FuncDefNode:

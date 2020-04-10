@@ -129,6 +129,15 @@ class Interpreter:
     def visit_IfNode(self, node, context):
         res = RTResult()
 
+        condition_value = res.register(self.visit(node.comp_expr, context))
+
+        if condition_value.is_true():
+            expr_value = res.register(self.visit(node.true_case, context))
+            return res.success(expr_value)
+        else:
+            expr_value = res.register(self.visit(node.false_case, context))
+            return res.success(expr_value)
+
         for condition, expr in node.cases:
             condition_value = res.register(self.visit(condition, context))
             if res.should_return(): return res

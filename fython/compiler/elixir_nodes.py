@@ -1,7 +1,7 @@
 from fython.core.lexer.tokens import TT_POW, TT_PLUS, TT_MINUS, TT_MUL, TT_DIV, TT_LTE, TT_LT, TT_GTE, TT_GT, TT_EE, \
     TT_KEYWORD
 from fython.core.parser import NumberNode, ListNode, BinOpNode, \
-    UnaryOpNode, VarAccessNode, VarAssignNode, StatementsNode
+    UnaryOpNode, VarAccessNode, VarAssignNode, StatementsNode, IfNode
 
 
 class ElixirAST:
@@ -78,6 +78,14 @@ class Conversor:
         # probably the pattern match core is here
         return "{:=, [], [{:" + node.var_name_tok.value + ", [], Elixir}" \
                 ", " + self.convert(node.value_node) + "]}"
+
+    def convert_IfNode(self, node: IfNode):
+        comp_expr = self.convert(node.comp_expr)
+        true_case = self.convert(node.true_case)
+        false_case = self.convert(node.false_case)
+
+        return "{:if, [context: Elixir, import: Kernel], " \
+               "[" + comp_expr + ", [do: " + true_case + ", else: " + false_case + "]]}"
 
     def convert_VarAccessNode(self, node: VarAccessNode):
         if node.var_name_tok.value == 'False':

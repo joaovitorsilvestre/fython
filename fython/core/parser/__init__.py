@@ -97,7 +97,6 @@ class Parser:
 
     def if_expr(self, expr_for_true):
         res = ParseResult()
-        cases = []
 
         if not self.current_tok.matches(TT_KEYWORD, 'if'):
             return res.failure(InvalidSyntaxError(
@@ -110,8 +109,6 @@ class Parser:
 
         condition = res.register(self.expr())
         if res.error: return res
-
-        cases.append((condition, expr_for_true))
 
         if not self.current_tok.matches(TT_KEYWORD, 'else'):
             return res.failure(InvalidSyntaxError(
@@ -126,7 +123,7 @@ class Parser:
         if res.error:
             return res
 
-        return res.success(IfNode(cases, else_case))
+        return res.success(IfNode(condition, expr_for_true, else_case))
 
     def call(self):
         res = ParseResult()
