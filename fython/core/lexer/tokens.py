@@ -29,11 +29,10 @@ KEYWORDS = [
     'or',
     'not',
     'if',
-    'then',
     'elif',
     'else',
     'def',
-    'end',
+    'end',  # TODO we still have end?
     'return'
 ]
 

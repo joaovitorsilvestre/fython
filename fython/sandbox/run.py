@@ -13,7 +13,7 @@ global_symbol_table.set("False", Number.false)
 def run(fn, text):
     ast, error = lex_and_parse(fn, text)
     if error:
-        return error
+        return None, error
 
     #interpreter
     interpreter = Interpreter()
