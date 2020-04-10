@@ -1,7 +1,7 @@
 from fython.core.lexer.tokens import TT_POW, TT_PLUS, TT_MINUS, TT_MUL, TT_DIV, TT_LTE, TT_LT, TT_GTE, TT_GT, TT_EE, \
     TT_KEYWORD
 from fython.core.parser import NumberNode, ListNode, BinOpNode, \
-    UnaryOpNode, VarAccessNode, VarAssignNode
+    UnaryOpNode, VarAccessNode, VarAssignNode, StatementsNode
 
 
 class ElixirAST:
@@ -39,9 +39,9 @@ class EModule(ElixirAST):
         return str(Conversor().convert(self.node))
 
 
-class EList(ElixirAST):
-    def __init__(self, node: ListNode):
-        self.nodes = node.element_nodes
+class EStatement(ElixirAST):
+    def __init__(self, node: StatementsNode):
+        self.nodes = node.statement_nodes
         self.content = None
         self.parse_content()
 
@@ -56,14 +56,6 @@ class EList(ElixirAST):
          [" + ', '.join(self.content) + "]}"
 
 
-class ENumber(ElixirAST):
-    def __init__(self, value):
-        self.value = value
-
-    def __repr__(self):
-        return str(self.value)
-
-
 class Conversor:
     def convert(self, node) -> ElixirAST:
         conver_func = f"convert_{type(node).__name__}"
@@ -74,10 +66,13 @@ class Conversor:
         raise Exception(f"No conversor for node type: {type(node).__name__}")
 
     def convert_NumberNode(self, node: NumberNode):
-        return ENumber(node.tok.value)
+        return str(node.tok.value)
+
+    def convert_StatementsNode(self, node: StatementsNode):
+        return EStatement(node)
 
     def convert_ListNode(self, node: ListNode):
-        return EList(node)
+        return "[" + ", ".join(self.convert(i) for i in node.element_nodes) + "]"
 
     def convert_VarAssignNode(self, node: VarAssignNode):
         # probably the pattern match core is here
