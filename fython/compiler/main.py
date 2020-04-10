@@ -1,8 +1,6 @@
 import os
 
-from fython.compiler.conversors import convert
-from fython.compiler.elixir import run_compiled
-from fython.core.parser.nodes import FuncDefNode, ListNode
+from fython.compiler.elixir_nodes import EModule
 
 
 class File:
@@ -27,23 +25,7 @@ class File:
         if error:
             return
 
-        self.compiled_value = self.create_module(self.name, ast)
-
-    def create_module(self, module_name, statements):
-        module_name = module_name[0].upper() + module_name[1:]
-
-        return "{:defmodule, [line: 1], \n\
-            [{:__aliases__, [line: 1], \n\
-            [:" + module_name + "]}, " + self.parse_statements(statements) + "]}"
-
-    def parse_statements(self, statements: ListNode):
-        sts = []
-
-        for st in statements.element_nodes:
-            assert type(st) == FuncDefNode
-            sts.append(convert(st))
-
-        return f"[{''.join(sts)}]"
+        self.compiled_value = str(EModule(self.name, ast))
 
 
 class Compiler:
@@ -84,7 +66,3 @@ if __name__ == '__main__':
     compiled_value = c.compile()
 
     print(compiled_value[0].compiled_value)
-
-    run_compiled(compiled_value[0].compiled_value)
-
-
