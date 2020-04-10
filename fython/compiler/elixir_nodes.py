@@ -1,7 +1,7 @@
 from fython.core.lexer.tokens import TT_POW, TT_PLUS, TT_MINUS, TT_MUL, TT_DIV, TT_LTE, TT_LT, TT_GTE, TT_GT, TT_EE, \
     TT_KEYWORD
 from fython.core.parser import NumberNode, ListNode, BinOpNode, \
-    UnaryOpNode, VarAccessNode, VarAssignNode, StatementsNode, IfNode, FuncDefNode
+    UnaryOpNode, VarAccessNode, VarAssignNode, StatementsNode, IfNode, FuncDefNode, CallNode
 
 
 class ElixirAST:
@@ -120,10 +120,19 @@ class Conversor:
             raise Exception(f"Invalid BinOpType: {node.op_tok.type}")
 
     def convert_FuncDefNode(self, node: FuncDefNode):
+        name = node.var_name_tok.value
         statements_node = node.body_node
+        line = Line(node.pos_start.ln)
+        arguments = ["{:" + i.value + ", [], Elixir}" for i in node.arg_name_toks]
 
-        return "{:def, [line: 2],\
+        return "{:def, " + line + ",\
          [\
-           {:add, [line: 2], []},\
+           {:" + name +", " + line + ", [" + ', '.join(arguments) + "]},\
            [do: " + self.convert(statements_node) + "]\
          ]}"
+
+    def convert_CallNode(self, node: CallNode):
+        arguments = [self.convert(i) for i in node.arg_nodes]
+
+        return "{" + node.node_to_call.var_name_tok.value + ", " \
+               " [], [" + ', '.join(arguments) + "]}"

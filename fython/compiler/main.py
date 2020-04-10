@@ -10,8 +10,8 @@ class File:
         self.full_path = full_path
         with open(full_path, 'r') as f:
             self.content = f.read()
-
-        self.compiled_value = None
+        self.error = None
+        self.compiled = None
 
     def __repr__(self):
         return f"File: {self.full_path}"
@@ -23,9 +23,10 @@ class File:
         print(ast, error)
 
         if error:
+            self.error = error
             return
 
-        self.compiled_value = str(EModule(self.name, ast))
+        self.content = str(EModule(self.name, ast))
 
 
 class Compiler:
@@ -71,10 +72,13 @@ def execute_in_elixir(compiled: str):
 
 if __name__ == '__main__':
     c = Compiler('example_project')
-    compiled_value = c.compile()
+    c.compile()
 
-    print('compiled::')
-    print(compiled_value[0].compiled_value)
-    print('elixir result:')
-    execute_in_elixir(compiled_value[0].compiled_value)
+    if c.project_structured['files'][0].error:
+        print(c.project_structured['files'][0].error.as_string())
+    else:
+        print('compiled::')
+        print(c.project_structured['files'][0].compiled)
+        print('elixir result:')
+        execute_in_elixir(c.project_structured['files'][0].compiled)
 
