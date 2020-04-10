@@ -19,6 +19,6 @@ def run(fn, text):
     interpreter = Interpreter()
     context = Context('<program>')
     context.symbol_table = global_symbol_table
-    result = interpreter.visit(ast.node, context)
+    result = interpreter.visit(ast, context)
 
     return result.value, result.error

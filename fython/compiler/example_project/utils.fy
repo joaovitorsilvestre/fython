@@ -1,1 +1,1 @@
-not not False
+[1, 2, 3]
