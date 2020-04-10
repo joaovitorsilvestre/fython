@@ -134,5 +134,5 @@ class Conversor:
     def convert_CallNode(self, node: CallNode):
         arguments = [self.convert(i) for i in node.arg_nodes]
 
-        return "{" + node.node_to_call.var_name_tok.value + ", " \
+        return "{:" + node.node_to_call.var_name_tok.value + ", " \
                " [], [" + ', '.join(arguments) + "]}"

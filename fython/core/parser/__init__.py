@@ -162,6 +162,7 @@ class Parser:
                 res.register_advancement()
                 self.advance()
             return res.success(CallNode(atom, arg_nodes))
+
         return res.success(atom)
 
     def atom(self):

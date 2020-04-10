@@ -26,7 +26,7 @@ class File:
             self.error = error
             return
 
-        self.content = str(EModule(self.name, ast))
+        self.compiled = str(EModule(self.name, ast))
 
 
 class Compiler:
