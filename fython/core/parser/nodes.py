@@ -46,6 +46,13 @@ class ListNode:
         self.pos_end = pos_end
 
 
+class StatementsNode:
+    def __init__(self, statement_nodes, pos_start, pos_end):
+        self.statement_nodes = statement_nodes
+        self.pos_start = pos_start
+        self.pos_end = pos_end
+
+
 class BinOpNode:
     def __init__(self, left_node, op_tok, right_node):
         self.left_node = left_node

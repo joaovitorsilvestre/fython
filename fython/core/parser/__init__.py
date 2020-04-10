@@ -348,7 +348,7 @@ class Parser:
 
             statements.append(statement)
 
-        return res.success(ListNode(
+        return res.success(StatementsNode(
             statements,
             pos_start,
             self.current_tok.pos_end.copy()

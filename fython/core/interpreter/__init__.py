@@ -22,6 +22,16 @@ class Interpreter:
             String(node.tok.value).set_context(context).set_pos(node.pos_start, node.pos_end)
         )
 
+    def visit_StatementsNode(self, node, context):
+        # this is a pog fot this interpreter
+        from fython.core.parser import ListNode
+
+        return self.visit_ListNode(ListNode(
+            node.statement_nodes,
+            node.pos_start,
+            node.pos_end,
+        ), context)
+
     def visit_ListNode(self, node, context):
         res = RTResult()
         elements = []
