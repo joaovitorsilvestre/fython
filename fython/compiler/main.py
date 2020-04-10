@@ -61,8 +61,21 @@ class Compiler:
         return self.project_structured['files']
 
 
+def execute_in_elixir(compiled: str):
+    command = f'elixir -e "IO.inspect(Code.eval_quoted({compiled}))"'
+
+    print('running command', command)
+    stream = os.popen(command)
+    output = stream.read()
+    print(output)
+
+
 if __name__ == '__main__':
     c = Compiler('example_project')
     compiled_value = c.compile()
 
+    print('compiled::')
     print(compiled_value[0].compiled_value)
+    print('elixir result:')
+    execute_in_elixir(compiled_value[0].compiled_value)
+
