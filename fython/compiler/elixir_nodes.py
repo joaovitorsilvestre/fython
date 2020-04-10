@@ -1,4 +1,5 @@
-from fython.core.parser import NumberNode, ListNode, FuncDefNode, BinOpNode, TT_PLUS, TT_MINUS, TT_MUL, TT_DIV
+from fython.core.parser import NumberNode, ListNode, FuncDefNode, BinOpNode, TT_PLUS, TT_MINUS, TT_MUL, TT_DIV, \
+    UnaryOpNode
 
 
 class ElixirAST:
@@ -53,26 +54,6 @@ class EList(ElixirAST):
          [" + ', '.join(self.content) + "]}"
 
 
-
-class EFuncDef(ElixirAST):
-    def __init__(self, node: FuncDefNode):
-        self.func_name = node.var_name_tok.value
-        self.list_node = node.body_node
-        self.content = None
-        self.line = Line(node.pos_start.ln)
-        self.parse_content()
-
-    def parse_content(self):
-        self.content = Conversor().convert(self.list_node)
-
-    def __repr__(self):
-        return "do: {:def, " + self.line + ", \n  \
-          [                           \n  \
-            {:" + self.func_name + ", " + self.line + ", []}, \n  \
-            " + self.content + " \n \
-          ]}"
-
-
 class ENumber(ElixirAST):
     def __init__(self, value):
         self.value = value
@@ -93,11 +74,13 @@ class Conversor:
     def convert_NumberNode(self, node: NumberNode):
         return ENumber(node.tok.value)
 
-    def convert_FuncDefNode(self, node: FuncDefNode):
-        return EFuncDef(node)
-
     def convert_ListNode(self, node: ListNode):
         return EList(node)
+
+    def convert_UnaryOpNode(self, node: UnaryOpNode):
+        value = self.convert(node.node)
+        op = ({TT_PLUS: '+', TT_MINUS: '-'})[node.op_tok.type]
+        return "{:" + op + ", [context: Elixir, import: Kernel], [" + value + "]}"
 
     def convert_BinOpNode(self, node: BinOpNode):
         a, b = self.convert(node.left_node), self.convert(node.right_node)
