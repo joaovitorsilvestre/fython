@@ -104,6 +104,9 @@ class FuncDefNode:
 
         self.pos_end = self.body_node.pos_end
 
+    def __repr__(self):
+        return f"def {self.var_name_tok.value}/{len(self.arg_name_toks)}"
+
 
 class CallNode:
     def __init__(self, node_to_call, arg_nodes):

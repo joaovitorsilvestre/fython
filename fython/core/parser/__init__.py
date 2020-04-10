@@ -345,9 +345,6 @@ class Parser:
 
         expr = res.register(self.expr())
 
-        if self.current_tok.matches(TT_KEYWORD, 'if'):
-            return self.if_expr(expr)
-
         if res.error:
             return res.failure(InvalidSyntaxError(
                 self.current_tok.pos_start, self.current_tok.pos_end,
@@ -384,6 +381,12 @@ class Parser:
             return res.success(VarAssignNode(var_name, expr))
 
         node = res.register(self.bin_op(self.comp_expr, ((TT_KEYWORD, "and"), (TT_KEYWORD, "or"))))
+
+        if self.current_tok.matches(TT_KEYWORD, 'if'):
+            node = res.register(self.if_expr(node))
+            if res.error:
+                return res
+            return res.success(node)
 
         if res.error:
             return res.failure(InvalidSyntaxError(
