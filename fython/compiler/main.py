@@ -1,6 +1,7 @@
 import os
 
 from fython.compiler.conversors import convert
+from fython.compiler.elixir import run_compiled
 from fython.core.parser.nodes import FuncDefNode, ListNode
 
 
@@ -11,6 +12,8 @@ class File:
         self.full_path = full_path
         with open(full_path, 'r') as f:
             self.content = f.read()
+
+        self.compiled_value = None
 
     def __repr__(self):
         return f"File: {self.full_path}"
@@ -24,10 +27,11 @@ class File:
         if error:
             return
 
-        # create main defmodule
-        return self.create_module(self.name, ast)
+        self.compiled_value = self.create_module(self.name, ast)
 
     def create_module(self, module_name, statements):
+        module_name = module_name[0].upper() + module_name[1:]
+
         return "{:defmodule, [line: 1], \n\
             [{:__aliases__, [line: 1], \n\
             [:" + module_name + "]}, " + self.parse_statements(statements) + "]}"
@@ -66,13 +70,21 @@ class Compiler:
                 )
 
     def compile(self):
+        compiled = []
+
         self.read_project()
         for file in self.project_structured['files']:
-            compiled_file = file.compile()
-            print(f'result of file: {file}')
-            print(compiled_file)
+            compiled.append(file.compile())
+
+        return self.project_structured['files']
 
 
 if __name__ == '__main__':
     c = Compiler('example_project')
-    c.compile()
+    compiled_value = c.compile()
+
+    print(compiled_value[0].compiled_value)
+
+    run_compiled(compiled_value[0].compiled_value)
+
+

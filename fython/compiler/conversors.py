@@ -23,8 +23,8 @@ def convert_def_func(node: FuncDefNode):
 
     return "do: {:def, [line: " + line + " ], \n  \
       [                           \n  \
-        {:" + func_name + ", [line: 2], nil}, \n  \
-        [do: {:__block__, [], " + content + "] \n \
+        {:" + func_name + ", [line: 2], []}, \n  \
+        [do: " + content + "] \n \
       ]}"
 
 
@@ -32,7 +32,7 @@ def convert_return(node: ReturnNode):
     line = str(node.pos_start.ln)
     to_return = node.node_to_return
 
-    return "{:return, [\line: " + line + "], [" + convert(to_return) + "]}"
+    return "[do: " + convert(to_return) +  "]"
 
 
 def convert_number(node: NumberNode):
