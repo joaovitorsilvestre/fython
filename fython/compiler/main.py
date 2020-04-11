@@ -63,11 +63,18 @@ class Compiler:
 
 
 def execute_in_elixir(compiled: str):
-    command = f'elixir -e "IO.inspect(Code.eval_quoted({compiled}))"'
+    with open('/tmp/compiled_fython', 'w+') as f:
+        f.write(compiled)
 
-    stream = os.popen(command)
-    output = stream.read()
-    print(output)
+    try:
+        command = f'elixir fython.exs'
+        stream = os.popen(command)
+        output = stream.read()
+        print(output)
+    except Exception as e:
+        raise e
+    finally:
+        os.remove('/tmp/compiled_fython')
 
 
 if __name__ == '__main__':

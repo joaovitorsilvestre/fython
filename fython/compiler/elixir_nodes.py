@@ -1,7 +1,7 @@
 from fython.core.lexer.tokens import TT_POW, TT_PLUS, TT_MINUS, TT_MUL, TT_DIV, TT_LTE, TT_LT, TT_GTE, TT_GT, TT_EE, \
     TT_KEYWORD
 from fython.core.parser import NumberNode, ListNode, BinOpNode, \
-    UnaryOpNode, VarAccessNode, VarAssignNode, StatementsNode, IfNode, FuncDefNode, CallNode
+    UnaryOpNode, VarAccessNode, VarAssignNode, StatementsNode, IfNode, FuncDefNode, CallNode, StringNode
 
 
 class ElixirAST:
@@ -136,3 +136,6 @@ class Conversor:
 
         return "{:" + node.node_to_call.var_name_tok.value + ", " \
                " [], [" + ', '.join(arguments) + "]}"
+
+    def convert_StringNode(self, node: StringNode):
+        return f'"{node.tok.value}"'
