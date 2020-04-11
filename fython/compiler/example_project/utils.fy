@@ -1,2 +1,5 @@
-def sub(a):
+def sub():
+    add()
+
+def add():
     :a
