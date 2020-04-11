@@ -31,9 +31,12 @@ call        : pipe-expr
 atom        : INT|FLOAT|IDENTIFIER|STRING
             : LPAREN expr RPAREN
             : list-expr
+            : map-expr
             : func-def
 
 list-expr   : LSQUARE (expr (COMMA expr)*)? RSQUARE
+
+map-expr    : LCURLY ((expr DO expr) (COMMA (expr DO expr))*)? RCURLY
 
 if-expr     : expr KEYWORD:if expr DO expr
             : (KEYWORD:else expr)?
