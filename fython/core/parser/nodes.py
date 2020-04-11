@@ -1,3 +1,6 @@
+from typing import List, Tuple
+
+
 class NumberNode:
     def __init__(self, tok):
         self.tok = tok
@@ -146,3 +149,13 @@ class PipeNode:
 
     def __repr__(self):
         return f"{self.left_node} |> {self.right_node}"
+
+
+class MapNode:
+    def __init__(self, pairs_list: List[Tuple["AnyNode", "AnyNode"]], pos_start, pos_end):
+        self.pairs_list = pairs_list
+        self.pos_start = pos_start
+        self.pos_end = pos_end
+
+    def __repr__(self):
+        return "{map}"

@@ -233,6 +233,12 @@ class Parser:
                 return res
             return res.success(list_expr)
 
+        elif tok.type == TT_LCURLY:
+            list_expr = res.register(self.map_expr())
+            if res.error:
+                return res
+            return res.success(list_expr)
+
         elif tok.matches(TT_KEYWORD, 'def'):
             func_def = res.register(self.func_def())
             if res.error:
@@ -549,3 +555,65 @@ class Parser:
             self.current_tok.pos_start.copy()
         ))
 
+    def map_expr(self):
+        res = ParseResult()
+        element_nodes = []
+        pos_start = self.current_tok.pos_start.copy()
+
+        if self.current_tok.type != TT_LCURLY:
+            return res.failure(InvalidSyntaxError(
+                self.current_tok.pos_start, self.current_tok.pos_end,
+                "Expected '{'"
+            ))
+
+        res.register_advancement()
+        self.advance()
+
+        pairs_list = []
+
+        if self.current_tok.type != TT_RCURLY:
+            def get_key_and_value_pair():
+                key = res.register(self.expr())
+                if res.error:
+                    return None, None, res
+
+                if self.current_tok.type != TT_DO:
+                    return None, None, res.failure(InvalidSyntaxError(
+                        self.current_tok.pos_start, self.current_tok.pos_end,
+                        "Expected ':'"
+                    ))
+
+                res.register_advancement()
+                self.advance()
+
+                value = res.register(self.expr())
+                if res.error:
+                    return None, None, res
+
+                return key, value, None
+
+            key, value, error = get_key_and_value_pair()
+
+            if error:
+                return error
+
+            pairs_list.append((key, value))
+
+            # Duplicated code from above
+            while self.current_tok.type == TT_COMMA:
+                res.register_advancement()
+                self.advance()
+
+                key, value, error = get_key_and_value_pair()
+
+                if error:
+                    return error
+
+                pairs_list.append((key, value))
+
+        res.register_advancement()
+        self.advance()
+
+        return res.success(MapNode(
+            pairs_list, pos_start, self.current_tok.pos_end.copy()
+        ))
