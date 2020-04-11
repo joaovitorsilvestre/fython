@@ -7,9 +7,6 @@ class IntegrityChecks:
     def __init__(self, node: StatementsNode):
         self.node = node
 
-        self.import_statements = [
-            i for i in self.node.statement_nodes if isinstance(i, ImportNode)
-        ]
         self.functions = [
             i for i in self.node.statement_nodes if isinstance(i, FuncDefNode)
         ]
@@ -22,10 +19,25 @@ class IntegrityChecks:
 
         return res
 
-    def imported_functions(self):
-        return [i.alias or i.name for i in sum([imp.imports_list for imp in self.import_statements], [])]
+    def avaliable_functons_in_context(self, function: FuncDefNode):
+        local_imports = [
+            i for i in function.body_node.statement_nodes if isinstance(i, ImportNode)
+        ]
+        global_imports = [
+            i for i in self.node.statement_nodes if isinstance(i, ImportNode)
+        ]
 
-    def integrity_FuncDefNode(self, func: FuncDefNode):
+        local_imported = [
+            i.alias or i.name for i in sum([imp.imports_list for imp in local_imports], [])
+        ]
+
+        global_imported =  [
+            i.alias or i.name for i in sum([imp.imports_list for imp in global_imports], [])
+        ]
+
+        return local_imported + global_imported
+
+    def integrity_FuncDefNode(self, function: FuncDefNode):
         res = InterityResult(self.node)
 
         # 1º Search for undefined functions
@@ -33,16 +45,16 @@ class IntegrityChecks:
         # todo check funcitons defined inside function
 
         func_calls = [
-            i for i in func.body_node.statement_nodes if isinstance(i, CallNode)
+            i for i in function.body_node.statement_nodes if isinstance(i, CallNode)
         ]
 
         # is function imported?
-        for func in func_calls:
-            func_name = func.node_to_call.var_name_tok.value
+        for func_call in func_calls:
+            func_name = func_call.node_to_call.var_name_tok.value
 
-            if not func_name in self.imported_functions():
+            if not func_name in self.avaliable_functons_in_context(function):
                 return res.failure(UndefinedFunction(
-                    func.pos_start.copy(), func.pos_end.copy(),
+                    func_call.pos_start.copy(), func_call.pos_end.copy(),
                     f"{func_name}"
                 ))
 
