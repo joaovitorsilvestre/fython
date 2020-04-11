@@ -12,6 +12,7 @@ statement   : KEYWORD:return expr?
 expr        : IDENTIFIER EQ expr
             : comp-expr ((KEYWORD:and|KEYWORD:or) comp-expr)*
             : if-expr
+            : pipe-expr
 
 comp-expr   : KEYWORD:not comp-expr
             : arith-expr ((EE|LT|GT|LTE|GTE) arith-expr)*
@@ -30,20 +31,16 @@ call        : atom (LPAREN (expr (COMMA expr)*)? RPAREN)?
 atom        : INT|FLOAT|IDENTIFIER|STRING
             : LPAREN expr RPAREN
             : list-expr
-            : func-dev
+            : func-def
 
 list-expr   : LSQUARE (expr (COMMA expr)*)? RSQUARE
 
 if-expr     : expr KEYWORD:if expr DO expr
             : (KEYWORD:else expr)?
 
+pipe-expr   : expr (PIPE expr)+
+
 func-def    : KEYWORD:def IDENTIFIER?
               LPAREN (IDENTIFIER (COMMA IDENTIFIER)*)? RPAREN
               (DO expr)
             | (NEWLINE statements KEYWORD:end)
-
-
-### od if expr multiline with elif
-if-expr     : KEYWORD:if expr DO expr
-            : (KEYWORD:elif expr KEYWORD:then expr)*
-            : (KEYWORD:else expr)?

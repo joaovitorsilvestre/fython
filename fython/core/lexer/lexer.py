@@ -21,22 +21,9 @@ class Lexer:
 
         while self.current_char != None:
             if self.current_char == ' ' and (len(tokens) and tokens[-1].type == TT_NEWLINE):
-                total_spaces = 0
-                pos_start = self.pos.copy()
-
-                while self.current_char == ' ':
-                    total_spaces += 1
-                    self.advance()
-
-                if total_spaces == 1:
-                    total_spaces = 0
-
-                if total_spaces % 4 != 0:
-                    return [], InvalidSyntaxError(
-                        pos_start, self.pos, "Identation problem"
-                    )
-                self.current_ident_level = max(0, total_spaces)
-
+                error = self.make_ident()
+                if error:
+                    return error
             elif self.current_char in ';\n':
                 self.current_ident_level = max(0, self.current_ident_level - 4)
                 tokens.append(Token(TT_NEWLINE, self.current_ident_level, pos_start=self.pos))
@@ -94,6 +81,11 @@ class Lexer:
             elif self.current_char == ',':
                 tokens.append(Token(TT_COMMA, self.current_ident_level, pos_start=self.pos))
                 self.advance()
+            elif self.current_char == '|':
+                tok, error = self.make_pipe()
+                if error:
+                    return [], error
+                tokens.append(tok)
             else:
                 pos_start = self.pos.copy()
                 char = self.current_char
@@ -102,6 +94,23 @@ class Lexer:
 
         tokens.append(Token(TT_EOF, self.current_ident_level, pos_start=self.pos))
         return tokens, None
+
+    def make_ident(self):
+        total_spaces = 0
+        pos_start = self.pos.copy()
+
+        while self.current_char == ' ':
+            total_spaces += 1
+            self.advance()
+
+        if total_spaces == 1:
+            total_spaces = 0
+
+        if total_spaces % 4 != 0:
+            return InvalidSyntaxError(
+                pos_start, self.pos, "Identation problem"
+            )
+        self.current_ident_level = max(0, total_spaces)
 
     def make_string(self):
         string = ''
@@ -222,3 +231,14 @@ class Lexer:
             self.advance()
 
         self.advance()
+
+    def make_pipe(self):
+        pos_start = self.pos.copy()
+        self.advance()
+
+        if self.current_char == '>':
+            self.advance()
+            return Token(TT_PIPE, self.current_ident_level, pos_start=pos_start, pos_end=self.pos), None
+
+        self.advance()
+        return None, ExpectedCharError(pos_start, self.pos, "'>' after '|'")

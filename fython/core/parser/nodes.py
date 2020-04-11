@@ -122,8 +122,19 @@ class CallNode:
 
 
 class ReturnNode:
-      def __init__(self, node_to_return, pos_start, pos_end):
-            self.node_to_return = node_to_return
+    def __init__(self, node_to_return, pos_start, pos_end):
+        self.node_to_return = node_to_return
 
-            self.pos_start = pos_start
-            self.pos_end = pos_end
+        self.pos_start = pos_start
+        self.pos_end = pos_end
+
+
+class PipeNode:
+    def __init__(self, left_node, right_node, pos_start, pos_end):
+        self.left_node = left_node
+        self.right_node = right_node
+        self.pos_start = pos_start
+        self.pos_end = pos_end
+
+    #def __repr__(self):
+    #    return f"{self.left_node} |> {self.right_node}"

@@ -1,7 +1,7 @@
 from fython.core.lexer.tokens import TT_POW, TT_PLUS, TT_MINUS, TT_MUL, TT_DIV, TT_LTE, TT_LT, TT_GTE, TT_GT, TT_EE, \
     TT_KEYWORD
 from fython.core.parser import NumberNode, ListNode, BinOpNode, \
-    UnaryOpNode, VarAccessNode, VarAssignNode, StatementsNode, IfNode, FuncDefNode, CallNode, StringNode
+    UnaryOpNode, VarAccessNode, VarAssignNode, StatementsNode, IfNode, FuncDefNode, CallNode, StringNode, PipeNode
 
 
 class ElixirAST:
@@ -139,3 +139,43 @@ class Conversor:
 
     def convert_StringNode(self, node: StringNode):
         return f'"{node.tok.value}"'
+
+    def convert_PipeNode(self, node: PipeNode):
+        assert not isinstance(node.left_node, PipeNode), "" \
+         "This function must resolve all children pipe nodes. Its not suppose to run recursively"
+
+        def build_one_pipe(left_node, right_node):
+            left_node = self.convert(left_node)
+            right_node = self.convert(right_node)
+            return "{:|>, [context: Elixir, import: Kernel], ["+left_node+", "+right_node+"]}"
+
+        def pairwise(it):
+            it = iter(it)
+            while True:
+                yield next(it), next(it, None)
+
+        if not isinstance(node.right_node, PipeNode):
+            return build_one_pipe(node.left_node, node.right_node)
+        else:
+            nodes_order = [node.left_node]
+
+            current_node = node.right_node
+            while isinstance(current_node, PipeNode):
+                nodes_order = [*nodes_order, current_node.left_node, current_node.right_node]
+                current_node = current_node.right_node
+
+            last = None
+            for left, right in pairwise(nodes_order):
+                if right is not None:
+                    last = build_one_pipe(left, right)
+                else:
+                    last_one = self.convert(left)
+                    last = "{:|>, [context: Elixir, import: Kernel], [" + last + ", " + last_one + "]}"
+
+            return last
+
+
+
+
+
+

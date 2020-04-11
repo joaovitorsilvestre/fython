@@ -388,6 +388,13 @@ class Parser:
                 return res
             return res.success(node)
 
+        elif self.current_tok.type == TT_PIPE:
+            pipe_expr = res.register(self.pipe_expr(node))
+            if res.error:
+                return res
+
+            return res.success(pipe_expr)
+
         if res.error:
             return res.failure(InvalidSyntaxError(
                 self.current_tok.pos_start, self.current_tok.pos_end,
@@ -495,12 +502,6 @@ class Parser:
         body = res.register(self.statements())
         if res.error: return res
 
-        #if not self.current_tok.matches(TT_KEYWORD, 'end'):
-        #    return res.failure(InvalidSyntaxError(
-        #        self.current_tok.pos_start, self.current_tok.pos_end,
-        #        f"Expected 'end'"
-        #    ))
-
         res.register_advancement()
         self.advance()
 
@@ -510,3 +511,31 @@ class Parser:
             body,
             False
         ))
+
+    def pipe_expr(self, left_node):
+        res = ParseResult()
+        pos_start = self.current_tok.pos_start.copy()
+
+        if self.current_tok.type != TT_PIPE:
+            return res.failure(InvalidSyntaxError(
+                self.current_tok.pos_start, self.current_tok.pos_end,
+                f"Expected '|>'"
+            ))
+
+        res.register_advancement()
+        self.advance()
+
+        right_node = res.register(self.expr())
+        if res.error:
+            return res.failure(InvalidSyntaxError(
+            pos_start, self.current_tok.pos_end,
+            f"Expected an expression after '|>' "
+        ))
+
+        return res.success(PipeNode(
+            left_node,
+            right_node,
+            pos_start,
+            self.current_tok.pos_start.copy()
+        ))
+
