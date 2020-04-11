@@ -45,12 +45,17 @@ class ListNode:
         self.pos_start = pos_start
         self.pos_end = pos_end
 
+    def __repr__(self):
+        return f"[{', '.join(self.element_nodes)}]"
 
 class StatementsNode:
     def __init__(self, statement_nodes, pos_start, pos_end):
         self.statement_nodes = statement_nodes
         self.pos_start = pos_start
         self.pos_end = pos_end
+
+    def __repr__(self):
+        return f"StatementsNode: {len(self.statement_nodes)} statemens"
 
 
 class BinOpNode:
@@ -86,6 +91,9 @@ class IfNode:
 
         self.pos_start = self.comp_expr.pos_start
         self.pos_end = self.false_case.pos_end
+
+    def __repr__(self):
+        return f"{self.true_case} if {self.comp_expr} else {self.false_case}"
 
 
 class FuncDefNode:
@@ -136,5 +144,5 @@ class PipeNode:
         self.pos_start = pos_start
         self.pos_end = pos_end
 
-    #def __repr__(self):
-    #    return f"{self.left_node} |> {self.right_node}"
+    def __repr__(self):
+        return f"{self.left_node} |> {self.right_node}"
