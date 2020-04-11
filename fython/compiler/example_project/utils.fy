@@ -1,4 +1,4 @@
-import Main
+from Main import add/2
 
 def sub():
-    add()
+    add(1, 2)

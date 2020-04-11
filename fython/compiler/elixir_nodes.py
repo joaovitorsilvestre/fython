@@ -205,16 +205,15 @@ class Conversor:
                         "{:import, [context: Elixir], [{:__aliases__, [alias: false], [:" + imp.name + "]}]}"
                     )
         elif node.type == 'from':
-            pass
-            #for imp in node.imports_list:
-            #    if imp.alias:
-
-            #    else:
-            #        import_commands.append(
-            #            "{:import, [context: Elixir],\
-            #             [{:__aliases__, [alias: false], [:List]}, [only: [duplicate: 2]]]}\
-            #           "
-            #       )
+            for imp in node.imports_list:
+                if imp.alias:
+                    continue
+                else:
+                    import_commands.append(
+                        "{:import, [context: Elixir],\
+                         [{:__aliases__, [alias: false], [:"+imp.from_+"]}, [only: ["+ imp.name +": "+str(imp.arity)+"]]]}\
+                       "
+                   )
         else:
             raise "Should not get here"
 

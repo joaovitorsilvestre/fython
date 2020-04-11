@@ -650,6 +650,26 @@ class Parser:
             res.register_advancement()
             self.advance()
 
+            if self.current_tok.type != TT_DIV:
+                return None, res.failure(InvalidSyntaxError(
+                    pos_start, self.current_tok.pos_end,
+                    "Expected / with the arity number"
+                ))
+
+            res.register_advancement()
+            self.advance()
+
+            if self.current_tok.type != TT_INT:
+                return None, res.failure(InvalidSyntaxError(
+                    pos_start, self.current_tok.pos_end,
+                    "Expected arity number of the function to be imported"
+                ))
+
+            arity = self.current_tok.value
+
+            res.register_advancement()
+            self.advance()
+
             if self.current_tok.matches(TT_KEYWORD, 'as'):
                 res.register_advancement()
                 self.advance()
@@ -668,6 +688,7 @@ class Parser:
             return ImportNode.gen_import(
                 name=module_name,
                 alias=alias,
+                arity=arity,
                 from_=from_
             ), None
 
