@@ -1,6 +1,7 @@
 import os
 
 from fython.compiler.elixir_nodes import EModule
+from fython.compiler.integrity_check import IntegrityChecks
 
 
 class File:
@@ -26,7 +27,12 @@ class File:
             self.error = error
             return
 
-        self.compiled = str(EModule(self.name, ast))
+        check = IntegrityChecks(ast).validate()
+        if check.error:
+            self.error = check.error
+            return
+
+        self.compiled = str(EModule(self.name, check.node))
 
 
 class Compiler:
