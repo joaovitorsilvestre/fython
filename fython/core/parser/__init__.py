@@ -183,6 +183,8 @@ class Parser:
         return res.success(atom)
 
     def atom(self):
+        from fython.core.lexer.consts import LETTERS, LETTERS_DIGITS
+
         res = ParseResult()
         tok = self.current_tok
 
@@ -200,6 +202,11 @@ class Parser:
             res.register_advancement()
             self.advance()
             return res.success(VarAccessNode(tok))
+
+        elif tok.type == TT_ATOM:
+            res.register_advancement()
+            self.advance()
+            return res.success(AtomNode(tok))
 
         elif tok.type == TT_LPAREN:
             res.register_advancement()

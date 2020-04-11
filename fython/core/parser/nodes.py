@@ -31,6 +31,16 @@ class VarAccessNode:
         return f'{self.var_name_tok}'
 
 
+class AtomNode:
+    def __init__(self, tok):
+        self.tok = tok
+        self.pos_start = tok.pos_start
+        self.pos_end = tok.pos_end
+
+    def __repr__(self):
+        return f'atom:{self.tok.value}'
+
+
 class VarAssignNode:
     def __init__(self, var_name_tok, value_node):
         self.var_name_tok = var_name_tok

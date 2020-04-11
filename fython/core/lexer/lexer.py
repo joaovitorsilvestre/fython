@@ -23,7 +23,7 @@ class Lexer:
             if self.current_char == ' ' and (len(tokens) and tokens[-1].type == TT_NEWLINE):
                 error = self.make_ident()
                 if error:
-                    return error
+                    return [], error
             elif self.current_char in ';\n':
                 self.current_ident_level = max(0, self.current_ident_level - 4)
                 tokens.append(Token(TT_NEWLINE, self.current_ident_level, pos_start=self.pos))
@@ -31,8 +31,10 @@ class Lexer:
             elif self.current_char in ' \t':
                 self.advance()
             elif self.current_char == ':':
-                tokens.append(Token(TT_DO, self.current_ident_level, pos_start=self.pos))
-                self.advance()
+                tok, error = self.make_do_or_atom()
+                if error:
+                    return [], error
+                tokens.append(tok)
             elif self.current_char == '#':
                 self.skip_comment()
             elif self.current_char in DIGISTS:
@@ -161,6 +163,33 @@ class Lexer:
             return Token(TT_INT, self.current_ident_level, int(num_str), pos_start, self.pos)
         else:
             return Token(TT_FLOAT, self.current_ident_level, float(num_str), pos_start, self.pos)
+
+    def make_do_or_atom(self):
+        pos_start = self.pos.copy()
+        self.advance()
+
+        if self.current_char in LETTERS:
+            # its a atom
+            atom = ''
+            while self.current_char is not None and self.current_char in LETTERS_DIGITS:
+                atom += self.current_char
+                self.advance()
+
+            return Token(
+                TT_ATOM,
+                self.current_ident_level,
+                value=atom,
+                pos_start=pos_start,
+                pos_end=self.pos.copy()
+            ), None
+
+        elif self.current_char is None or self.current_char in '\n; ':
+            return Token(TT_DO, self.current_ident_level, pos_start=self.pos), None
+        else:
+            return None, ExpectedCharError(
+                pos_start,
+                self.pos, "expected letters or digits (to create an atom), new line or space after ':'"
+            )
 
     def make_identifier(self):
         id_str = ''

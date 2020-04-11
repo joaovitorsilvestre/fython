@@ -28,7 +28,7 @@ power       : call(POW factor)*
 call        : pipe-expr
             : atom (LPAREN (expr (COMMA expr)*)? RPAREN)?
 
-atom        : INT|FLOAT|IDENTIFIER|STRING
+atom        : INT|FLOAT|IDENTIFIER|STRING|ATOM
             : LPAREN expr RPAREN
             : list-expr
             : map-expr
