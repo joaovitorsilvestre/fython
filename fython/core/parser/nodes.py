@@ -7,6 +7,7 @@ class NumberNode:
     def __repr__(self):
         return f'{self.tok}'
 
+
 class StringNode:
     def __init__(self, tok):
         self.tok = tok
@@ -16,6 +17,7 @@ class StringNode:
     def __repr__(self):
         return f'{self.tok}'
 
+
 class VarAccessNode:
     def __init__(self, var_name_tok):
         self.var_name_tok = var_name_tok
@@ -24,6 +26,7 @@ class VarAccessNode:
 
     def __repr__(self):
         return f'{self.var_name_tok}'
+
 
 class VarAssignNode:
     def __init__(self, var_name_tok, value_node):
@@ -41,6 +44,19 @@ class ListNode:
         self.element_nodes = element_nodes
         self.pos_start = pos_start
         self.pos_end = pos_end
+
+    def __repr__(self):
+        return f"[{', '.join(self.element_nodes)}]"
+
+class StatementsNode:
+    def __init__(self, statement_nodes, pos_start, pos_end):
+        self.statement_nodes = statement_nodes
+        self.pos_start = pos_start
+        self.pos_end = pos_end
+
+    def __repr__(self):
+        return f"StatementsNode: {len(self.statement_nodes)} statemens"
+
 
 class BinOpNode:
     def __init__(self, left_node, op_tok, right_node):
@@ -66,13 +82,18 @@ class UnaryOpNode:
     def __repr__(self):
         return f'({self.op_tok}, {self.node})'
 
-class IfNode:
-    def __init__(self, cases, else_case):
-        self.cases = cases
-        self.else_case = else_case
 
-        self.pos_start = self.cases[0][0].pos_start
-        self.pos_end = (self.else_case or self.cases[len(self.cases) - 1][0]).pos_end
+class IfNode:
+    def __init__(self, comp_expr, true_case, false_case):
+        self.comp_expr = comp_expr
+        self.true_case = true_case
+        self.false_case = false_case
+
+        self.pos_start = self.comp_expr.pos_start
+        self.pos_end = self.false_case.pos_end
+
+    def __repr__(self):
+        return f"{self.true_case} if {self.comp_expr} else {self.false_case}"
 
 
 class FuncDefNode:
@@ -91,6 +112,9 @@ class FuncDefNode:
 
         self.pos_end = self.body_node.pos_end
 
+    def __repr__(self):
+        return f"def {self.var_name_tok.value}/{len(self.arg_name_toks)}"
+
 
 class CallNode:
     def __init__(self, node_to_call, arg_nodes):
@@ -104,9 +128,21 @@ class CallNode:
         else:
             self.pos_end = self.node_to_call.pos_end
 
-class ReturnNode:
-  def __init__(self, node_to_return, pos_start, pos_end):
-    self.node_to_return = node_to_return
 
-    self.pos_start = pos_start
-    self.pos_end = pos_end
+class ReturnNode:
+    def __init__(self, node_to_return, pos_start, pos_end):
+        self.node_to_return = node_to_return
+
+        self.pos_start = pos_start
+        self.pos_end = pos_end
+
+
+class PipeNode:
+    def __init__(self, left_node, right_node, pos_start, pos_end):
+        self.left_node = left_node
+        self.right_node = right_node
+        self.pos_start = pos_start
+        self.pos_end = pos_end
+
+    def __repr__(self):
+        return f"{self.left_node} |> {self.right_node}"

@@ -1,6 +1,6 @@
-from fython.core.run import run
+from fython.sandbox.run import run
 
-with open('file.fy') as f:
+with open('./sandbox/file.fy') as f:
     lines = f.read()
 
     result, error = run('<file.fy>', lines)

@@ -55,7 +55,7 @@ class Function(BaseFunction):
         self.should_auto_return = should_auto_return
 
     def execute(self, args):
-        from fython.core.interpreter import Interpreter
+        from fython.core.interpreter import Interpreter, Number
 
         res = RTResult()
         interpreter = Interpreter()

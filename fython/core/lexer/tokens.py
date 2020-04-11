@@ -22,6 +22,7 @@ TT_RPAREN           = "RPAREN"
 TT_LSQUARE          = "LSQUARE"
 TT_RSQUARE          = "RSQUARE"
 TT_NEWLINE          = 'NEWLINE'
+TT_PIPE             = 'PIPE'
 TT_EOF              = 'EOF'
 
 KEYWORDS = [
@@ -29,11 +30,9 @@ KEYWORDS = [
     'or',
     'not',
     'if',
-    'then',
     'elif',
     'else',
     'def',
-    'end',
     'return'
 ]
 

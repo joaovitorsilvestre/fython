@@ -22,6 +22,16 @@ class Interpreter:
             String(node.tok.value).set_context(context).set_pos(node.pos_start, node.pos_end)
         )
 
+    def visit_StatementsNode(self, node, context):
+        # this is a pog fot this interpreter
+        from fython.core.parser import ListNode
+
+        return self.visit_ListNode(ListNode(
+            node.statement_nodes,
+            node.pos_start,
+            node.pos_end,
+        ), context)
+
     def visit_ListNode(self, node, context):
         res = RTResult()
         elements = []
@@ -118,6 +128,15 @@ class Interpreter:
 
     def visit_IfNode(self, node, context):
         res = RTResult()
+
+        condition_value = res.register(self.visit(node.comp_expr, context))
+
+        if condition_value.is_true():
+            expr_value = res.register(self.visit(node.true_case, context))
+            return res.success(expr_value)
+        else:
+            expr_value = res.register(self.visit(node.false_case, context))
+            return res.success(expr_value)
 
         for condition, expr in node.cases:
             condition_value = res.register(self.visit(condition, context))

@@ -1,4 +1,4 @@
-from fython.core.run import run
+from fython.sandbox.run import run
 
 while True:
     text = input('fyton> ')
