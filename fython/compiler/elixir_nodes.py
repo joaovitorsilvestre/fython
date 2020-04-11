@@ -1,7 +1,8 @@
 from fython.core.lexer.tokens import TT_POW, TT_PLUS, TT_MINUS, TT_MUL, TT_DIV, TT_LTE, TT_LT, TT_GTE, TT_GT, TT_EE, \
     TT_KEYWORD
 from fython.core.parser import NumberNode, ListNode, BinOpNode, \
-    UnaryOpNode, VarAccessNode, VarAssignNode, StatementsNode, IfNode, FuncDefNode, CallNode, StringNode, PipeNode
+    UnaryOpNode, VarAccessNode, VarAssignNode, StatementsNode, IfNode, FuncDefNode, CallNode, StringNode, PipeNode, \
+    MapNode
 
 
 class ElixirAST:
@@ -52,6 +53,12 @@ class Conversor:
         conver_func = f"convert_{type(node).__name__}"
 
         return getattr(self, conver_func, self.invalid_node)(node)
+
+    @staticmethod
+    def pairwise(it):
+        it = iter(it)
+        while True:
+            yield next(it), next(it, None)
 
     def invalid_node(self, node):
         raise Exception(f"No conversor for node type: {type(node).__name__}")
@@ -149,11 +156,6 @@ class Conversor:
             right_node = self.convert(right_node)
             return "{:|>, [context: Elixir, import: Kernel], ["+left_node+", "+right_node+"]}"
 
-        def pairwise(it):
-            it = iter(it)
-            while True:
-                yield next(it), next(it, None)
-
         if not isinstance(node.right_node, PipeNode):
             return build_one_pipe(node.left_node, node.right_node)
         else:
@@ -165,7 +167,7 @@ class Conversor:
                 current_node = current_node.right_node
 
             last = None
-            for left, right in pairwise(nodes_order):
+            for left, right in Conversor.pairwise(nodes_order):
                 if right is not None:
                     last = build_one_pipe(left, right)
                 else:
@@ -173,6 +175,14 @@ class Conversor:
                     last = "{:|>, [context: Elixir, import: Kernel], [" + last + ", " + last_one + "]}"
 
             return last
+
+    def convert_MapNode(self, node: MapNode):
+        values = []
+
+        for k, v in node.pairs_list:
+            values.append("{" + self.convert(k) + ", " +  self.convert(v) + "}")
+
+        return "{:%{}, [], [" + ', '.join(values) + "]}"
 
 
 
