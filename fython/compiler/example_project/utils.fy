@@ -1,8 +1,4 @@
-from Main import OIII, Halkel as hasllll
-import Main as OII
+import Main
 
 def sub():
     add()
-
-def add():
-    :a

@@ -2,7 +2,7 @@ from fython.core.lexer.tokens import TT_POW, TT_PLUS, TT_MINUS, TT_MUL, TT_DIV, 
     TT_KEYWORD
 from fython.core.parser import NumberNode, ListNode, BinOpNode, \
     UnaryOpNode, VarAccessNode, VarAssignNode, StatementsNode, IfNode, FuncDefNode, CallNode, StringNode, PipeNode, \
-    MapNode, AtomNode
+    MapNode, AtomNode, ImportNode
 
 
 class ElixirAST:
@@ -187,8 +187,39 @@ class Conversor:
 
         return "{:%{}, [], [" + ', '.join(values) + "]}"
 
+    def convert_ImportNode(self, node: ImportNode):
+        import_commands = []
 
+        if node.type == 'import':
+            for imp in node.imports_list:
+                if imp.alias:
+                    import_commands.append(
+                        "{:import, [context: Elixir],\
+                        [\
+                          {:__aliases__, [alias: false], [:" + imp.name + "]},\
+                          [as: {:__aliases__, [alias: false], [:Oi]}]\
+                        ]}"
+                    )
+                else:
+                    import_commands.append(
+                        "{:import, [context: Elixir], [{:__aliases__, [alias: false], [:" + imp.name + "]}]}"
+                    )
+        elif node.type == 'from':
+            pass
+            #for imp in node.imports_list:
+            #    if imp.alias:
 
+            #    else:
+            #        import_commands.append(
+            #            "{:import, [context: Elixir],\
+            #             [{:__aliases__, [alias: false], [:List]}, [only: [duplicate: 2]]]}\
+            #           "
+            #       )
+        else:
+            raise "Should not get here"
 
+        if len(import_commands) == 1:
+            return import_commands[0]
 
+        return "{:__block__, [], [" + ''.join(import_commands) + "]}"
 
