@@ -6,12 +6,12 @@ legend:
 
 statements  : NEWLINE* IDENT* statement (NEWLINE+ statement) NEWLINE*
 
-import-expr : import IDENTIFIER (COMMA IDENTIFIER (as IDENTIFIER)?)*
-            : from IDENTIFIER import IDENTIFIER (as IDENTIFIER)? (COMMA IDENTIFIER (as IDENTIFIER)?)*
-
 statement   : import-expr
             : KEYWORD:return expr?
             : expr
+
+import-expr : import IDENTIFIER (COMMA IDENTIFIER (as IDENTIFIER)?)*
+            | from IDENTIFIER import IDENTIFIER (as IDENTIFIER)? (COMMA IDENTIFIER (as IDENTIFIER)?)*
 
 expr        : IDENTIFIER EQ expr
             : comp-expr ((KEYWORD:and|KEYWORD:or) comp-expr)*

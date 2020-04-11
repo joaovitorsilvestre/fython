@@ -385,7 +385,7 @@ class Parser:
 
         if res.error:
             return res.failure(InvalidSyntaxError(
-                self.current_tok.pos_start, self.current_tok.pos_end,
+                self.current_tok.pos_start.copy(), self.current_tok.pos_end.copy(),
                 "Expected return, int, float, variable, 'not', '+', '-', '(' or '['"
             ))
 
@@ -637,7 +637,7 @@ class Parser:
         res = ParseResult()
         pos_start = self.current_tok.pos_start.copy()
 
-        def resolve_module():
+        def resolve_module(from_=None):
             if self.current_tok.type != TT_IDENTIFIER:
                 return None, res.failure(InvalidSyntaxError(
                     pos_start, self.current_tok.pos_end,
@@ -665,15 +665,25 @@ class Parser:
                 res.register_advancement()
                 self.advance()
 
-            return ImportNode.gen_import(name=module_name, alias=alias), None
+            return ImportNode.gen_import(
+                name=module_name,
+                alias=alias,
+                from_=from_
+            ), None
 
-        if self.current_tok.value == "import":
+        if self.current_tok.matches(TT_KEYWORD, "import"):
             # import foo
             # import foo, poo
             # import foo as oii, foo2 as 33
 
             res.register_advancement()
             self.advance()
+
+            if self.current_tok.type != TT_IDENTIFIER:
+                return res.failure(InvalidSyntaxError(
+                    pos_start, self.current_tok.pos_end,
+                    "Expected a module name"
+                ))
 
             modules = []
 
@@ -701,12 +711,73 @@ class Parser:
                     ))
             else:
                 return res.failure(InvalidSyntaxError(
-                    pos_start, self.current_tok.pos_start.copy(),
+                    self.current_tok.pos_start.copy(), self.current_tok.pos_end.copy(),
                     "Expected ',' or new line"
                 ))
 
             return res.success(ImportNode(
                 modules, 'import', pos_start, self.current_tok.pos_end.copy()
             ))
+        elif self.current_tok.matches(TT_KEYWORD, 'from'):
+            # from Foo import aaa
+            # from Foo import aaa as oii, bbb
+
+            res.register_advancement()
+            self.advance()
+
+            if self.current_tok.type != TT_IDENTIFIER:
+                return res.failure(InvalidSyntaxError(
+                    pos_start, self.current_tok.pos_end,
+                    "Expected a module name"
+                ))
+
+            _from_module = self.current_tok.value
+
+            res.register_advancement()
+            self.advance()
+
+            if not self.current_tok.matches(TT_KEYWORD, 'import'):
+                return res.failure(InvalidSyntaxError(
+                    pos_start, self.current_tok.pos_end,
+                    "Expected 'import'"
+                ))
+
+            res.register_advancement()
+            self.advance()
+
+            modules_or_functions = []
+
+            m_or_f, error = resolve_module(_from_module)
+            if error:
+                return res
+
+            modules_or_functions.append(m_or_f)
+
+            if self.current_tok.type == TT_NEWLINE:
+                pass
+            elif self.current_tok.type == TT_COMMA:
+                while self.current_tok.type == TT_COMMA:
+                    res.register_advancement()
+                    self.advance()
+                    module, error = resolve_module(_from_module)
+                    if error:
+                        return res
+                    modules_or_functions.append(module)
+
+                if self.current_tok.type != TT_NEWLINE:
+                    return res.failure(InvalidSyntaxError(
+                        pos_start, self.current_tok.pos_start.copy(),
+                        "Expected ',' or new line"
+                    ))
+
+            return res.success(ImportNode(
+                modules_or_functions,
+                'from',
+                pos_start,
+                self.current_tok.pos_end.copy()
+            ))
         else:
-            pass
+            return res.failure(InvalidSyntaxError(
+                pos_start, self.current_tok.pos_start.copy(),
+                "Expected 'import' or 'from'"
+            ))

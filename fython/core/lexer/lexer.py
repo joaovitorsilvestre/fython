@@ -143,7 +143,7 @@ class Lexer:
             escape_character = False
 
         self.advance()
-        return Token(TT_STRING, self.current_ident_level, string, pos_start, self.pos)
+        return Token(TT_STRING, self.current_ident_level, string, pos_start, self.pos.copy())
 
     def make_number(self):
         num_str = ''
@@ -160,9 +160,9 @@ class Lexer:
             self.advance()
 
         if dot_count == 0:
-            return Token(TT_INT, self.current_ident_level, int(num_str), pos_start, self.pos)
+            return Token(TT_INT, self.current_ident_level, int(num_str), pos_start, self.pos.copy())
         else:
-            return Token(TT_FLOAT, self.current_ident_level, float(num_str), pos_start, self.pos)
+            return Token(TT_FLOAT, self.current_ident_level, float(num_str), pos_start, self.pos.copy())
 
     def make_do_or_atom(self):
         pos_start = self.pos.copy()
@@ -200,7 +200,7 @@ class Lexer:
             self.advance()
 
         tok_type = TT_KEYWORD if id_str in KEYWORDS else TT_IDENTIFIER
-        return Token(tok_type, self.current_ident_level, id_str, pos_start, self.pos)
+        return Token(tok_type, self.current_ident_level, id_str, pos_start, self.pos.copy())
 
     def make_mul_or_power(self):
         token_type = TT_MUL
@@ -219,7 +219,7 @@ class Lexer:
 
         if self.current_char == '=':
             self.advance()
-            return Token(TT_NE, self.current_ident_level, pos_start=pos_start, pos_end=self.pos), None
+            return Token(TT_NE, self.current_ident_level, pos_start=pos_start, pos_end=self.pos.copy()), None
 
         self.advance()
         return None, ExpectedCharError(pos_start, self.pos, "'=' (after '!')")
@@ -233,7 +233,7 @@ class Lexer:
             self.advance()
             toke_type = TT_EE
 
-        return Token(toke_type, self.current_ident_level, pos_start=pos_start, pos_end=self.pos)
+        return Token(toke_type, self.current_ident_level, pos_start=pos_start, pos_end=self.pos.copy())
 
     def make_less_than(self):
         toke_type = TT_LT
@@ -244,7 +244,7 @@ class Lexer:
             self.advance()
             toke_type = TT_LTE
 
-        return Token(toke_type, self.current_ident_level, pos_start=pos_start, pos_end=self.pos)
+        return Token(toke_type, self.current_ident_level, pos_start=pos_start, pos_end=self.pos.copy())
 
     def make_greater_than(self):
         toke_type = TT_GT
@@ -255,7 +255,7 @@ class Lexer:
             self.advance()
             toke_type = TT_GTE
 
-        return Token(toke_type, self.current_ident_level, pos_start=pos_start, pos_end=self.pos)
+        return Token(toke_type, self.current_ident_level, pos_start=pos_start, pos_end=self.pos.copy())
 
     def skip_comment(self):
         # TODO fixx
@@ -273,7 +273,7 @@ class Lexer:
 
         if self.current_char == '>':
             self.advance()
-            return Token(TT_PIPE, self.current_ident_level, pos_start=pos_start, pos_end=self.pos), None
+            return Token(TT_PIPE, self.current_ident_level, pos_start=pos_start, pos_end=self.pos.copy()), None
 
         self.advance()
         return None, ExpectedCharError(pos_start, self.pos, "'>' after '|'")

@@ -185,16 +185,19 @@ class ImportNode:
         assert type in ['import', 'from']
         self.type = type
 
-    _import_module = namedtuple("Simple", ['name', 'alias'])
+    _import_module = namedtuple("Simple", ['name', 'alias', 'from_'])
 
     @staticmethod
-    def gen_import(name, alias):
-        return ImportNode._import_module(name=name, alias=alias)
+    def gen_import(name, alias, from_):
+        return ImportNode._import_module(name=name, alias=alias, from_=from_)
 
     def __repr__(self):
-        if self.type == 'import':
-            modules = [
-                f'{i.name} as {i.alias}' if i.alias else i.name for i in self.imports_list
-            ]
+        modules = [
+            f'{i.name} as {i.alias}' if i.alias else i.name for i in self.imports_list
+        ]
 
+        if self.type == 'import':
             return f"import {', '.join(modules)}"
+        else:
+            main_module = self.imports_list[0].from_
+            return f"from {main_module} import {', '.join(modules)}"
