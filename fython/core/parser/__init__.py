@@ -358,6 +358,14 @@ class Parser:
             res.register_advancement()
             self.advance()
 
+        if self.current_tok.matches(TT_KEYWORD, 'import') or \
+            self.current_tok.matches(TT_KEYWORD, 'from'):
+
+            expr = res.register(self.make_import())
+            if res.error:
+                return res
+            return res.success(expr)
+
         if self.current_tok.matches(TT_KEYWORD, 'return'):
             res.register_advancement()
             self.advance()
@@ -624,3 +632,81 @@ class Parser:
         return res.success(MapNode(
             pairs_list, pos_start, self.current_tok.pos_end.copy()
         ))
+
+    def make_import(self):
+        res = ParseResult()
+        pos_start = self.current_tok.pos_start.copy()
+
+        def resolve_module():
+            if self.current_tok.type != TT_IDENTIFIER:
+                return None, res.failure(InvalidSyntaxError(
+                    pos_start, self.current_tok.pos_end,
+                    "Expected a module name"
+                ))
+
+            module_name = self.current_tok.value
+            alias = None
+
+            res.register_advancement()
+            self.advance()
+
+            if self.current_tok.matches(TT_KEYWORD, 'as'):
+                res.register_advancement()
+                self.advance()
+
+                if self.current_tok.type != TT_IDENTIFIER:
+                    return None, res.failure(InvalidSyntaxError(
+                        pos_start, self.current_tok.pos_end,
+                        "Expected a module name"
+                    ))
+
+                alias = self.current_tok.value
+
+                res.register_advancement()
+                self.advance()
+
+            return ImportNode.gen_import(name=module_name, alias=alias), None
+
+        if self.current_tok.value == "import":
+            # import foo
+            # import foo, poo
+            # import foo as oii, foo2 as 33
+
+            res.register_advancement()
+            self.advance()
+
+            modules = []
+
+            module, error = resolve_module()
+            if error:
+                return res
+
+            modules.append(module)
+
+            if self.current_tok.type == TT_NEWLINE:
+                pass
+            elif self.current_tok.type == TT_COMMA:
+                while self.current_tok.type == TT_COMMA:
+                    res.register_advancement()
+                    self.advance()
+                    module, error = resolve_module()
+                    if error:
+                        return res
+                    modules.append(module)
+
+                if self.current_tok.type != TT_NEWLINE:
+                    return res.failure(InvalidSyntaxError(
+                        pos_start, self.current_tok.pos_start.copy(),
+                        "Expected ',' or new line"
+                    ))
+            else:
+                return res.failure(InvalidSyntaxError(
+                    pos_start, self.current_tok.pos_start.copy(),
+                    "Expected ',' or new line"
+                ))
+
+            return res.success(ImportNode(
+                modules, 'import', pos_start, self.current_tok.pos_end.copy()
+            ))
+        else:
+            pass

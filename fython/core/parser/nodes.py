@@ -1,4 +1,5 @@
-from typing import List, Tuple
+from collections import namedtuple
+from typing import List, Tuple, Union
 
 
 class NumberNode:
@@ -169,3 +170,31 @@ class MapNode:
 
     def __repr__(self):
         return "{map}"
+
+
+class ImportNode:
+    def __init__(self,
+         imports_list: List[namedtuple],
+         type: str,
+         pos_start,
+         pos_end,
+    ):
+        self.imports_list = imports_list
+        self.pos_start = pos_start
+        self.pos_end = pos_end
+        assert type in ['import', 'from']
+        self.type = type
+
+    _import_module = namedtuple("Simple", ['name', 'alias'])
+
+    @staticmethod
+    def gen_import(name, alias):
+        return ImportNode._import_module(name=name, alias=alias)
+
+    def __repr__(self):
+        if self.type == 'import':
+            modules = [
+                f'{i.name} as {i.alias}' if i.alias else i.name for i in self.imports_list
+            ]
+
+            return f"import {', '.join(modules)}"

@@ -29,6 +29,9 @@ TT_PIPE             = 'PIPE'
 TT_EOF              = 'EOF'
 
 KEYWORDS = [
+    'import',
+    'from',
+    'as',
     'and',
     'or',
     'not',
