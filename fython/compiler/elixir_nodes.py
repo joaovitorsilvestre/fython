@@ -142,10 +142,14 @@ class Conversor:
          ]}"
 
     def convert_CallNode(self, node: CallNode):
-        arguments = [self.convert(i) for i in node.arg_nodes]
+        arguments = "[" + ','.join([self.convert(i) for i in node.arg_nodes]) + ']'
 
-        return "{:" + node.node_to_call.var_name_tok.value + ", " \
-               " [], [" + ', '.join(arguments) + "]}"
+        if '.' in node.get_name():
+            module, func_name = node.get_name().split('.')
+            func_name, _ = func_name.split('/')
+            return "{{:., [], [{:__aliases__, [alias: false], [:"+module+"]}, :"+func_name+"]}, [], " + arguments + "}"
+        else:
+            return "{:" + node.node_to_call.var_name_tok.value + ", [], " + arguments + "}"
 
     def convert_StringNode(self, node: StringNode):
         return f'"{node.tok.value}"'

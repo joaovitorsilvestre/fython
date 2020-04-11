@@ -637,7 +637,7 @@ class Parser:
         res = ParseResult()
         pos_start = self.current_tok.pos_start.copy()
 
-        def resolve_module(from_=None):
+        def resolve_module(from_=None, check_arity=True):
             if self.current_tok.type != TT_IDENTIFIER:
                 return None, res.failure(InvalidSyntaxError(
                     pos_start, self.current_tok.pos_end,
@@ -650,22 +650,25 @@ class Parser:
             res.register_advancement()
             self.advance()
 
-            if self.current_tok.type != TT_DIV:
-                return None, res.failure(InvalidSyntaxError(
-                    pos_start, self.current_tok.pos_end,
-                    "Expected / with the arity number"
-                ))
+            arity = None
 
-            res.register_advancement()
-            self.advance()
+            if check_arity:
+                if self.current_tok.type != TT_DIV:
+                    return None, res.failure(InvalidSyntaxError(
+                        pos_start, self.current_tok.pos_end,
+                        "Expected / with the arity number"
+                    ))
 
-            if self.current_tok.type != TT_INT:
-                return None, res.failure(InvalidSyntaxError(
-                    pos_start, self.current_tok.pos_end,
-                    "Expected arity number of the function to be imported"
-                ))
+                res.register_advancement()
+                self.advance()
 
-            arity = self.current_tok.value
+                if self.current_tok.type != TT_INT:
+                    return None, res.failure(InvalidSyntaxError(
+                        pos_start, self.current_tok.pos_end,
+                        "Expected arity number of the function to be imported"
+                    ))
+
+                arity = self.current_tok.value
 
             res.register_advancement()
             self.advance()
@@ -708,7 +711,7 @@ class Parser:
 
             modules = []
 
-            module, error = resolve_module()
+            module, error = resolve_module(check_arity=False)
             if error:
                 return res
 
@@ -720,7 +723,7 @@ class Parser:
                 while self.current_tok.type == TT_COMMA:
                     res.register_advancement()
                     self.advance()
-                    module, error = resolve_module()
+                    module, error = resolve_module(check_arity=False)
                     if error:
                         return res
                     modules.append(module)
@@ -768,7 +771,7 @@ class Parser:
 
             modules_or_functions = []
 
-            m_or_f, error = resolve_module(_from_module)
+            m_or_f, error = resolve_module(_from_module, check_arity=True)
             if error:
                 return res
 
@@ -780,7 +783,7 @@ class Parser:
                 while self.current_tok.type == TT_COMMA:
                     res.register_advancement()
                     self.advance()
-                    module, error = resolve_module(_from_module)
+                    module, error = resolve_module(_from_module, check_arity=True)
                     if error:
                         return res
                     modules_or_functions.append(module)

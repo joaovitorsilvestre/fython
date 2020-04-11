@@ -19,23 +19,34 @@ class IntegrityChecks:
 
         return res
 
-    def avaliable_functons_in_context(self, function: FuncDefNode):
+    def is_this_function_avaliable_in_this_context(
+        self, func_call: CallNode, function_context: FuncDefNode
+    ):
         local_imports = [
-            i for i in function.body_node.statement_nodes if isinstance(i, ImportNode)
+            i for i in function_context.body_node.statement_nodes
+            if isinstance(i, ImportNode)
         ]
         global_imports = [
-            i for i in self.node.statement_nodes if isinstance(i, ImportNode)
+            i for i in self.node.statement_nodes
+            if isinstance(i, ImportNode)
         ]
 
         local_imported = [
-            i.alias or i.name for i in sum([imp.imports_list for imp in local_imports], [])
+            i.get_name() for i in sum([imp.imports_list for imp in local_imports], [])
         ]
 
         global_imported =  [
-            i.alias or i.name for i in sum([imp.imports_list for imp in global_imports], [])
+            i.get_name() for i in sum([imp.imports_list for imp in global_imports], [])
         ]
 
-        return local_imported + global_imported
+        if func_call.get_name() in local_imported + global_imported:
+            return True
+        else:
+            # lets finds for this function in the global imported without
+            # specific functions. eg: import Main
+            # TODO this is more complex. We neet to check if any of the
+            # TODO imported modules has any function defined considering arity
+            return True
 
     def integrity_FuncDefNode(self, function: FuncDefNode):
         res = InterityResult(self.node)
@@ -49,13 +60,11 @@ class IntegrityChecks:
         ]
 
         # is function imported?
-        for func_call in func_calls:
-            func_name = func_call.node_to_call.var_name_tok.value
-
-            if not func_name in self.avaliable_functons_in_context(function):
+        for fc in func_calls:
+            if not self.is_this_function_avaliable_in_this_context(fc, function):
                 return res.failure(UndefinedFunction(
-                    func_call.pos_start.copy(), func_call.pos_end.copy(),
-                    f"{func_name}"
+                    fc.pos_start.copy(), fc.pos_end.copy(),
+                    f"{fc.get_name()}"
                 ))
 
         return res.success(self.node)

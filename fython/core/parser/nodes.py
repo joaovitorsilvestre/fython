@@ -114,6 +114,7 @@ class FuncDefNode:
     def __init__(self, var_name_tok, arg_name_toks, body_node: StatementsNode, should_auto_return):
         self.var_name_tok = var_name_tok
         self.arg_name_toks = arg_name_toks
+        self.arity = len(arg_name_toks)
         self.body_node = body_node
         self.should_auto_return = should_auto_return
 
@@ -129,18 +130,24 @@ class FuncDefNode:
     def __repr__(self):
         return f"def {self.var_name_tok.value}/{len(self.arg_name_toks)}"
 
+    def get_name(self):
+        return f'{self.var_name_tok.var_name_tok.value}/{self.arity}'
+
 
 class CallNode:
     def __init__(self, node_to_call, arg_nodes):
         self.node_to_call = node_to_call
         self.arg_nodes = arg_nodes
-
+        self.arity = len(arg_nodes)
         self.pos_start = self.node_to_call.pos_start
 
         if len(self.arg_nodes) > 0:
             self.pos_end = self.arg_nodes[len(self.arg_nodes) - 1].pos_end
         else:
             self.pos_end = self.node_to_call.pos_end
+
+    def get_name(self):
+        return f'{self.node_to_call.var_name_tok.value}/{self.arity}'
 
 
 class ReturnNode:
@@ -185,11 +192,17 @@ class ImportNode:
         assert type in ['import', 'from']
         self.type = type
 
-    _import_module = namedtuple("Simple", ['name', 'alias', 'from_', 'arity'])
+    _import_module = namedtuple("Simple", ['name', 'alias', 'from_', 'arity', 'get_name'])
 
     @staticmethod
     def gen_import(name, alias, arity, from_):
-        return ImportNode._import_module(name=name, alias=alias, from_=from_, arity=arity)
+        return ImportNode._import_module(
+            name=name,
+            alias=alias,
+            from_=from_,
+            arity=arity,
+            get_name=lambda: f'{alias or name}/{arity}'
+        )
 
     def __repr__(self):
         modules = [
