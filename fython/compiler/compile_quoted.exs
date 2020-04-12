@@ -13,7 +13,7 @@ defmodule M do
       |> Code.compile_quoted
       |> Enum.each(fn {module, content} ->
         File.write(
-          "#{root}/compiled/#{module |> to_string |> String.replace("Elixir.", "")}.beam",
+          "#{root}/compiled/#{module |> to_string}.beam",
           content,
           mode: :binary
         )
