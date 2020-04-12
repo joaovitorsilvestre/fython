@@ -39,6 +39,7 @@ KEYWORDS = [
     'elif',
     'else',
     'def',
+    'lambda',
     'return'
 ]
 

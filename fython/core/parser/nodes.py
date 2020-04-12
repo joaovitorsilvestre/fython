@@ -134,7 +134,7 @@ class FuncDefNode:
         return f'{self.var_name_tok.var_name_tok.value}/{self.arity}'
 
 
-class InlineDefFunctionNode(FuncDefNode):
+class LambdaNode(FuncDefNode):
     def __repr__(self):
         return f"def inline func {self.var_name_tok.value}/{len(self.arg_name_toks)}"
 

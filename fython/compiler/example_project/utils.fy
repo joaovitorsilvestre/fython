@@ -18,7 +18,7 @@ def calculate(a, b, operation):
     #    |> self()
 
     list
-        |> Enum.find(def (i):
+        |> Enum.find(lambda (i):
             i == 2
         )
 

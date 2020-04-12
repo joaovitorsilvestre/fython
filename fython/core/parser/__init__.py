@@ -242,7 +242,7 @@ class Parser:
                 return res
             return res.success(list_expr)
 
-        elif tok.matches(TT_KEYWORD, 'def'):
+        elif tok.matches(TT_KEYWORD, 'def') or tok.matches(TT_KEYWORD, 'lambda'):
             func_def = res.register(self.func_def())
             if res.error:
                 return res
@@ -467,18 +467,33 @@ class Parser:
     def func_def(self):
         res = ParseResult()
 
-        inline_function = self.current_tok.ident > 0
-
-        if not self.current_tok.matches(TT_KEYWORD, 'def'):
+        if (not self.current_tok.matches(TT_KEYWORD, 'def')) and \
+           (not self.current_tok.matches(TT_KEYWORD, 'lambda')):
             return res.failure(InvalidSyntaxError(
                 self.current_tok.pos_start, self.current_tok.pos_end,
-                f"Expected 'def'"
+                f"Expected 'def' or 'lambda'"
+            ))
+
+        lambda_function = self.current_tok.matches(TT_KEYWORD, 'lambda')
+
+        if not lambda_function and self.current_tok.ident != 0:
+            # if enters here, causes a infinite loop in some while loop
+            print('Entered in a errors message that causes inifinite loop. You need to fix it.')
+            return res.failure(InvalidSyntaxError(
+                self.current_tok.pos_start, self.current_tok.pos_end,
+                f"'def' is not allowed inside functions. Use 'lambda' instead."
             ))
 
         res.register_advancement()
         self.advance()
 
         if self.current_tok.type == TT_IDENTIFIER:
+            if lambda_function:
+                return res.failure(InvalidSyntaxError(
+                    self.current_tok.pos_start, self.current_tok.pos_end,
+                    f"Expected '('. Lambda functions cant have name."
+                ))
+
             var_name_tok = self.current_tok
             res.register_advancement()
             self.advance()
@@ -546,7 +561,7 @@ class Parser:
         body = res.register(self.statements())
         if res.error: return res
 
-        func_type = InlineDefFunctionNode if inline_function else FuncDefNode
+        func_type = LambdaNode if lambda_function else FuncDefNode
 
         return res.success(func_type(
             var_name_tok,
