@@ -683,8 +683,8 @@ class Parser:
             if check_arity:
                 if self.current_tok.type != TT_DIV:
                     return None, res.failure(InvalidSyntaxError(
-                        pos_start, self.current_tok.pos_end,
-                        "Expected / with the arity number"
+                        self.current_tok.pos_start, self.current_tok.pos_end,
+                        "Expected / with the arity number of each function being imported"
                     ))
 
                 res.register_advancement()
