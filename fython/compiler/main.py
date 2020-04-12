@@ -1,4 +1,6 @@
 import os
+import shutil
+from typing import List
 
 from fython.compiler.elixir_nodes import EModule
 from fython.compiler.integrity_check import IntegrityChecks
@@ -50,11 +52,12 @@ class Compiler:
                 # print('\t- subdirectory ' + subdir)
 
             for filename in files:
-                file_path = os.path.join(root, filename)
+                if filename[-3:] == '.fy':
+                    file_path = os.path.join(root, filename)
 
-                self.files.append(
-                    File(filename, None, file_path)
-                )
+                    self.files.append(
+                        File(filename, None, file_path)
+                    )
 
     def compile(self):
         compiled = []
@@ -75,25 +78,18 @@ class Compiler:
             return "{:__block__, [], [" + ','.join(compiled) + "]}"
 
 
+def run(project_path='example_project'):
+    project_name = project_path.split('/')[-1]
 
-def execute_in_elixir(compiled: str):
-    with open('/tmp/compiled_fython', 'w+') as f:
-        f.write(compiled)
+    c = Compiler(project_path)
+    c.compile()
 
     try:
-        command = f'elixir fython.exs'
-        stream = os.popen(command)
-        output = stream.read()
-        print(output)
-    except Exception as e:
-        raise e
-    finally:
-        os.remove('/tmp/compiled_fython')
+        shutil.rmtree(f"{project_path}/compiled")
+    except:
+        pass
 
-
-def run():
-    c = Compiler('example_project')
-    c.compile()
+    os.mkdir(f"{project_name}/compiled")
 
     for i in c.files:
         if i.error:
@@ -101,12 +97,21 @@ def run():
             return
 
     compiled = c.merge_compiled()
-
-    print('compiled::')
+    print('Compiled to elixir!. Resulting quoted:')
     print(compiled)
-    print('elixir result:')
-    execute_in_elixir(compiled)
+    print("Generating beam files")
+
+    quoted_name = f'{project_path}/{project_name}.fyc'
+
+    with open(quoted_name, 'w+') as f:
+        f.write(compiled)
+
+    project_path = f"{project_path}/{project_name}.fyc".replace('/', ' ')
+
+    output = os.popen(f'elixir compile_quoted.exs {project_path}').read()
+
+    os.remove(quoted_name)
 
 
 if __name__ == '__main__':
-    run()
+    run('/home/joao/fython/fython/compiler/example_project')
