@@ -150,16 +150,13 @@ class Conversor:
         for p in node.arg_name_toks:
             params.append("{:"+p.value+", [context: Elixir, import: IEx.Helpers], Elixir}")
 
-        if hasattr(node, "var_name_tok"):
-            func_def = "[{:aa, [], [" + ','.join(params) + "]}]"
-        else:
-            func_def = params
+        params = "[" + ','.join(params) + "]"
 
         return "{:fn, [],\
                  [\
                    {:->, [],\
                     [\
-                      " + func_def + ",\
+                      " + params + ",\
                       " + self.convert(node.body_node) + "\
                     ]}\
                  ]}"
