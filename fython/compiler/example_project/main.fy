@@ -8,4 +8,5 @@ def calculate(a, b, operation):
         "*": a * b,
     }
 
+    # aqui nós retornamos o role
     operations |> Map.get(operation)
