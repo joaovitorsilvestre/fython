@@ -126,6 +126,10 @@ class Conversor:
             return "{:" + op + ", [context: Elixir, import: Kernel], [" + a + ", " + b + "]}"
         elif node.op_tok.type == TT_POW:
             return "{{:., [], [:math, :pow]}, [], [" + a + ", " + b + "]}"
+        elif node.op_tok.matches(TT_KEYWORD, 'or'):
+            return "{:or, [context: Elixir, import: Kernel], [" + a + ", " + b + "]}"
+        elif node.op_tok.matches(TT_KEYWORD, 'and'):
+            return "{:and, [context: Elixir, import: Kernel], [" + a + ", " + b + "]}"
         else:
             raise Exception(f"Invalid BinOpType: {node.op_tok.type}")
 

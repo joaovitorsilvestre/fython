@@ -5,8 +5,9 @@ def calculate(a, b, operation):
         "+": a + b,
         "-": a - b,
         "/": a / b,
-        "*": a * b,
+        "*": a * b
     }
 
-    # aqui nós retornamos o role
-    operations |> Map.get(operation)
+    # aqui nós retornamos o role a =c {{} [] 09090321
+    operations
+        |> Map.fetch(operation)
