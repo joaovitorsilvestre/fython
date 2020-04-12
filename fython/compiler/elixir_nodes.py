@@ -1,7 +1,8 @@
 from fython.core.lexer.tokens import TT_POW, TT_PLUS, TT_MINUS, TT_MUL, TT_DIV, TT_LTE, TT_LT, TT_GTE, TT_GT, TT_EE, \
     TT_KEYWORD
 from fython.core.parser import NumberNode, ListNode, BinOpNode, \
-    UnaryOpNode, VarAccessNode, VarAssignNode, StatementsNode, IfNode, FuncDefNode, CallNode, StringNode, PipeNode
+    UnaryOpNode, VarAccessNode, VarAssignNode, StatementsNode, IfNode, FuncDefNode, CallNode, StringNode, PipeNode, \
+    MapNode, AtomNode, ImportNode
 
 
 class ElixirAST:
@@ -53,11 +54,20 @@ class Conversor:
 
         return getattr(self, conver_func, self.invalid_node)(node)
 
+    @staticmethod
+    def pairwise(it):
+        it = iter(it)
+        while True:
+            yield next(it), next(it, None)
+
     def invalid_node(self, node):
         raise Exception(f"No conversor for node type: {type(node).__name__}")
 
     def convert_NumberNode(self, node: NumberNode):
         return str(node.tok.value)
+
+    def convert_AtomNode(self, node: AtomNode):
+        return ':' + node.tok.value
 
     def convert_StatementsNode(self, node: StatementsNode):
         line = Line(node.pos_start.ln)
@@ -116,6 +126,10 @@ class Conversor:
             return "{:" + op + ", [context: Elixir, import: Kernel], [" + a + ", " + b + "]}"
         elif node.op_tok.type == TT_POW:
             return "{{:., [], [:math, :pow]}, [], [" + a + ", " + b + "]}"
+        elif node.op_tok.matches(TT_KEYWORD, 'or'):
+            return "{:or, [context: Elixir, import: Kernel], [" + a + ", " + b + "]}"
+        elif node.op_tok.matches(TT_KEYWORD, 'and'):
+            return "{:and, [context: Elixir, import: Kernel], [" + a + ", " + b + "]}"
         else:
             raise Exception(f"Invalid BinOpType: {node.op_tok.type}")
 
@@ -132,10 +146,14 @@ class Conversor:
          ]}"
 
     def convert_CallNode(self, node: CallNode):
-        arguments = [self.convert(i) for i in node.arg_nodes]
+        arguments = "[" + ','.join([self.convert(i) for i in node.arg_nodes]) + ']'
 
-        return "{:" + node.node_to_call.var_name_tok.value + ", " \
-               " [], [" + ', '.join(arguments) + "]}"
+        if '.' in node.get_name():
+            module, func_name = node.get_name().split('.')
+            func_name, _ = func_name.split('/')
+            return "{{:., [], [{:__aliases__, [alias: false], [:"+module+"]}, :"+func_name+"]}, [], " + arguments + "}"
+        else:
+            return "{:" + node.node_to_call.var_name_tok.value + ", [], " + arguments + "}"
 
     def convert_StringNode(self, node: StringNode):
         return f'"{node.tok.value}"'
@@ -149,11 +167,6 @@ class Conversor:
             right_node = self.convert(right_node)
             return "{:|>, [context: Elixir, import: Kernel], ["+left_node+", "+right_node+"]}"
 
-        def pairwise(it):
-            it = iter(it)
-            while True:
-                yield next(it), next(it, None)
-
         if not isinstance(node.right_node, PipeNode):
             return build_one_pipe(node.left_node, node.right_node)
         else:
@@ -161,12 +174,15 @@ class Conversor:
 
             current_node = node.right_node
             while isinstance(current_node, PipeNode):
-                nodes_order = [*nodes_order, current_node.left_node, current_node.right_node]
+                nodes_order = [*nodes_order, current_node.left_node]
                 current_node = current_node.right_node
 
+            if not isinstance(current_node, PipeNode):
+                nodes_order = [*nodes_order, current_node]
+
             last = None
-            for left, right in pairwise(nodes_order):
-                if right is not None:
+            for left, right in Conversor.pairwise(nodes_order):
+                if last is None:
                     last = build_one_pipe(left, right)
                 else:
                     last_one = self.convert(left)
@@ -174,8 +190,45 @@ class Conversor:
 
             return last
 
+    def convert_MapNode(self, node: MapNode):
+        values = []
 
+        for k, v in node.pairs_list:
+            values.append("{" + self.convert(k) + ", " +  self.convert(v) + "}")
 
+        return "{:%{}, [], [" + ', '.join(values) + "]}"
 
+    def convert_ImportNode(self, node: ImportNode):
+        import_commands = []
 
+        if node.type == 'import':
+            for imp in node.imports_list:
+                if imp.alias:
+                    import_commands.append(
+                        "{:import, [context: Elixir],\
+                        [\
+                          {:__aliases__, [alias: false], [:" + imp.name + "]},\
+                          [as: {:__aliases__, [alias: false], [:Oi]}]\
+                        ]}"
+                    )
+                else:
+                    import_commands.append(
+                        "{:import, [context: Elixir], [{:__aliases__, [alias: false], [:" + imp.name + "]}]}"
+                    )
+        elif node.type == 'from':
+            for imp in node.imports_list:
+                if imp.alias:
+                    continue
+                else:
+                    import_commands.append(
+                        "{:import, [context: Elixir],\
+                         [{:__aliases__, [alias: false], [:"+imp.from_+"]}, [only: ["+ imp.name +": "+str(imp.arity)+"]]]}\
+                       "
+                   )
+        else:
+            raise "Should not get here"
 
+        if len(import_commands) == 1:
+            return import_commands[0]
+
+        return "{:__block__, [], [" + ''.join(import_commands) + "]}"

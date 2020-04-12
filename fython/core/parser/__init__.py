@@ -25,7 +25,7 @@ class Parser:
         if self.tok_index >= 0 and self.tok_index < len(self.tokens):
             self.current_tok = self.tokens[self.tok_index]
 
-    def get_next_token(self):
+    def get_next_token(self, ignore_new_line=False):
         # this function doest modify any state
         # it is useful to get the next toke info when
         # you cant use advance
@@ -36,10 +36,23 @@ class Parser:
         if tok_index < len(self.tokens):
             current_tok = self.tokens[tok_index]
 
+            if current_tok.type == TT_NEWLINE and ignore_new_line:
+                tok_index += 1
+                current_tok = self.tokens[tok_index]
+
         return current_tok
 
     ###################
     def parse(self):
+        if self.tokens[0].type == TT_EOF:
+            # handle empty files
+            res = ParseResult()
+            return res.success(StatementsNode(
+                [],
+                self.current_tok.pos_start.copy(),
+                self.current_tok.pos_end.copy()
+            ))
+
         res = self.statements()
         if not res.error and self.current_tok.type != TT_EOF:
             return res.failure(InvalidSyntaxError(
@@ -163,26 +176,11 @@ class Parser:
                 self.advance()
             return res.success(CallNode(atom, arg_nodes))
 
-        elif self.current_tok.type in [TT_PIPE, TT_NEWLINE]:
-            new_lines_skiped = 0
-
-            while self.current_tok.type == TT_NEWLINE:
-                res.register_advancement()
-                self.advance()
-                new_lines_skiped += 1
-
-            if self.current_tok.type == TT_PIPE:
-                pipe_expr = res.register(self.pipe_expr(atom))
-                if res.error:
-                    return res
-
-                return res.success(pipe_expr)
-            else:
-                self.reverse(new_lines_skiped)
-
         return res.success(atom)
 
     def atom(self):
+        from fython.core.lexer.consts import LETTERS, LETTERS_DIGITS
+
         res = ParseResult()
         tok = self.current_tok
 
@@ -200,6 +198,11 @@ class Parser:
             res.register_advancement()
             self.advance()
             return res.success(VarAccessNode(tok))
+
+        elif tok.type == TT_ATOM:
+            res.register_advancement()
+            self.advance()
+            return res.success(AtomNode(tok))
 
         elif tok.type == TT_LPAREN:
             res.register_advancement()
@@ -229,6 +232,12 @@ class Parser:
 
         elif tok.type == TT_LSQUARE:
             list_expr = res.register(self.list_expr())
+            if res.error:
+                return res
+            return res.success(list_expr)
+
+        elif tok.type == TT_LCURLY:
+            list_expr = res.register(self.map_expr())
             if res.error:
                 return res
             return res.success(list_expr)
@@ -300,28 +309,25 @@ class Parser:
             res.register_advancement()
             self.advance()
 
+        first_node = self.current_tok
+
         statement = res.register(self.statement())
         if res.error: return res
         statements.append(statement)
 
-        more_statements = True
+        more_statements = False
 
         while True:
-            prev_tok_ident = self.tokens[self.tok_index - 1].ident if self.tok_index > 0 else 0
-
-            newline_count = 0
-
-            while self.current_tok.type == TT_NEWLINE and self.current_tok.ident >= prev_tok_ident:
+            while self.current_tok.type == TT_NEWLINE:
                 res.register_advancement()
                 self.advance()
-                newline_count += 1
 
-            if newline_count == 0 and \
-                    (self.get_next_token() != self.current_tok and not self.get_next_token().ident != self.current_tok.ident):
-                more_statements = False
+            if self.current_tok.ident >= first_node.ident:
+                more_statements = True
 
-            if not more_statements or self.get_next_token().type == TT_EOF:
+            if not more_statements or self.current_tok.type == TT_EOF:
                 break
+
             statement = res.try_register(self.statement())
 
             if not statement:
@@ -345,6 +351,14 @@ class Parser:
             res.register_advancement()
             self.advance()
 
+        if self.current_tok.matches(TT_KEYWORD, 'import') or \
+            self.current_tok.matches(TT_KEYWORD, 'from'):
+
+            expr = res.register(self.make_import())
+            if res.error:
+                return res
+            return res.success(expr)
+
         if self.current_tok.matches(TT_KEYWORD, 'return'):
             res.register_advancement()
             self.advance()
@@ -364,7 +378,7 @@ class Parser:
 
         if res.error:
             return res.failure(InvalidSyntaxError(
-                self.current_tok.pos_start, self.current_tok.pos_end,
+                self.current_tok.pos_start.copy(), self.current_tok.pos_end.copy(),
                 "Expected return, int, float, variable, 'not', '+', '-', '(' or '['"
             ))
 
@@ -404,6 +418,23 @@ class Parser:
             if res.error:
                 return res
             return res.success(node)
+
+        if self.current_tok.type in [TT_PIPE, TT_NEWLINE]:
+            new_lines_skiped = 0
+
+            while self.current_tok.type == TT_NEWLINE:
+                res.register_advancement()
+                self.advance()
+                new_lines_skiped += 1
+
+            if self.current_tok.type == TT_PIPE:
+                pipe_expr = res.register(self.pipe_expr(node))
+                if res.error:
+                    return res
+
+                return res.success(pipe_expr)
+            else:
+                self.reverse(new_lines_skiped)
 
         if res.error:
             return res.failure(InvalidSyntaxError(
@@ -512,9 +543,6 @@ class Parser:
         body = res.register(self.statements())
         if res.error: return res
 
-        res.register_advancement()
-        self.advance()
-
         return res.success(FuncDefNode(
             var_name_tok,
             arg_name_toks,
@@ -536,6 +564,7 @@ class Parser:
         self.advance()
 
         right_node = res.register(self.expr())
+
         if res.error:
             return res.failure(InvalidSyntaxError(
             pos_start, self.current_tok.pos_end,
@@ -549,3 +578,258 @@ class Parser:
             self.current_tok.pos_start.copy()
         ))
 
+    def map_expr(self):
+        res = ParseResult()
+        element_nodes = []
+        pos_start = self.current_tok.pos_start.copy()
+
+        if self.current_tok.type != TT_LCURLY:
+            return res.failure(InvalidSyntaxError(
+                self.current_tok.pos_start, self.current_tok.pos_end,
+                "Expected '{'"
+            ))
+
+        res.register_advancement()
+        self.advance()
+
+        while self.current_tok.type == TT_NEWLINE:
+            res.register_advancement()
+            self.advance()
+
+        pairs_list = []
+
+        if self.current_tok.type != TT_RCURLY:
+            def get_key_and_value_pair():
+                while self.current_tok.type == TT_NEWLINE:
+                    res.register_advancement()
+                    self.advance()
+
+                key = res.register(self.expr())
+                if res.error:
+                    return None, None, res
+
+                if self.current_tok.type != TT_DO:
+                    return None, None, res.failure(InvalidSyntaxError(
+                        self.current_tok.pos_start, self.current_tok.pos_end,
+                        "Expected ':'"
+                    ))
+
+                res.register_advancement()
+                self.advance()
+
+                value = res.register(self.expr())
+                if res.error:
+                    return None, None, res
+
+                return key, value, None
+
+            key, value, error = get_key_and_value_pair()
+
+            if error:
+                return error
+
+            pairs_list.append((key, value))
+
+            # Duplicated code from above
+            while self.current_tok.type == TT_COMMA:
+                res.register_advancement()
+                self.advance()
+
+                while self.current_tok.type == TT_NEWLINE:
+                    res.register_advancement()
+                    self.advance()
+
+                # to support comma after the last value in map
+                if self.current_tok.type == TT_RCURLY:
+                    break
+
+                key, value, error = get_key_and_value_pair()
+
+                if error:
+                    return error
+
+                pairs_list.append((key, value))
+
+        while self.current_tok.type == TT_NEWLINE:
+            res.register_advancement()
+            self.advance()
+
+        res.register_advancement()
+        self.advance()
+
+        return res.success(MapNode(
+            pairs_list, pos_start, self.current_tok.pos_end.copy()
+        ))
+
+    def make_import(self):
+        res = ParseResult()
+        pos_start = self.current_tok.pos_start.copy()
+
+        def resolve_module(from_=None, check_arity=True):
+            if self.current_tok.type != TT_IDENTIFIER:
+                return None, res.failure(InvalidSyntaxError(
+                    pos_start, self.current_tok.pos_end,
+                    "Expected a module name"
+                ))
+
+            module_name = self.current_tok.value
+            alias = None
+
+            res.register_advancement()
+            self.advance()
+
+            arity = None
+
+            if check_arity:
+                if self.current_tok.type != TT_DIV:
+                    return None, res.failure(InvalidSyntaxError(
+                        pos_start, self.current_tok.pos_end,
+                        "Expected / with the arity number"
+                    ))
+
+                res.register_advancement()
+                self.advance()
+
+                if self.current_tok.type != TT_INT:
+                    return None, res.failure(InvalidSyntaxError(
+                        pos_start, self.current_tok.pos_end,
+                        "Expected arity number of the function to be imported"
+                    ))
+
+                arity = self.current_tok.value
+
+            res.register_advancement()
+            self.advance()
+
+            if self.current_tok.matches(TT_KEYWORD, 'as'):
+                res.register_advancement()
+                self.advance()
+
+                if self.current_tok.type != TT_IDENTIFIER:
+                    return None, res.failure(InvalidSyntaxError(
+                        pos_start, self.current_tok.pos_end,
+                        "Expected a module name"
+                    ))
+
+                alias = self.current_tok.value
+
+                res.register_advancement()
+                self.advance()
+
+            return ImportNode.gen_import(
+                name=module_name,
+                alias=alias,
+                arity=arity,
+                from_=from_
+            ), None
+
+        if self.current_tok.matches(TT_KEYWORD, "import"):
+            # import foo
+            # import foo, poo
+            # import foo as oii, foo2 as 33
+
+            res.register_advancement()
+            self.advance()
+
+            if self.current_tok.type != TT_IDENTIFIER:
+                return res.failure(InvalidSyntaxError(
+                    pos_start, self.current_tok.pos_end,
+                    "Expected a module name"
+                ))
+
+            modules = []
+
+            module, error = resolve_module(check_arity=False)
+            if error:
+                return res
+
+            modules.append(module)
+
+            if self.current_tok.type == TT_NEWLINE:
+                pass
+            elif self.current_tok.type == TT_COMMA:
+                while self.current_tok.type == TT_COMMA:
+                    res.register_advancement()
+                    self.advance()
+                    module, error = resolve_module(check_arity=False)
+                    if error:
+                        return res
+                    modules.append(module)
+
+                if self.current_tok.type != TT_NEWLINE:
+                    return res.failure(InvalidSyntaxError(
+                        pos_start, self.current_tok.pos_start.copy(),
+                        "Expected ',' or new line"
+                    ))
+            else:
+                return res.failure(InvalidSyntaxError(
+                    self.current_tok.pos_start.copy(), self.current_tok.pos_end.copy(),
+                    "Expected ',' or new line"
+                ))
+
+            return res.success(ImportNode(
+                modules, 'import', pos_start, self.current_tok.pos_end.copy()
+            ))
+        elif self.current_tok.matches(TT_KEYWORD, 'from'):
+            # from Foo import aaa
+            # from Foo import aaa as oii, bbb
+
+            res.register_advancement()
+            self.advance()
+
+            if self.current_tok.type != TT_IDENTIFIER:
+                return res.failure(InvalidSyntaxError(
+                    pos_start, self.current_tok.pos_end,
+                    "Expected a module name"
+                ))
+
+            _from_module = self.current_tok.value
+
+            res.register_advancement()
+            self.advance()
+
+            if not self.current_tok.matches(TT_KEYWORD, 'import'):
+                return res.failure(InvalidSyntaxError(
+                    pos_start, self.current_tok.pos_end,
+                    "Expected 'import'"
+                ))
+
+            res.register_advancement()
+            self.advance()
+
+            modules_or_functions = []
+
+            m_or_f, error = resolve_module(_from_module, check_arity=True)
+            if error:
+                return res
+
+            modules_or_functions.append(m_or_f)
+
+            if self.current_tok.type == TT_NEWLINE:
+                pass
+            elif self.current_tok.type == TT_COMMA:
+                while self.current_tok.type == TT_COMMA:
+                    res.register_advancement()
+                    self.advance()
+                    module, error = resolve_module(_from_module, check_arity=True)
+                    if error:
+                        return res
+                    modules_or_functions.append(module)
+
+                if self.current_tok.type != TT_NEWLINE:
+                    return res.failure(InvalidSyntaxError(
+                        pos_start, self.current_tok.pos_start.copy(),
+                        "Expected ',' or new line"
+                    ))
+
+            return res.success(ImportNode(
+                modules_or_functions,
+                'from',
+                pos_start,
+                self.current_tok.pos_end.copy()
+            ))
+        else:
+            return res.failure(InvalidSyntaxError(
+                pos_start, self.current_tok.pos_start.copy(),
+                "Expected 'import' or 'from'"
+            ))

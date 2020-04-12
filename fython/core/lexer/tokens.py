@@ -2,6 +2,7 @@ TT_INT              = 'INT'
 TT_STRING           = 'STRING'
 TT_KEYWORD          = 'KEYWORD'
 TT_IDENTIFIER       = 'IDENTIFIER'
+TT_ATOM             = 'TT_ATOM'
 TT_FLOAT            = "FLOAT"
 TT_PLUS             = 'PLUS'
 TT_MINUS            = "MINUS"
@@ -21,11 +22,16 @@ TT_LPAREN           = "LPAREN"
 TT_RPAREN           = "RPAREN"
 TT_LSQUARE          = "LSQUARE"
 TT_RSQUARE          = "RSQUARE"
+TT_LCURLY           = "LCURLY"
+TT_RCURLY           = "RCURLY"
 TT_NEWLINE          = 'NEWLINE'
 TT_PIPE             = 'PIPE'
 TT_EOF              = 'EOF'
 
 KEYWORDS = [
+    'import',
+    'from',
+    'as',
     'and',
     'or',
     'not',

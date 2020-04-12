@@ -20,10 +20,10 @@ class Lexer:
         tokens = []
 
         while self.current_char != None:
-            if self.current_char == ' ' and (len(tokens) and tokens[-1].type == TT_NEWLINE):
+            if self.current_char == ' ' and self.pos.col == 0:
                 error = self.make_ident()
                 if error:
-                    return error
+                    return [], error
             elif self.current_char in ';\n':
                 self.current_ident_level = max(0, self.current_ident_level - 4)
                 tokens.append(Token(TT_NEWLINE, self.current_ident_level, pos_start=self.pos))
@@ -31,8 +31,10 @@ class Lexer:
             elif self.current_char in ' \t':
                 self.advance()
             elif self.current_char == ':':
-                tokens.append(Token(TT_DO, self.current_ident_level, pos_start=self.pos))
-                self.advance()
+                tok, error = self.make_do_or_atom()
+                if error:
+                    return [], error
+                tokens.append(tok)
             elif self.current_char == '#':
                 self.skip_comment()
             elif self.current_char in DIGISTS:
@@ -63,6 +65,12 @@ class Lexer:
                 self.advance()
             elif self.current_char == ']':
                 tokens.append(Token(TT_RSQUARE, self.current_ident_level, pos_start=self.pos))
+                self.advance()
+            elif self.current_char == '{':
+                tokens.append(Token(TT_LCURLY, self.current_ident_level, pos_start=self.pos))
+                self.advance()
+            elif self.current_char == '}':
+                tokens.append(Token(TT_RCURLY, self.current_ident_level, pos_start=self.pos))
                 self.advance()
             elif self.current_char == '!':
                 tok, error = self.make_not_equals()
@@ -99,9 +107,15 @@ class Lexer:
         total_spaces = 0
         pos_start = self.pos.copy()
 
-        while self.current_char == ' ':
+        while self.current_char == '\n':
+            self.advance()
+
+        while self.current_char in ' ':
             total_spaces += 1
             self.advance()
+            while self.current_char == '\n':
+                total_spaces = 0
+                self.advance()
 
         if total_spaces == 1:
             total_spaces = 0
@@ -135,7 +149,7 @@ class Lexer:
             escape_character = False
 
         self.advance()
-        return Token(TT_STRING, self.current_ident_level, string, pos_start, self.pos)
+        return Token(TT_STRING, self.current_ident_level, string, pos_start, self.pos.copy())
 
     def make_number(self):
         num_str = ''
@@ -152,20 +166,47 @@ class Lexer:
             self.advance()
 
         if dot_count == 0:
-            return Token(TT_INT, self.current_ident_level, int(num_str), pos_start, self.pos)
+            return Token(TT_INT, self.current_ident_level, int(num_str), pos_start, self.pos.copy())
         else:
-            return Token(TT_FLOAT, self.current_ident_level, float(num_str), pos_start, self.pos)
+            return Token(TT_FLOAT, self.current_ident_level, float(num_str), pos_start, self.pos.copy())
+
+    def make_do_or_atom(self):
+        pos_start = self.pos.copy()
+        self.advance()
+
+        if self.current_char in LETTERS:
+            # its a atom
+            atom = ''
+            while self.current_char is not None and self.current_char in LETTERS_DIGITS:
+                atom += self.current_char
+                self.advance()
+
+            return Token(
+                TT_ATOM,
+                self.current_ident_level,
+                value=atom,
+                pos_start=pos_start,
+                pos_end=self.pos.copy()
+            ), None
+
+        elif self.current_char is None or self.current_char in '\n; ':
+            return Token(TT_DO, self.current_ident_level, pos_start=self.pos), None
+        else:
+            return None, ExpectedCharError(
+                pos_start,
+                self.pos, "expected letters or digits (to create an atom), new line or space after ':'"
+            )
 
     def make_identifier(self):
         id_str = ''
         pos_start = self.pos.copy()
 
-        while self.current_char != None and self.current_char in LETTERS_DIGITS + '_':
+        while self.current_char != None and self.current_char in LETTERS_DIGITS + '_.':
             id_str += self.current_char
             self.advance()
 
         tok_type = TT_KEYWORD if id_str in KEYWORDS else TT_IDENTIFIER
-        return Token(tok_type, self.current_ident_level, id_str, pos_start, self.pos)
+        return Token(tok_type, self.current_ident_level, id_str, pos_start, self.pos.copy())
 
     def make_mul_or_power(self):
         token_type = TT_MUL
@@ -184,7 +225,7 @@ class Lexer:
 
         if self.current_char == '=':
             self.advance()
-            return Token(TT_NE, self.current_ident_level, pos_start=pos_start, pos_end=self.pos), None
+            return Token(TT_NE, self.current_ident_level, pos_start=pos_start, pos_end=self.pos.copy()), None
 
         self.advance()
         return None, ExpectedCharError(pos_start, self.pos, "'=' (after '!')")
@@ -198,7 +239,7 @@ class Lexer:
             self.advance()
             toke_type = TT_EE
 
-        return Token(toke_type, self.current_ident_level, pos_start=pos_start, pos_end=self.pos)
+        return Token(toke_type, self.current_ident_level, pos_start=pos_start, pos_end=self.pos.copy())
 
     def make_less_than(self):
         toke_type = TT_LT
@@ -209,7 +250,7 @@ class Lexer:
             self.advance()
             toke_type = TT_LTE
 
-        return Token(toke_type, self.current_ident_level, pos_start=pos_start, pos_end=self.pos)
+        return Token(toke_type, self.current_ident_level, pos_start=pos_start, pos_end=self.pos.copy())
 
     def make_greater_than(self):
         toke_type = TT_GT
@@ -220,14 +261,12 @@ class Lexer:
             self.advance()
             toke_type = TT_GTE
 
-        return Token(toke_type, self.current_ident_level, pos_start=pos_start, pos_end=self.pos)
+        return Token(toke_type, self.current_ident_level, pos_start=pos_start, pos_end=self.pos.copy())
 
     def skip_comment(self):
-        # TODO fixx
-
         self.advance()
 
-        while self.current_char != '\n' and not self.pos.col == len(self.text) - 1:
+        while self.current_char != '\n':
             self.advance()
 
         self.advance()
@@ -238,7 +277,7 @@ class Lexer:
 
         if self.current_char == '>':
             self.advance()
-            return Token(TT_PIPE, self.current_ident_level, pos_start=pos_start, pos_end=self.pos), None
+            return Token(TT_PIPE, self.current_ident_level, pos_start=pos_start, pos_end=self.pos.copy()), None
 
         self.advance()
         return None, ExpectedCharError(pos_start, self.pos, "'>' after '|'")

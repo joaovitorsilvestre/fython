@@ -1,6 +1,7 @@
 import os
 
 from fython.compiler.elixir_nodes import EModule
+from fython.compiler.integrity_check import IntegrityChecks
 
 
 class File:
@@ -26,16 +27,19 @@ class File:
             self.error = error
             return
 
-        self.compiled = str(EModule(self.name, ast))
+        check = IntegrityChecks(ast).validate()
+        if check.error:
+            self.error = check.error
+            return
+
+        self.compiled = str(EModule(self.name, check.node))
 
 
 class Compiler:
     def __init__(self, folder):
         self.folder = folder
-        self.project_structured = {
-            "name": self.folder.split('/')[-1],
-            "files": []
-        }
+        self.project_name = self.folder.split('/')[-1]
+        self.files = []
 
     def read_project(self):
         for root, subdirs, files in os.walk(self.folder):
@@ -48,7 +52,7 @@ class Compiler:
             for filename in files:
                 file_path = os.path.join(root, filename)
 
-                self.project_structured['files'].append(
+                self.files.append(
                     File(filename, None, file_path)
                 )
 
@@ -56,10 +60,20 @@ class Compiler:
         compiled = []
 
         self.read_project()
-        for file in self.project_structured['files']:
+        for file in self.files:
             compiled.append(file.compile())
 
-        return self.project_structured['files']
+        return self.files
+
+    def merge_compiled(self):
+        assert all(i.compiled for i in self.files), " Files no compiled"
+
+        if len(self.files) == 1:
+            return self.files[0].compiled
+        else:
+            compiled = (i.compiled for i in self.files)
+            return "{:__block__, [], [" + ','.join(compiled) + "]}"
+
 
 
 def execute_in_elixir(compiled: str):
@@ -77,15 +91,22 @@ def execute_in_elixir(compiled: str):
         os.remove('/tmp/compiled_fython')
 
 
-if __name__ == '__main__':
+def run():
     c = Compiler('example_project')
     c.compile()
 
-    if c.project_structured['files'][0].error:
-        print(c.project_structured['files'][0].error.as_string())
-    else:
-        print('compiled::')
-        print(c.project_structured['files'][0].compiled)
-        print('elixir result:')
-        execute_in_elixir(c.project_structured['files'][0].compiled)
+    for i in c.files:
+        if i.error:
+            print(i.error.as_string())
+            return
 
+    compiled = c.merge_compiled()
+
+    print('compiled::')
+    print(compiled)
+    print('elixir result:')
+    execute_in_elixir(compiled)
+
+
+if __name__ == '__main__':
+    run()
