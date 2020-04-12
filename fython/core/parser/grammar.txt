@@ -16,6 +16,7 @@ import-expr : import IDENTIFIER (COMMA IDENTIFIER (as IDENTIFIER)?)*
 expr        : IDENTIFIER EQ expr
             : comp-expr ((KEYWORD:and|KEYWORD:or) comp-expr)*
             : if-expr
+            : pipe-expr
 
 comp-expr   : KEYWORD:not comp-expr
             : arith-expr ((EE|LT|GT|LTE|GTE) arith-expr)*
@@ -29,8 +30,7 @@ factor      : (PLUS|MINUS) factor
 
 power       : call(POW factor)*
 
-call        : pipe-expr
-            : atom (LPAREN (expr (COMMA expr)*)? RPAREN)?
+call        : atom (LPAREN (expr (COMMA expr)*)? RPAREN)?
 
 atom        : INT|FLOAT|IDENTIFIER|STRING|ATOM
             : LPAREN expr RPAREN

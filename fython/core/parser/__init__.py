@@ -176,23 +176,6 @@ class Parser:
                 self.advance()
             return res.success(CallNode(atom, arg_nodes))
 
-        elif self.current_tok.type in [TT_PIPE, TT_NEWLINE]:
-            new_lines_skiped = 0
-
-            while self.current_tok.type == TT_NEWLINE:
-                res.register_advancement()
-                self.advance()
-                new_lines_skiped += 1
-
-            if self.current_tok.type == TT_PIPE:
-                pipe_expr = res.register(self.pipe_expr(atom))
-                if res.error:
-                    return res
-
-                return res.success(pipe_expr)
-            else:
-                self.reverse(new_lines_skiped)
-
         return res.success(atom)
 
     def atom(self):
@@ -435,6 +418,23 @@ class Parser:
             if res.error:
                 return res
             return res.success(node)
+
+        if self.current_tok.type in [TT_PIPE, TT_NEWLINE]:
+            new_lines_skiped = 0
+
+            while self.current_tok.type == TT_NEWLINE:
+                res.register_advancement()
+                self.advance()
+                new_lines_skiped += 1
+
+            if self.current_tok.type == TT_PIPE:
+                pipe_expr = res.register(self.pipe_expr(node))
+                if res.error:
+                    return res
+
+                return res.success(pipe_expr)
+            else:
+                self.reverse(new_lines_skiped)
 
         if res.error:
             return res.failure(InvalidSyntaxError(
