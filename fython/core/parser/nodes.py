@@ -149,6 +149,9 @@ class CallNode:
     def get_name(self):
         return f'{self.node_to_call.var_name_tok.value}/{self.arity}'
 
+    def __repr__(self):
+        return f"call: {self.get_name()}"
+
 
 class ReturnNode:
     def __init__(self, node_to_return, pos_start, pos_end):

@@ -1,5 +1,8 @@
 import Map
 
+def self(a):
+    a
+
 def calculate(a, b, operation):
     operations = {
         "+": a + b,

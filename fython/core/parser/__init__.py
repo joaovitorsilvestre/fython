@@ -326,37 +326,25 @@ class Parser:
             res.register_advancement()
             self.advance()
 
+        first_node = self.current_tok
+
         statement = res.register(self.statement())
         if res.error: return res
         statements.append(statement)
 
-        more_statements = True
+        more_statements = False
 
         while True:
-            def prev_token_ident():
-                if self.tok_index == 0:
-                    return 0
-                tok = next(
-                    (i for i in self.tokens[:self.tok_index][::-1] if i.type != TT_NEWLINE),
-                    None
-                )
-                return tok.ident if tok else 0
-
-            newline_count = 0
-
-            while self.current_tok.type == TT_NEWLINE and self.current_tok.ident >= prev_token_ident():
+            while self.current_tok.type == TT_NEWLINE:
                 res.register_advancement()
                 self.advance()
-                newline_count += 1
 
-            if newline_count == 0 and (
-                self.get_next_token() != self.current_tok and
-                not self.get_next_token(True).ident != self.current_tok.ident
-            ):
-                more_statements = False
+            if self.current_tok.ident >= first_node.ident:
+                more_statements = True
 
-            if not more_statements or self.get_next_token().type == TT_EOF:
+            if not more_statements or self.current_tok.type == TT_EOF:
                 break
+
             statement = res.try_register(self.statement())
 
             if not statement:
@@ -554,9 +542,6 @@ class Parser:
 
         body = res.register(self.statements())
         if res.error: return res
-
-        res.register_advancement()
-        self.advance()
 
         return res.success(FuncDefNode(
             var_name_tok,
