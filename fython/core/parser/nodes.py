@@ -135,7 +135,7 @@ class FuncDefNode:
 
 
 class CallNode:
-    def __init__(self, node_to_call, arg_nodes):
+    def __init__(self, node_to_call: VarAccessNode, arg_nodes):
         self.node_to_call = node_to_call
         self.arg_nodes = arg_nodes
         self.arity = len(arg_nodes)

@@ -564,6 +564,25 @@ class Parser:
         self.advance()
 
         right_node = res.register(self.expr())
+
+        # The job of this next block of code is to fix arity of all call functions
+
+        if isinstance(right_node, VarAccessNode):
+            # handle the case where you pass a function without parenteses. e.g:
+            # foo |> bar
+            # we must make bar a call node with correct arity
+            right_node = CallNode(
+                right_node,
+                arg_nodes=[left_node]
+            )
+        elif isinstance(right_node, PipeNode) and isinstance(right_node.left_node, VarAccessNode):
+            right_node.left_node = CallNode(
+                right_node.left_node,
+                arg_nodes=[left_node]
+            )
+        elif isinstance(right_node, CallNode):
+            right_node.arg_nodes = [left_node, *right_node.arg_nodes]
+
         if res.error:
             return res.failure(InvalidSyntaxError(
             pos_start, self.current_tok.pos_end,

@@ -13,9 +13,7 @@ def calculate(a, b, operation):
 
     # aqui nós retornamos o role a =c {{} [] 09090321
     operations
-        |> Map.fetch(operation)
-        |> Map.fetch(operation)
-        |> Map.fetch(operation)
-        |> Map.fetch(operation)
-        |> Map.fetch(operation)
-        |> Map.fetch(operation)
+        |> Map.get(operation)
+        |> self
+        |> self
+        |> self

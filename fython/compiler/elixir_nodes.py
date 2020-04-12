@@ -174,12 +174,12 @@ class Conversor:
 
             current_node = node.right_node
             while isinstance(current_node, PipeNode):
-                nodes_order = [*nodes_order, current_node.left_node, current_node.right_node]
+                nodes_order = [*nodes_order, current_node.left_node]
                 current_node = current_node.right_node
 
             last = None
             for left, right in Conversor.pairwise(nodes_order):
-                if right is not None:
+                if last is None:
                     last = build_one_pipe(left, right)
                 else:
                     last_one = self.convert(left)
