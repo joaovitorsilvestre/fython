@@ -20,7 +20,7 @@ class Lexer:
         tokens = []
 
         while self.current_char != None:
-            if self.current_char == ' ' and (len(tokens) and tokens[-1].type == TT_NEWLINE):
+            if self.current_char == ' ' and self.pos.col == 0:
                 error = self.make_ident()
                 if error:
                     return [], error
@@ -107,9 +107,15 @@ class Lexer:
         total_spaces = 0
         pos_start = self.pos.copy()
 
-        while self.current_char == ' ':
+        while self.current_char == '\n':
+            self.advance()
+
+        while self.current_char in ' ':
             total_spaces += 1
             self.advance()
+            while self.current_char == '\n':
+                total_spaces = 0
+                self.advance()
 
         if total_spaces == 1:
             total_spaces = 0

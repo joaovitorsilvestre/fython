@@ -225,4 +225,3 @@ class Conversor:
             return import_commands[0]
 
         return "{:__block__, [], [" + ''.join(import_commands) + "]}"
-

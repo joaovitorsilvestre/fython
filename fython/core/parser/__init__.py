@@ -25,7 +25,7 @@ class Parser:
         if self.tok_index >= 0 and self.tok_index < len(self.tokens):
             self.current_tok = self.tokens[self.tok_index]
 
-    def get_next_token(self):
+    def get_next_token(self, ignore_new_line=False):
         # this function doest modify any state
         # it is useful to get the next toke info when
         # you cant use advance
@@ -36,10 +36,23 @@ class Parser:
         if tok_index < len(self.tokens):
             current_tok = self.tokens[tok_index]
 
+            if current_tok.type == TT_NEWLINE and ignore_new_line:
+                tok_index += 1
+                current_tok = self.tokens[tok_index]
+
         return current_tok
 
     ###################
     def parse(self):
+        if self.tokens[0].type == TT_EOF:
+            # handle empty files
+            res = ParseResult()
+            return res.success(StatementsNode(
+                [],
+                self.current_tok.pos_start.copy(),
+                self.current_tok.pos_end.copy()
+            ))
+
         res = self.statements()
         if not res.error and self.current_tok.type != TT_EOF:
             return res.failure(InvalidSyntaxError(
@@ -320,17 +333,26 @@ class Parser:
         more_statements = True
 
         while True:
-            prev_tok_ident = self.tokens[self.tok_index - 1].ident if self.tok_index > 0 else 0
+            def prev_token_ident():
+                if self.tok_index == 0:
+                    return 0
+                tok = next(
+                    (i for i in self.tokens[:self.tok_index][::-1] if i.type != TT_NEWLINE),
+                    None
+                )
+                return tok.ident if tok else 0
 
             newline_count = 0
 
-            while self.current_tok.type == TT_NEWLINE and self.current_tok.ident >= prev_tok_ident:
+            while self.current_tok.type == TT_NEWLINE and self.current_tok.ident >= prev_token_ident():
                 res.register_advancement()
                 self.advance()
                 newline_count += 1
 
-            if newline_count == 0 and \
-                    (self.get_next_token() != self.current_tok and not self.get_next_token().ident != self.current_tok.ident):
+            if newline_count == 0 and (
+                self.get_next_token() != self.current_tok and
+                not self.get_next_token(True).ident != self.current_tok.ident
+            ):
                 more_statements = False
 
             if not more_statements or self.get_next_token().type == TT_EOF:
@@ -584,10 +606,18 @@ class Parser:
         res.register_advancement()
         self.advance()
 
+        while self.current_tok.type == TT_NEWLINE:
+            res.register_advancement()
+            self.advance()
+
         pairs_list = []
 
         if self.current_tok.type != TT_RCURLY:
             def get_key_and_value_pair():
+                while self.current_tok.type == TT_NEWLINE:
+                    res.register_advancement()
+                    self.advance()
+
                 key = res.register(self.expr())
                 if res.error:
                     return None, None, res
@@ -619,12 +649,24 @@ class Parser:
                 res.register_advancement()
                 self.advance()
 
+                while self.current_tok.type == TT_NEWLINE:
+                    res.register_advancement()
+                    self.advance()
+
+                # to support comma after the last value in map
+                if self.current_tok.type == TT_RCURLY:
+                    break
+
                 key, value, error = get_key_and_value_pair()
 
                 if error:
                     return error
 
                 pairs_list.append((key, value))
+
+        while self.current_tok.type == TT_NEWLINE:
+            res.register_advancement()
+            self.advance()
 
         res.register_advancement()
         self.advance()
