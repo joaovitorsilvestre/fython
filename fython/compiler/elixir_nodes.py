@@ -177,6 +177,9 @@ class Conversor:
                 nodes_order = [*nodes_order, current_node.left_node]
                 current_node = current_node.right_node
 
+            if not isinstance(current_node, PipeNode):
+                nodes_order = [*nodes_order, current_node]
+
             last = None
             for left, right in Conversor.pairwise(nodes_order):
                 if last is None:
