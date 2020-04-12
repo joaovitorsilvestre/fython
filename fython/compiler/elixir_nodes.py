@@ -2,7 +2,7 @@ from fython.core.lexer.tokens import TT_POW, TT_PLUS, TT_MINUS, TT_MUL, TT_DIV, 
     TT_KEYWORD
 from fython.core.parser import NumberNode, ListNode, BinOpNode, \
     UnaryOpNode, VarAccessNode, VarAssignNode, StatementsNode, IfNode, FuncDefNode, CallNode, StringNode, PipeNode, \
-    MapNode, AtomNode, ImportNode
+    MapNode, AtomNode, ImportNode, InlineDefFunctionNode
 
 
 class ElixirAST:
@@ -144,6 +144,25 @@ class Conversor:
            {:" + name +", " + line + ", [" + ', '.join(arguments) + "]},\
            [do: " + self.convert(statements_node) + "]\
          ]}"
+
+    def convert_InlineDefFunctionNode(self, node: InlineDefFunctionNode):
+        params = []
+        for p in node.arg_name_toks:
+            params.append("{:"+p.value+", [context: Elixir, import: IEx.Helpers], Elixir}")
+
+        if hasattr(node, "var_name_tok"):
+            func_def = "[{:aa, [], [" + ','.join(params) + "]}]"
+        else:
+            func_def = params
+
+        return "{:fn, [],\
+                 [\
+                   {:->, [],\
+                    [\
+                      " + func_def + ",\
+                      " + self.convert(node.body_node) + "\
+                    ]}\
+                 ]}"
 
     def convert_CallNode(self, node: CallNode):
         arguments = "[" + ','.join([self.convert(i) for i in node.arg_nodes]) + ']'

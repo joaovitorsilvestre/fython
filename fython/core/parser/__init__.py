@@ -467,10 +467,12 @@ class Parser:
     def func_def(self):
         res = ParseResult()
 
+        inline_function = self.current_tok.ident > 0
+
         if not self.current_tok.matches(TT_KEYWORD, 'def'):
             return res.failure(InvalidSyntaxError(
                 self.current_tok.pos_start, self.current_tok.pos_end,
-                f"Expected 'FUN'"
+                f"Expected 'def'"
             ))
 
         res.register_advancement()
@@ -487,6 +489,7 @@ class Parser:
                 ))
         else:
             var_name_tok = None
+
             if self.current_tok.type != TT_LPAREN:
                 return res.failure(InvalidSyntaxError(
                     self.current_tok.pos_start, self.current_tok.pos_end,
@@ -543,7 +546,9 @@ class Parser:
         body = res.register(self.statements())
         if res.error: return res
 
-        return res.success(FuncDefNode(
+        func_type = InlineDefFunctionNode if inline_function else FuncDefNode
+
+        return res.success(func_type(
             var_name_tok,
             arg_name_toks,
             body,

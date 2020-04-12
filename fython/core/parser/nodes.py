@@ -134,6 +134,14 @@ class FuncDefNode:
         return f'{self.var_name_tok.var_name_tok.value}/{self.arity}'
 
 
+class InlineDefFunctionNode(FuncDefNode):
+    def __repr__(self):
+        return f"def inline func {self.var_name_tok.value}/{len(self.arg_name_toks)}"
+
+    def get_name(self):
+        return f'inline func {self.var_name_tok.var_name_tok.value}/{self.arity}'
+
+
 class CallNode:
     def __init__(self, node_to_call: VarAccessNode, arg_nodes):
         self.node_to_call = node_to_call
