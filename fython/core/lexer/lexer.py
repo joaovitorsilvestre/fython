@@ -156,12 +156,12 @@ class Lexer:
         dot_count = 0
         pos_start = self.pos.copy()
 
-        while self.current_char is not None and self.current_char in DIGISTS + '.':
+        while self.current_char is not None and self.current_char in DIGISTS + '._':
             if self.current_char == '.':
                 if dot_count == 1: break
                 dot_count += 1
                 num_str += '.'
-            else:
+            elif self.current_char != '_':
                 num_str += self.current_char
             self.advance()
 

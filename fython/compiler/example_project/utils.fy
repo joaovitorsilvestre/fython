@@ -8,6 +8,8 @@ def calculate(a, b, operation):
         "*": a * b
     }
 
+    a = 30_000
+
     list = [1, 2, 3, operations |> Map.get(operation)]
 
     # aqui nós retornamos o role a =c {{} [] 09090321
