@@ -2,7 +2,17 @@ from collections import namedtuple
 from typing import List, Tuple, Union
 
 
-class NumberNode:
+class Node:
+    def to_json(self):
+        return {
+            "NodeType": self.__class__.__name__,
+            "content": {
+                k: v for k, v in self.__dict__.items() if k not in ['to_json', 'gen_import']
+            }
+        }
+
+
+class NumberNode(Node):
     def __init__(self, tok):
         self.tok = tok
         self.pos_start = tok.pos_start
@@ -12,7 +22,7 @@ class NumberNode:
         return f'{self.tok}'
 
 
-class StringNode:
+class StringNode(Node):
     def __init__(self, tok):
         self.tok = tok
         self.pos_start = tok.pos_start
@@ -22,7 +32,7 @@ class StringNode:
         return f'{self.tok}'
 
 
-class VarAccessNode:
+class VarAccessNode(Node):
     def __init__(self, var_name_tok):
         self.var_name_tok = var_name_tok
         self.pos_start = var_name_tok.pos_start
@@ -32,7 +42,7 @@ class VarAccessNode:
         return f'{self.var_name_tok}'
 
 
-class AtomNode:
+class AtomNode(Node):
     def __init__(self, tok):
         self.tok = tok
         self.pos_start = tok.pos_start
@@ -42,7 +52,7 @@ class AtomNode:
         return f'atom:{self.tok.value}'
 
 
-class VarAssignNode:
+class VarAssignNode(Node):
     def __init__(self, var_name_tok, value_node):
         self.var_name_tok = var_name_tok
         self.value_node = value_node
@@ -53,7 +63,7 @@ class VarAssignNode:
         return f'(VAR_ASSIGN, ({self.var_name_tok}, {self.value_node})'
 
 
-class ListNode:
+class ListNode(Node):
     def __init__(self, element_nodes, pos_start, pos_end):
         self.element_nodes = element_nodes
         self.pos_start = pos_start
@@ -62,7 +72,8 @@ class ListNode:
     def __repr__(self):
         return f"[{', '.join(self.element_nodes)}]"
 
-class StatementsNode:
+
+class StatementsNode(Node):
     def __init__(self, statement_nodes, pos_start, pos_end):
         self.statement_nodes = statement_nodes
         self.pos_start = pos_start
@@ -72,7 +83,7 @@ class StatementsNode:
         return f"StatementsNode: {len(self.statement_nodes)} statemens"
 
 
-class BinOpNode:
+class BinOpNode(Node):
     def __init__(self, left_node, op_tok, right_node):
         self.left_node = left_node
         self.op_tok = op_tok
@@ -85,7 +96,7 @@ class BinOpNode:
         return f'({self.left_node}, {self.op_tok}, {self.right_node})'
 
 
-class UnaryOpNode:
+class UnaryOpNode(Node):
     def __init__(self, op_tok, node):
         self.op_tok = op_tok
         self.node = node
@@ -97,7 +108,7 @@ class UnaryOpNode:
         return f'({self.op_tok}, {self.node})'
 
 
-class IfNode:
+class IfNode(Node):
     def __init__(self, comp_expr, true_case, false_case):
         self.comp_expr = comp_expr
         self.true_case = true_case
@@ -110,7 +121,7 @@ class IfNode:
         return f"{self.true_case} if {self.comp_expr} else {self.false_case}"
 
 
-class FuncDefNode:
+class FuncDefNode(Node):
     def __init__(self, var_name_tok, arg_name_toks, body_node: StatementsNode, should_auto_return):
         self.var_name_tok = var_name_tok
         self.arg_name_toks = arg_name_toks
@@ -142,7 +153,7 @@ class LambdaNode(FuncDefNode):
         return f'inline func {self.var_name_tok.var_name_tok.value}/{self.arity}'
 
 
-class CallNode:
+class CallNode(Node):
     def __init__(self, node_to_call: VarAccessNode, arg_nodes):
         self.node_to_call = node_to_call
         self.arg_nodes = arg_nodes
@@ -161,7 +172,7 @@ class CallNode:
         return f"call: {self.get_name()}"
 
 
-class ReturnNode:
+class ReturnNode(Node):
     def __init__(self, node_to_return, pos_start, pos_end):
         self.node_to_return = node_to_return
 
@@ -169,7 +180,7 @@ class ReturnNode:
         self.pos_end = pos_end
 
 
-class PipeNode:
+class PipeNode(Node):
     def __init__(self, left_node, right_node, pos_start, pos_end):
         self.left_node = left_node
         self.right_node = right_node
@@ -180,7 +191,7 @@ class PipeNode:
         return f"{self.left_node} |> {self.right_node}"
 
 
-class MapNode:
+class MapNode(Node):
     def __init__(self, pairs_list: List[Tuple["AnyNode", "AnyNode"]], pos_start, pos_end):
         self.pairs_list = pairs_list
         self.pos_start = pos_start
@@ -190,7 +201,7 @@ class MapNode:
         return "{map}"
 
 
-class ImportNode:
+class ImportNode(Node):
     def __init__(self,
          imports_list: List[namedtuple],
          type: str,

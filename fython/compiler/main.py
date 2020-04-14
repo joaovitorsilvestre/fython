@@ -1,3 +1,4 @@
+import json
 import os
 import shutil
 from typing import List
@@ -30,6 +31,19 @@ class File:
         if error:
             self.error = error
             return
+
+        def to_json(x):
+            try:
+                return x.to_json()
+            except:
+                from fython.core.lexer.tokens import Token
+                from fython.core.lexer.position import Position
+                if isinstance(x, (Token, Position)):
+                    return {"NodeType": x.__class__.__name__, **x.__dict__}
+                return ""
+
+        with open('testnoline.json', 'w') as outfile:
+            json.dump(ast.__dict__, outfile, default=lambda x: to_json(x), indent=None)
 
         check = IntegrityChecks(ast).validate()
         if check.error:
