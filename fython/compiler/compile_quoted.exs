@@ -3,9 +3,6 @@ defmodule M do
     root = "/#{quoted_path |> Enum.slice(0..-2) |> Enum.join("/")}"
     quoted_path = "/#{Enum.join(quoted_path, "/")}"
 
-    IO.inspect(quoted_path)
-    IO.inspect(root)
-
     File.read(quoted_path)
       |> elem(1)
       |> Code.eval_string

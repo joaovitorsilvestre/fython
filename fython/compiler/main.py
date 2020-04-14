@@ -1,9 +1,11 @@
 import os
 import shutil
 from typing import List
-
+import pathlib
 from fython.compiler.elixir_nodes import EModule
 from fython.compiler.integrity_check import IntegrityChecks
+
+CURRENT_PATH = pathlib.Path(__file__).parent.absolute()
 
 
 class File:
@@ -78,7 +80,7 @@ class Compiler:
             return "{:__block__, [], [" + ','.join(compiled) + "]}"
 
 
-def run(project_path='example_project'):
+def run(project_path):
     project_name = project_path.split('/')[-1]
 
     c = Compiler(project_path)
@@ -89,7 +91,7 @@ def run(project_path='example_project'):
     except:
         pass
 
-    os.mkdir(f"{project_name}/compiled")
+    os.mkdir(f"{project_path}/compiled")
 
     for i in c.files:
         if i.error:
@@ -108,7 +110,9 @@ def run(project_path='example_project'):
 
     project_path = f"{project_path}/{project_name}.fyc".replace('/', ' ')
 
-    output = os.popen(f'elixir compile_quoted.exs {project_path}').read()
+    output = os.popen(f'elixir {CURRENT_PATH}/compile_quoted.exs {project_path}').read()
+
+    print(output)
 
     os.remove(quoted_name)
 
