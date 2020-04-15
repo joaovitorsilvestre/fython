@@ -32,21 +32,6 @@ class File:
             self.error = error
             return
 
-        def to_json(x):
-            try:
-                return x.to_json()
-            except:
-                from fython.core.lexer.tokens import Token
-                from fython.core.lexer.position import Position
-                if isinstance(x, Position):
-                    return {"NodeType": x.__class__.__name__, **{k: v for k, v in x.__dict__.items() if k != 'ftxt'}}
-                elif isinstance(x, Token):
-                    return {"NodeType": x.__class__.__name__, **x.__dict__}
-                return ""
-
-        with open('testnoline.json', 'w') as outfile:
-            json.dump(to_json(ast), outfile, default=lambda x: to_json(x), indent=None)
-
         check = IntegrityChecks(ast).validate()
         if check.error:
             self.error = check.error
