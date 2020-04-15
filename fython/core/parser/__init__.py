@@ -242,8 +242,13 @@ class Parser:
                 return res
             return res.success(list_expr)
 
-        elif tok.matches(TT_KEYWORD, 'def') or tok.matches(TT_KEYWORD, 'lambda'):
+        elif tok.matches(TT_KEYWORD, 'def'):
             func_def = res.register(self.func_def())
+            if res.error:
+                return res
+            return res.success(func_def)
+        elif tok.matches(TT_KEYWORD, 'lambda'):
+            func_def = res.register(self.lambda_def())
             if res.error:
                 return res
             return res.success(func_def)
@@ -300,7 +305,7 @@ class Parser:
     def arith_expr(self):
         return self.bin_op(self.term, (TT_PLUS, TT_MINUS))
 
-    def statements(self):
+    def statements(self, stop_if_no_more_statements=False):
         res = ParseResult()
         statements = []
         pos_start = self.current_tok.pos_start.copy()
@@ -325,6 +330,10 @@ class Parser:
             if self.current_tok.ident >= first_node.ident:
                 more_statements = True
 
+            if self.current_tok.type == TT_RPAREN:
+                # no more statements. Its like the end of a lamda inside Enum.map
+                more_statements = False
+
             if not more_statements or self.current_tok.type == TT_EOF:
                 break
 
@@ -333,6 +342,9 @@ class Parser:
             if not statement:
                 self.reverse(res.to_reverse_count)
                 more_statements = False
+
+                if stop_if_no_more_statements:
+                    break
                 continue
 
             statements.append(statement)
@@ -467,16 +479,13 @@ class Parser:
     def func_def(self):
         res = ParseResult()
 
-        if (not self.current_tok.matches(TT_KEYWORD, 'def')) and \
-           (not self.current_tok.matches(TT_KEYWORD, 'lambda')):
+        if not self.current_tok.matches(TT_KEYWORD, 'def'):
             return res.failure(InvalidSyntaxError(
                 self.current_tok.pos_start, self.current_tok.pos_end,
-                f"Expected 'def' or 'lambda'"
+                f"Expected 'def'"
             ))
 
-        lambda_function = self.current_tok.matches(TT_KEYWORD, 'lambda')
-
-        if not lambda_function and self.current_tok.ident != 0:
+        if self.current_tok.ident != 0:
             # if enters here, causes a infinite loop in some while loop
             print('Entered in a errors message that causes inifinite loop. You need to fix it.')
             return res.failure(InvalidSyntaxError(
@@ -488,12 +497,6 @@ class Parser:
         self.advance()
 
         if self.current_tok.type == TT_IDENTIFIER:
-            if lambda_function:
-                return res.failure(InvalidSyntaxError(
-                    self.current_tok.pos_start, self.current_tok.pos_end,
-                    f"Expected '('. Lambda functions cant have name."
-                ))
-
             var_name_tok = self.current_tok
             res.register_advancement()
             self.advance()
@@ -513,6 +516,7 @@ class Parser:
 
         res.register_advancement()
         self.advance()
+
         arg_name_toks = []
 
         if self.current_tok.type == TT_IDENTIFIER:
@@ -559,16 +563,97 @@ class Parser:
         self.advance()
 
         body = res.register(self.statements())
-        if res.error: return res
+        if res.error:
+            return res
 
-        func_type = LambdaNode if lambda_function else FuncDefNode
-
-        return res.success(func_type(
+        return res.success(FuncDefNode(
             var_name_tok,
             arg_name_toks,
             body,
             False
         ))
+
+    def lambda_def(self):
+        res = ParseResult()
+
+        if not self.current_tok.matches(TT_KEYWORD, 'lambda'):
+            return res.failure(InvalidSyntaxError(
+                self.current_tok.pos_start, self.current_tok.pos_end,
+                f"Expected 'lambda'"
+            ))
+
+        if self.current_tok.ident == 0:
+            return res.failure(InvalidSyntaxError(
+                self.current_tok.pos_start, self.current_tok.pos_end,
+                f"'lambda' are only allowed to be defined inside functions."
+            ))
+
+        res.register_advancement()
+        self.advance()
+
+        opened_parenteses = False
+        if self.current_tok.type == TT_LPAREN:
+            res.register_advancement()
+            self.advance()
+            opened_parenteses = True
+
+        arg_name_toks = []
+
+        if self.current_tok.type == TT_IDENTIFIER:
+            arg_name_toks.append(self.current_tok)
+            res.register_advancement()
+            self.advance()
+
+            while self.current_tok.type == TT_COMMA:
+                res.register_advancement()
+                self.advance()
+
+                if self.current_tok.type != TT_IDENTIFIER:
+                    return res.failure(InvalidSyntaxError(
+                        self.current_tok.pos_start, self.current_tok.pos_end,
+                        f"Expected identifier"
+                    ))
+
+                arg_name_toks.append(self.current_tok)
+                res.register_advancement()
+                self.advance()
+
+            if opened_parenteses and self.current_tok.type != TT_RPAREN:
+                return res.failure(InvalidSyntaxError(
+                    self.current_tok.pos_start, self.current_tok.pos_end,
+                    f"Expected ',' or ')'"
+                ))
+        elif opened_parenteses:
+            if self.current_tok.type != TT_RPAREN:
+                return res.failure(InvalidSyntaxError(
+                    self.current_tok.pos_start, self.current_tok.pos_end,
+                    f"Expected identifier or ')'"
+                ))
+
+        if opened_parenteses:
+            res.register_advancement()
+            self.advance()
+
+        if self.current_tok.type != TT_DO:
+            return res.failure(InvalidSyntaxError(
+                self.current_tok.pos_start, self.current_tok.pos_end,
+                f"Expected ':'"
+            ))
+
+        res.register_advancement()
+        self.advance()
+
+        body = res.register(self.statements())
+        if res.error:
+            return res
+
+        return res.success(LambdaNode(
+            None,
+            arg_name_toks,
+            body,
+            False
+        ))
+
 
     def pipe_expr(self, left_node):
         res = ParseResult()

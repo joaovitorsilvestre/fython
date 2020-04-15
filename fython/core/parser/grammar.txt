@@ -37,6 +37,7 @@ atom        : INT|FLOAT|IDENTIFIER|STRING|ATOM
             : list-expr
             : map-expr
             : func-def
+            : lambda-def
 
 list-expr   : LSQUARE (expr (COMMA expr)*)? RSQUARE
 
@@ -47,7 +48,9 @@ if-expr     : expr KEYWORD:if expr DO expr
 
 pipe-expr   : expr (PIPE expr)+
 
-func-def    : KEYWORD:def IDENTIFIER?
-              LPAREN (IDENTIFIER (COMMA IDENTIFIER)*)? RPAREN
-              (DO expr)
-            | (NEWLINE statements KEYWORD:end)
+func-def    : KEYWORD:def IDENTIFIER
+              LPAREN (IDENTIFIER (COMMA IDENTIFIER)*)? RPAREN DO
+              (NEWLINE statements)*
+
+lambda-def  : KEYWORD:lambda LPAREN? (IDENTIFIER (COMMA IDENTIFIER)*)? RPAREN?
+              (DO expr)|(NEWLINE statements)*

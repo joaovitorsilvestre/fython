@@ -132,4 +132,4 @@ def run(project_path):
 
 
 if __name__ == '__main__':
-    run('/home/joao/fython/fython/compiler/example_project')
+    run('/home/joao/fython/fython/compiler/bootstrap')
