@@ -201,8 +201,12 @@ class Conversor:
                 if last is None:
                     last = build_one_pipe(left, right)
                 else:
-                    last_one = self.convert(left)
-                    last = "{:|>, [context: Elixir, import: Kernel], [" + last + ", " + last_one + "]}"
+                    left = self.convert(left)
+                    last = "{:|>, [context: Elixir, import: Kernel], [" + last + ", " + left + "]}"
+                    if right:
+                        right = self.convert(right)
+                        last = "{:|>, [context: Elixir, import: Kernel], [" + last + ", " + right + "]}"
+
 
             return last
 

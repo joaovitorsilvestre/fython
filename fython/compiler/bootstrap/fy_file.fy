@@ -18,9 +18,7 @@ def get_all_fy_files_in_path(directory_path):
         |> Enum.map(lambda i:
             read_file_content(i)
         )
-        |> Enum.map(lambda i:
-            lexer_and_parse_file_content_in_python(i)
-        )
+        |> IO.inspect()
 
 
 def lexer_and_parse_file_content_in_python(file_content):
