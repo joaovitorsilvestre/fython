@@ -1,4 +1,5 @@
 import json
+import sys
 
 from fython.core.lexer.lexer import Lexer
 from fython.core.parser import Parser
@@ -40,4 +41,8 @@ def get_lexed_and_jsonified(file_path):
                 return {"NodeType": x.__class__.__name__, **x.__dict__}
             return ""
 
-    return json.dumps(to_json(ast), default=lambda x: to_json(x), indent=None)
+    return json.dumps(to_json(ast), default=lambda x: to_json(x), indent=2)
+
+
+if __name__ == '__main__':
+    print(get_lexed_and_jsonified(sys.argv[1]))

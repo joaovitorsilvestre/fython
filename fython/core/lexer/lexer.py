@@ -129,6 +129,9 @@ class Lexer:
     def make_string(self):
         string = ''
         pos_start = self.pos.copy()
+
+        string_cote_type = self.current_char
+
         escape_character = False
         self.advance()
 
@@ -137,7 +140,7 @@ class Lexer:
             't': '\t'
         }
 
-        while self.current_char != None and (self.current_char not in ["'", '"'] or escape_character):
+        while self.current_char != None and (self.current_char != string_cote_type or escape_character):
             if escape_character:
                 string += escape_characters.get(self.current_char, self.current_char)
             else:

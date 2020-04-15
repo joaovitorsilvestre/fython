@@ -81,6 +81,13 @@ class Compiler:
             return "{:__block__, [], [" + ','.join(compiled) + "]}"
 
 
+def copy_jason(src, dest):
+    for item in os.listdir(src):
+        full_file_name = os.path.join(src, item)
+        if os.path.isfile(full_file_name):
+            shutil.copy(full_file_name, dest)
+
+
 def run(project_path):
     project_name = project_path.split('/')[-1]
 
@@ -116,6 +123,10 @@ def run(project_path):
     print(output)
 
     os.remove(quoted_name)
+
+    copy_jason('./jason_dep', f'./{project_name}/compiled/')
+
+    print('OK')
 
 
 if __name__ == '__main__':

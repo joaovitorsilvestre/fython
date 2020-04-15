@@ -1,5 +1,7 @@
 import IO
 
+import System
+
 import File
 
 def read_file_content(file_full_path):
@@ -16,16 +18,27 @@ def get_all_fy_files_in_path(directory_path):
         |> Enum.join("/")
         |> Path.wildcard()
         |> Enum.map(lambda i:
-            i
-                |> read_file_content()
-                |> lexer_and_parse_file_content_in_python()
+            module_name = i |> String.replace(directory_path) |> Enum.at(1)
+            lexer_and_parse_file_content_in_python(module_name, i)
         )
         |> IO.inspect()
 
 
-def lexer_and_parse_file_content_in_python(file_content):
+def lexer_and_parse_file_content_in_python(module_name, file_full_path):
     # this function will lexer and parser using python for now
     # when the day to write the lexer and parser in python has come
     # this function will be responsible to call all the necessary functions
 
-    JSON.parse(file_content)
+    # 1º Ask python for the json lexed and parsed
+    command = [
+        'import sys;',
+        "sys.path.insert(0, '/home/joao/fython');",
+        'from fython.core import get_lexed_and_jsonified;',
+        'a = ',
+        "'", file_full_path ,"';",
+        'print(get_lexed_and_jsonified(a))'
+    ] |> Enum.join('')
+
+    IO.inspect(command)
+
+    System.cmd("python3.6", ["-c", command]) |> elem(0) |> Jason.decode() |> elem(1)
