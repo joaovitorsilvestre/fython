@@ -24,4 +24,8 @@ def get_all_fy_files_in_path(directory_path):
 
 
 def lexer_and_parse_file_content_in_python(file_content):
+    # this function will lexer and parser using python for now
+    # when the day to write the lexer and parser in python has come
+    # this function will be responsible to call all the necessary functions
+
     JSON.parse(file_content)
