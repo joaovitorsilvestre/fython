@@ -1,9 +1,9 @@
-from fython.compiler.integrity_check.errors import UndefinedFunction
-from fython.compiler.integrity_check.result_integrity import InterityResult
-from fython.core.parser import ImportNode, FuncDefNode, CallNode, ParseResult, StatementsNode
+from fython.core.parser.pos_parser.errors import UndefinedFunction
+from fython.core.parser.pos_parser.result_integrity import InterityResult
+from fython.core.parser import ImportNode, FuncDefNode, CallNode, StatementsNode
 
 
-class IntegrityChecks:
+class PosParser:
     def __init__(self, node: StatementsNode):
         self.node = node
 

@@ -7,9 +7,11 @@ def convert(json):
     )
 
 def convert_node(node):
-    case Map.get(node, "NodeType"):
-        "StatementsNode" -> 1
+    func = case Map.get(node, "NodeType"):
+        "StatementsNode" -> lambda: convert_statements_node(node)
         _ -> 2
+
+    func()
 
 def convert_statements_node(node):
     "foiii"

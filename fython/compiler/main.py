@@ -1,10 +1,7 @@
-import json
 import os
 import shutil
-from typing import List
 import pathlib
 from fython.compiler.elixir_nodes import EModule
-from fython.compiler.integrity_check import IntegrityChecks
 
 CURRENT_PATH = pathlib.Path(__file__).parent.absolute()
 
@@ -47,12 +44,7 @@ class File:
             self.error = error
             return
 
-        check = IntegrityChecks(ast).validate()
-        if check.error:
-            self.error = check.error
-            return
-
-        self.compiled = str(EModule(self.module_name(), check.node))
+        self.compiled = str(EModule(self.module_name(), ast))
 
 
 class Compiler:

@@ -44,6 +44,8 @@ class Parser:
 
     ###################
     def parse(self):
+        from fython.core.parser.pos_parser import PosParser
+
         if self.tokens[0].type == TT_EOF:
             # handle empty files
             res = ParseResult()
@@ -59,6 +61,10 @@ class Parser:
                 self.current_tok.pos_start, self.current_tok.pos_end,
                 "Expected '+' or '-' or '*' or '/'"
             ))
+
+        check = PosParser(res.node).validate()
+        if check.error:
+            return check.error
 
         return res
 
@@ -663,7 +669,11 @@ class Parser:
         res.register_advancement()
         self.advance()
 
-        body = res.register(self.statements())
+        if self.current_tok.type == TT_NEWLINE:
+            body = res.register(self.statements())
+        else:
+            body = res.register(self.statement())
+
         if res.error:
             return res
 
