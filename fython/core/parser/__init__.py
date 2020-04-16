@@ -341,6 +341,8 @@ class Parser:
 
             if self.current_tok.ident >= first_node.ident:
                 more_statements = True
+            else:
+                more_statements = False
 
             if self.current_tok.type == TT_RPAREN:
                 # no more statements. Its like the end of a lamda inside Enum.map
