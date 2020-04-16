@@ -228,7 +228,7 @@ class Conversor:
                         "{:import, [context: Elixir],\
                         [\
                           {:__aliases__, [alias: false], [:" + imp.name + "]},\
-                          [as: {:__aliases__, [alias: false], [:Oi]}]\
+                          [as: {:__aliases__, [alias: false], [:" + imp.alias + "]}]\
                         ]}"
                     )
                 else:
@@ -238,8 +238,8 @@ class Conversor:
         elif node.type == 'from':
             for imp in node.imports_list:
                 if imp.alias:
-                    continue
-                else:
+                    raise Exception('no suported')
+                elif '.' not in imp.from_:
                     import_commands.append(
                         "{:import, [context: Elixir],\
                          [{:__aliases__, [alias: false], [:"+imp.from_+"]}, [only: ["+ imp.name +": "+str(imp.arity)+"]]]}\

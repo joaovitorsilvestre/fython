@@ -1,4 +1,4 @@
-from Python_integration import convert/0
+from Conversor import convert/0
 
 import IO
 
