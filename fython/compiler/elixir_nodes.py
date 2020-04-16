@@ -2,7 +2,7 @@ from fython.core.lexer.tokens import TT_POW, TT_PLUS, TT_MINUS, TT_MUL, TT_DIV, 
     TT_KEYWORD
 from fython.core.parser import NumberNode, ListNode, BinOpNode, \
     UnaryOpNode, VarAccessNode, VarAssignNode, StatementsNode, IfNode, FuncDefNode, CallNode, StringNode, PipeNode, \
-    MapNode, AtomNode, ImportNode, LambdaNode
+    MapNode, AtomNode, ImportNode, LambdaNode, CaseNode
 
 
 class ElixirAST:
@@ -252,3 +252,15 @@ class Conversor:
             return import_commands[0]
 
         return "{:__block__, [], [" + ''.join(import_commands) + "]}"
+
+    def convert_CaseNode(self, node: CaseNode):
+        expr = self.convert(node.expr)
+
+        arguments = [
+            "{:->, [], [[" + self.convert(left) + "], " + self.convert(right) + "]}"
+            for left, right in node.cases
+        ]
+
+        arguments = ", ".join(arguments)
+
+        return "{:case, [], [" + expr + ", [do: [" + arguments + "]]]}"

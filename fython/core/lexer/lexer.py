@@ -39,7 +39,7 @@ class Lexer:
                 self.skip_comment()
             elif self.current_char in DIGISTS:
                 tokens.append(self.make_number())
-            elif self.current_char in LETTERS:
+            elif self.current_char in LETTERS + '_':
                 tokens.append(self.make_identifier())
             elif self.current_char in ["'", '"']:
                 tokens.append(self.make_string())
@@ -47,8 +47,7 @@ class Lexer:
                 tokens.append(Token(TT_PLUS, self.current_ident_level, pos_start=self.pos))
                 self.advance()
             elif self.current_char == '-':
-                tokens.append(Token(TT_MINUS, self.current_ident_level, pos_start=self.pos))
-                self.advance()
+                tokens.append(self.make_minus_arrow())
             elif self.current_char == '*':
                 tokens.append(self.make_mul_or_power())
             elif self.current_char == '/':
@@ -125,6 +124,15 @@ class Lexer:
                 pos_start, self.pos, "Identation problem"
             )
         self.current_ident_level = max(0, total_spaces)
+
+    def make_minus_arrow(self):
+        self.advance()
+
+        if self.current_char == '>':
+            self.advance()
+            return Token(TT_ARROW, self.current_ident_level, pos_start=self.pos)
+
+        return Token(TT_MINUS, self.current_ident_level, pos_start=self.pos)
 
     def make_string(self):
         string = ''

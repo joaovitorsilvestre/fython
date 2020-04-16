@@ -265,6 +265,12 @@ class Parser:
                 return res
             return res.success(func_def)
 
+        elif tok.matches(TT_KEYWORD, 'case'):
+            case_def = res.register(self.case_def())
+            if res.error:
+                return res
+            return res.success(case_def)
+
         return res.failure(InvalidSyntaxError(
             tok.pos_start, tok.pos_end,
             "Expected int, float, identifier, '+', '-', '(', '[', if or def"
@@ -952,3 +958,82 @@ class Parser:
                 pos_start, self.current_tok.pos_start.copy(),
                 "Expected 'import' or 'from'"
             ))
+
+    def case_def(self):
+        res = ParseResult()
+        pos_start = self.current_tok.pos_start.copy()
+
+        initial_ident = self.current_tok.ident
+
+        res.register_advancement()
+        self.advance()
+
+        expr = res.register(self.expr())
+        if res.error:
+            return res
+
+        if self.current_tok.type != TT_DO:
+            return res.failure(InvalidSyntaxError(
+                pos_start, self.current_tok.pos_start.copy(),
+                "Expected ':'"
+            ))
+
+        res.register_advancement()
+        self.advance()
+
+        if self.current_tok.type != TT_NEWLINE:
+            return res.failure(InvalidSyntaxError(
+                pos_start, self.current_tok.pos_start.copy(),
+                "Expected new line after ':'"
+            ))
+
+        res.register_advancement()
+        self.advance()
+
+        def check_ident(tok):
+            if tok.ident <= initial_ident:
+                return res.failure(InvalidSyntaxError(
+                    pos_start, self.current_tok.pos_start.copy(),
+                    "The expresions of case must be idented 4 spaces forward in reference to 'case' keyword"
+                ))
+
+        cases = []
+
+        while True:
+            check_ident(self.current_tok)
+            if res.error:
+                return res
+
+            left_expr = res.register(self.expr())
+
+            if res.error:
+                return res
+
+            if self.current_tok.type != TT_ARROW:
+                return res.failure(InvalidSyntaxError(
+                    pos_start, self.current_tok.pos_start.copy(),
+                    "Expected '->'"
+                ))
+
+            res.register_advancement()
+            self.advance()
+
+            result_value = res.register(self.expr())
+            if res.error:
+                return res
+
+            cases.append((left_expr, result_value))
+
+            res.register_advancement()
+            self.advance()
+
+            if self.current_tok.ident != initial_ident + 4:
+                break
+
+        while self.current_tok.type == TT_NEWLINE:
+            res.register_advancement()
+            self.advance()
+
+        return res.success(
+            CaseNode(expr, cases, pos_start, self.current_tok.pos_start.copy())
+        )

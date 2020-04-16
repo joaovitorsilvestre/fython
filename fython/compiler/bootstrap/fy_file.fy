@@ -1,5 +1,3 @@
-from Conversorpython import convert/0
-
 import IO
 
 import System

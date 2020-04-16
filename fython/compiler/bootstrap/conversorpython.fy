@@ -7,11 +7,9 @@ def convert(json):
     )
 
 def convert_node(node):
-    by_node_type = {
-        "StatementsNode": convert_statements_node
-    }
-
-    conversor_to_use = by_node_type |> Map.get(node |> Map.get("NodeType"))
+    case Map.get(node, "NodeType"):
+        "StatementsNode" -> 1
+        _ -> 2
 
 def convert_statements_node(node):
     "foiii"

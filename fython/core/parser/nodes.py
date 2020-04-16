@@ -236,3 +236,14 @@ class ImportNode(Node):
         else:
             main_module = self.imports_list[0].from_
             return f"from {main_module} import {', '.join(modules)}"
+
+
+class CaseNode(Node):
+    def __init__(self, expr: Node, cases: List[Tuple[Node, Node]], pos_start, pos_end,):
+        self.expr = expr
+        self.cases = cases
+        self.pos_start = pos_start
+        self.pos_end = pos_end
+
+    def __repr__(self):
+        return f"case {str(self.expr)} do: {len(self.cases)} cases"

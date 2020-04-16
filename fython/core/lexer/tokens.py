@@ -1,5 +1,6 @@
 TT_INT              = 'INT'
 TT_STRING           = 'STRING'
+TT_ARROW            = 'ARROW'
 TT_KEYWORD          = 'KEYWORD'
 TT_IDENTIFIER       = 'IDENTIFIER'
 TT_ATOM             = 'TT_ATOM'
@@ -40,7 +41,8 @@ KEYWORDS = [
     'else',
     'def',
     'lambda',
-    'return'
+    'return',
+    'case'
 ]
 
 
