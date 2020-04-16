@@ -10,10 +10,10 @@ CURRENT_PATH = pathlib.Path(__file__).parent.absolute()
 
 
 class File:
-    def __init__(self, name, parent, full_path):
+    def __init__(self, name, full_path, path_from_root):
         self.name = name.replace('.fy', '').strip()
-        self.parent = parent
         self.full_path = full_path
+        self.path_from_root = path_from_root
         with open(full_path, 'r') as f:
             self.content = f.read()
         self.error = None
@@ -21,6 +21,21 @@ class File:
 
     def __repr__(self):
         return f"File: {self.full_path}"
+
+    def module_name(self):
+        if self.path_from_root:
+            folders = [i for i in (self.path_from_root + '/' + self.name).split('/') if i]
+
+            module =  ''
+            for f in folders:
+                if module:
+                    module += '.' + f[0].upper() + f[1:]
+                else:
+                    module += f[0].upper() + f[1:]
+        else:
+            module =  self.name
+
+        return module[0].upper() + module[1:]
 
     def compile(self):
         from fython.core import lex_and_parse
@@ -37,7 +52,7 @@ class File:
             self.error = check.error
             return
 
-        self.compiled = str(EModule(self.name, check.node))
+        self.compiled = str(EModule(self.module_name(), check.node))
 
 
 class Compiler:
@@ -48,18 +63,14 @@ class Compiler:
 
     def read_project(self):
         for root, subdirs, files in os.walk(self.folder):
-            # print('--\nroot = ' + root)
-
-            for subdir in subdirs:
-                pass
-                # print('\t- subdirectory ' + subdir)
+            path_from_root = root.replace(self.folder, '')
 
             for filename in files:
                 if filename[-3:] == '.fy':
                     file_path = os.path.join(root, filename)
 
                     self.files.append(
-                        File(filename, None, file_path)
+                        File(filename, file_path, path_from_root)
                     )
 
     def compile(self):

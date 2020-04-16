@@ -1,3 +1,5 @@
+from Python_integration import convert/0
+
 import IO
 
 import System
@@ -41,4 +43,7 @@ def lexer_and_parse_file_content_in_python(module_name, file_full_path):
 
     IO.inspect(command)
 
-    System.cmd("python3.6", ["-c", command]) |> elem(0) |> Jason.decode() |> elem(1)
+    json = System.cmd("python3.6", ["-c", command]) |> elem(0) |> Jason.decode() |> elem(1)
+
+    # 2º Convert each node from json to Fython format
+
