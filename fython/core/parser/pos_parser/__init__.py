@@ -1,6 +1,8 @@
+from typing import List
+
 from fython.core.parser.pos_parser.errors import UndefinedFunction
-from fython.core.parser.pos_parser.result_integrity import InterityResult
-from fython.core.parser import ImportNode, FuncDefNode, CallNode, StatementsNode
+from fython.core.parser.pos_parser.pos_parser_result import PosParserResult
+from fython.core.parser import ImportNode, FuncDefNode, CallNode, StatementsNode, VarAssignNode
 
 
 class PosParser:
@@ -12,10 +14,16 @@ class PosParser:
         ]
 
     def validate(self):
-        res = InterityResult(self.node)
+        res = PosParserResult(self.node)
 
         for func in self.functions:
             res.register(self.integrity_FuncDefNode(func))
+            if res.error:
+                return res
+
+            res.register(self.ensure_local_call_nodes(func))
+            if res.error:
+                return res
 
         return res
 
@@ -49,7 +57,7 @@ class PosParser:
             return True
 
     def integrity_FuncDefNode(self, function: FuncDefNode):
-        res = InterityResult(self.node)
+        res = PosParserResult(self.node)
 
         # 1º Search for undefined functions
 
@@ -69,3 +77,26 @@ class PosParser:
 
         return res.success(self.node)
 
+    def _get_defined_variables_in_func(self, func: FuncDefNode) -> List[str]:
+        return [
+            i.var_name_tok.value for i in func.body_node.statement_nodes
+            if isinstance(i, VarAssignNode)
+        ]
+
+    def ensure_local_call_nodes(self, func: FuncDefNode):
+        # This function has a important job
+        # Check if the function that is being called was defined inside this function
+        # if this function is local the syntax in elixir is different, therefore is ast
+        # e.g in elixir local call:  func_local.()   << notice the dot
+
+        res = PosParserResult(self.node)
+
+        func_calls = [
+            i for i in func.body_node.statement_nodes if isinstance(i, CallNode)
+        ]
+
+        for func_call in func_calls:
+            if func_call.node_to_call.var_name_tok.value in self._get_defined_variables_in_func(func):
+                func_call.set_to_local_call()
+
+        return res

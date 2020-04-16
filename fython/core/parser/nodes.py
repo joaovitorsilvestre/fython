@@ -159,11 +159,15 @@ class CallNode(Node):
         self.arg_nodes = arg_nodes
         self.arity = len(arg_nodes)
         self.pos_start = self.node_to_call.pos_start
+        self.local_call = False
 
         if len(self.arg_nodes) > 0:
             self.pos_end = self.arg_nodes[len(self.arg_nodes) - 1].pos_end
         else:
             self.pos_end = self.node_to_call.pos_end
+
+    def set_to_local_call(self):
+        self.local_call = True
 
     def get_name(self):
         return f'{self.node_to_call.var_name_tok.value}/{self.arity}'
