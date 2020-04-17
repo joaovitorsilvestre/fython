@@ -62,9 +62,10 @@ class Parser:
                 "Expected '+' or '-' or '*' or '/'"
             ))
 
-        check = PosParser(res.node).validate()
-        if check.error:
-            return check.error
+        if not res.error:
+            check = PosParser(res.node).validate()
+            if check.error:
+                return check.error
 
         return res
 
@@ -279,7 +280,7 @@ class Parser:
 
         return res.failure(InvalidSyntaxError(
             tok.pos_start, tok.pos_end,
-            "Expected int, float, identifier, '+', '-', '(', '[', if or def"
+            "Expected int, float, identifier, '+', '-', '(', '[', if, def, lambda or case"
         ))
 
     def power(self):

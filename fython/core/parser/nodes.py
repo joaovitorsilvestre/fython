@@ -6,7 +6,7 @@ class Node:
     def to_json(self):
         return {
             "NodeType": self.__class__.__name__,
-            "content": {
+            **{
                 k: v for k, v in self.__dict__.items() if k not in ['to_json', 'gen_import']
             }
         }

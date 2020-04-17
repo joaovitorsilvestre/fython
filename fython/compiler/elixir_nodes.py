@@ -121,7 +121,10 @@ class Conversor:
             TT_EE: '==',
         }
 
-        if node.op_tok.type in simple_ops:
+        if node.op_tok.type == TT_PLUS and \
+                isinstance(node.left_node, StringNode) and isinstance(node.right_node, StringNode):
+            return "{:<>, [context: Elixir, import: Kernel], [" + a + ", " + b + "]}"
+        elif node.op_tok.type in simple_ops:
             op = simple_ops[node.op_tok.type]
             return "{:" + op + ", [context: Elixir, import: Kernel], [" + a + ", " + b + "]}"
         elif node.op_tok.type == TT_POW:

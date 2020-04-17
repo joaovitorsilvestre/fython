@@ -4,7 +4,7 @@ import System
 
 import File
 
-import Conversorpython
+import ParserNode
 
 def read_file_content(file_full_path):
     file_full_path
@@ -44,4 +44,4 @@ def lexer_and_parse_file_content_in_python(module_name, file_full_path):
     json = System.cmd("python3.6", ["-c", command]) |> elem(0) |> Jason.decode() |> elem(1)
 
     # 2º Convert each node from json to Fython format
-    Conversorpython.convert(json) |> IO.inspect()
+    ParserNode.convert(json) |> IO.inspect()
