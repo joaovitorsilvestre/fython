@@ -4,14 +4,13 @@ def convert(node):
     func = case Map.get(node, "NodeType"):
         "StatementsNode"    -> lambda: convert_statements_node(node)
         "NumberNode"        -> lambda: convert_number_node(node)
-        "AtomNode"          -> lambda: "Not implemented for 'AtomNode'"
-        "StatementsNode"    -> lambda: "Not implemented for 'StatementsNode'"
+        "AtomNode"          -> lambda: convert_atom_node(node)
         "ListNode"          -> lambda: "Not implemented for 'ListNode'"
         "VarAssignNode"     -> lambda: "Not implemented for 'VarAssignNode'"
         "IfNode"            -> lambda: "Not implemented for 'IfNode'"
         "VarAccessNode"     -> lambda: "Not implemented for 'VarAccessNode'"
         "UnaryOpNode"       -> lambda: "Not implemented for 'UnaryOpNode'"
-        "BinOpNode"         -> lambda: "Not implemented for 'BinOpNode'"
+        "BinOpNode"         -> lambda: convert_binop_node(node)
         "FuncDefNode"       -> lambda: "Not implemented for 'FuncDefNode'"
         "LambdaNode"        -> lambda: "Not implemented for 'LambdaNode'"
         "CallNode"          -> lambda: "Not implemented for 'CallNode'"
@@ -33,6 +32,19 @@ def make_line(node):
 
 def convert_number_node(node):
     node |> Map.get("tok") |> Map.get("value") |> to_string()
+
+def convert_atom_node(node):
+    join_str([":", node |> Map.get("tok") |> Map.get("value")])
+
+def convert_binop_node(node):
+    a = node |> convert(Map.get(node, "left_node"))
+    b = node |> convert(Map.get(node, "right_node"))
+
+    simple_ops = [
+        '+', '-', '*', '/', '>', '>=', '<', '<=', '==',
+    ]
+
+    ## todo
 
 def convert_statements_node(node):
     line = make_line(node)
