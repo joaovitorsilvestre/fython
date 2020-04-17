@@ -24,11 +24,15 @@ def convert(node):
 
     func()
 
+def join_str(list):
+    list |> Enum.map(lambda i: i |> to_string()) |> Enum.join('')
+
 def make_line(node):
-    "[line: " + node |> Map.get("pos_start") |> Map.get("ln") + "]"
+    number = node |> Map.get("pos_start") |> Map.get("ln")
+    join_str(["[line: ", number, "]"])
 
 def convert_number_node(node):
-    node |> Map.get("tok") |> Map.get("value")
+    node |> Map.get("tok") |> Map.get("value") |> to_string()
 
 def convert_statements_node(node):
     line = make_line(node)
@@ -37,6 +41,8 @@ def convert_statements_node(node):
         |> Map.get("statement_nodes")
         |> Enum.map(lambda i: convert(i))
 
-    case Enum.count(1):
+    case Enum.count(content):
         1 -> content
-        _ -> "{:__block__, " + line + ", [" + Enum.join(content, ', ') + "]}"
+        _ -> join_str([
+            "{:__block__, ", line, ", [", Enum.join(content, ", "), "]}"
+        ])
