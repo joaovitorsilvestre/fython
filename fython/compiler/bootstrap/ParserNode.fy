@@ -1,4 +1,6 @@
 def convert(node):
+    IO.inspect(node)
+
     func = case Map.get(node, "NodeType"):
         "StatementsNode"    -> lambda: convert_statements_node(node)
         "NumberNode"        -> lambda: convert_number_node(node)
@@ -22,12 +24,19 @@ def convert(node):
 
     func()
 
-def make_line(number):
-    1
+def make_line(node):
+    "[line: " + node |> Map.get("pos_start") |> Map.get("ln") + "]"
 
 def convert_number_node(node):
-    1
-
+    node |> Map.get("tok") |> Map.get("value")
 
 def convert_statements_node(node):
-    "not implemented"
+    line = make_line(node)
+
+    content = node
+        |> Map.get("statement_nodes")
+        |> Enum.map(lambda i: convert(i))
+
+    case Enum.count(1):
+        1 -> content
+        _ -> "{:__block__, " + line + ", [" + Enum.join(content, ', ') + "]}"
