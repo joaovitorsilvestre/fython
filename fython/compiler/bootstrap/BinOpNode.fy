@@ -1,6 +1,6 @@
-import AUtils
-
 import ParserResult
+
+import Utils
 
 def convert_binop_node(node):
     a = node |> ParserResult.convert(Map.get(node, "left_node"))
@@ -29,16 +29,16 @@ def convert_binop_node(node):
 
 def simple_op_node(node, a, b):
     op = simple_ops |> Map.get(node |> Map.get("op_tok") |> Map.get("type"))
-    AUtils.join_str([
+    Utils.join_str([
         "{:", op, ", [context: Elixir, import: Kernel], [", a, ", ", b, "]}"
     ])
 
 def or_op(node, a, b):
-    AUtils.join_str([
+    Utils.join_str([
         "{:or, [context: Elixir, import: Kernel], [", a, ", ", b, "]}"
     ])
 
 def and_op(node, a, b):
-    AUtils.join_str([
+    Utils.join_str([
         "{:adn, [context: Elixir, import: Kernel], [", a, ", ", b, "]}"
     ])

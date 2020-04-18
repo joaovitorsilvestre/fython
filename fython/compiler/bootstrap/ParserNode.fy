@@ -1,4 +1,4 @@
-import AUtils
+import Utils
 
 def convert(node):
     IO.inspect(node)
@@ -27,13 +27,13 @@ def convert(node):
 
 def make_line(node):
     number = node |> Map.get("pos_start") |> Map.get("ln")
-    AUtils.join_str(["[line: ", number, "]"])
+    Utils.join_str(["[line: ", number, "]"])
 
 def convert_number_node(node):
     node |> Map.get("tok") |> Map.get("value") |> to_string()
 
 def convert_atom_node(node):
-    AUtils.join_str([":", node |> Map.get("tok") |> Map.get("value")])
+    Utils.join_str([":", node |> Map.get("tok") |> Map.get("value")])
 
 
 def convert_statements_node(node):
@@ -45,6 +45,6 @@ def convert_statements_node(node):
 
     case Enum.count(content):
         1 -> content
-        _ -> AUtils.join_str([
+        _ -> Utils.join_str([
             "{:__block__, ", line, ", [", Enum.join(content, ", "), "]}"
         ])

@@ -2,6 +2,7 @@ import os
 import shutil
 import pathlib
 from fython.compiler.elixir_nodes import EModule
+from collections import defaultdict
 
 CURRENT_PATH = pathlib.Path(__file__).parent.absolute()
 
@@ -46,6 +47,20 @@ class File:
 
         self.compiled = str(EModule(self.module_name(), ast))
 
+    def get_imports(self):
+        from fython.core import lex_and_parse
+        from fython.core.parser import ImportNode
+
+        ast, error = lex_and_parse(self.name, self.content)
+
+        if error:
+            self.error = error
+            return
+
+        return [
+            i for i in ast.statement_nodes if isinstance(i, ImportNode)
+        ]
+
 
 class Compiler:
     def __init__(self, folder):
@@ -69,10 +84,39 @@ class Compiler:
         compiled = []
 
         self.read_project()
-        for file in self.files:
+        for file in self.ordered_files_by_dependencies():
             compiled.append(file.compile())
 
         return self.files
+
+    def ordered_files_by_dependencies(self):
+        dependencies_by_file = defaultdict(list)
+
+        for f in self.files:
+            for imp in f.get_imports():
+                for i in imp.imports_list:
+                    dependencies_by_file[f.module_name()].append(i.name)
+
+        need_order = []
+        dependencies_by_file = dict(dependencies_by_file)
+
+        for k, v in dependencies_by_file.items():
+            for dep in v:
+                if dep not in need_order:
+                    need_order = [dep, *need_order]
+
+        need_order = [i for i in need_order if i in [f.module_name() for f in self.files]]
+
+        files_per_name = {f.module_name(): f for f in self.files}
+
+        ordered_by_number_of_imports = sorted(
+            need_order, key=lambda x: len(files_per_name[x].get_imports())
+        )
+
+        return [
+            *[files_per_name[i] for i in ordered_by_number_of_imports],
+            *[f for f in self.files if f.module_name() not in ordered_by_number_of_imports]
+        ]
 
     def merge_compiled(self):
         assert all(i.compiled for i in self.files), " Files no compiled"

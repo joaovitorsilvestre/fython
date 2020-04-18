@@ -5,7 +5,7 @@ defmodule M do
 
     result = File.read(quoted_path)
       |> elem(1)
-      |> Code.eval_string
+      |> Code.eval_string([], __ENV__)
       |> elem(0)
       |> Code.compile_quoted
       |> Enum.each(fn {module, content} ->
