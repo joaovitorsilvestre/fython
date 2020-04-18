@@ -806,15 +806,13 @@ class Parser:
         res = ParseResult()
         pos_start = self.current_tok.pos_start.copy()
 
-        def resolve_module(from_=None, check_arity=True):
+        def resolve_module(check_arity=True):
             if self.current_tok.type != TT_IDENTIFIER:
                 return None, res.failure(InvalidSyntaxError(
                     pos_start, self.current_tok.pos_end,
                     "Expected a module name"
                 ))
-
-            module_name = self.current_tok.value
-            alias = None
+            to_import_name = self.current_tok.value
 
             res.register_advancement()
             self.advance()
@@ -842,6 +840,8 @@ class Parser:
             res.register_advancement()
             self.advance()
 
+            alias = None
+
             if self.current_tok.matches(TT_KEYWORD, 'as'):
                 res.register_advancement()
                 self.advance()
@@ -857,12 +857,7 @@ class Parser:
                 res.register_advancement()
                 self.advance()
 
-            return ImportNode.gen_import(
-                name=module_name,
-                alias=alias,
-                arity=arity,
-                from_=from_
-            ), None
+            return {"arity": arity, "name": to_import_name, "alias": alias}, None
 
         if self.current_tok.matches(TT_KEYWORD, "import"):
             # import foo
@@ -909,7 +904,10 @@ class Parser:
                 ))
 
             return res.success(ImportNode(
-                modules, 'import', pos_start, self.current_tok.pos_end.copy()
+                modules_import=modules,
+                functions_import=None,
+                pos_start=pos_start,
+                pos_end=self.current_tok.pos_end.copy()
             ))
         elif self.current_tok.matches(TT_KEYWORD, 'from'):
             # from Foo import aaa

@@ -30,22 +30,12 @@ class PosParser:
     def is_this_function_avaliable_in_this_context(
         self, func_call: CallNode, function_context: FuncDefNode
     ):
-        local_imports = [
-            i for i in function_context.body_node.statement_nodes
+        global_imported = sum([
+            i.get_imported_names() for i in self.node.statement_nodes
             if isinstance(i, ImportNode)
-        ]
-        global_imports = [
-            i for i in self.node.statement_nodes
-            if isinstance(i, ImportNode)
-        ]
+        ], [])
 
-        local_imported = [
-            i.get_name() for i in sum([imp.imports_list for imp in local_imports], [])
-        ]
-
-        global_imported =  [
-            i.get_name() for i in sum([imp.imports_list for imp in global_imports], [])
-        ]
+        local_imported = function_context.get_defined_variables()
 
         if func_call.get_name() in local_imported + global_imported:
             return True

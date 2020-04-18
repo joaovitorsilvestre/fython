@@ -1,5 +1,5 @@
 from collections import namedtuple
-from typing import List, Tuple, Union
+from typing import List, Tuple, Union, Dict
 
 
 class Node:
@@ -277,39 +277,28 @@ class MapNode(Node):
 
 class ImportNode(Node):
     def __init__(self,
-         imports_list: List[namedtuple],
-         type: str,
+         modules_import: Union[None, List[Dict[str, Union[int, str, None]]]],
+         functions_import: Union[None, List[Dict[str, Union[int, str, None]]]],
          pos_start,
          pos_end,
     ):
-        self.imports_list = imports_list
+        # {"arity": arity or None, "name": to_import_name, "alias": alias}
+
+        assert (modules_import is None and functions_import) or \
+               (modules_import and functions_import is None)
+
+        self.modules_import = modules_import
+        self.functions_import = functions_import
         self.pos_start = pos_start
         self.pos_end = pos_end
-        assert type in ['import', 'from']
-        self.type = type
 
-    _import_module = namedtuple("Simple", ['name', 'alias', 'from_', 'arity', 'get_name'])
+    def get_imported_names(self):
+        if self.modules_import:
+            return [i['name'] for i in self.modules_import]
 
-    @staticmethod
-    def gen_import(name, alias, arity, from_):
-        return ImportNode._import_module(
-            name=name,
-            alias=alias,
-            from_=from_,
-            arity=arity,
-            get_name=lambda: f'{alias or name}/{arity}'
-        )
-
-    def __repr__(self):
-        modules = [
-            f'{i.name} as {i.alias}' if i.alias else i.name for i in self.imports_list
+        return [
+            f"{i['names']}/{i['arity']}" for i in self.functions_import
         ]
-
-        if self.type == 'import':
-            return f"import {', '.join(modules)}"
-        else:
-            main_module = self.imports_list[0].from_
-            return f"from {main_module} import {', '.join(modules)}"
 
 
 class CaseNode(Node):

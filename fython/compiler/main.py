@@ -97,8 +97,7 @@ class Compiler:
 
         for f in self.files:
             for imp in f.get_imports():
-                for i in imp.imports_list:
-                    dependencies_by_file[f.module_name()].append(i.name)
+                dependencies_by_file[f.module_name()] += imp.get_imported_names()
 
         need_order = []
         dependencies_by_file = dict(dependencies_by_file)

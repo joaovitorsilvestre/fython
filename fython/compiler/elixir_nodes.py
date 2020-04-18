@@ -222,39 +222,57 @@ class Conversor:
         return "{:%{}, [], [" + ', '.join(values) + "]}"
 
     def convert_ImportNode(self, node: ImportNode):
-        import_commands = []
+        if node.modules_import:
+            import_commands = []
 
-        if node.type == 'import':
-            for imp in node.imports_list:
-                if imp.alias:
+            for imp in node.modules_import:
+                if imp.get('alias'):
                     import_commands.append(
                         "{:import, [context: Elixir],\
                         [\
-                          {:__aliases__, [alias: false], [:" + imp.name + "]},\
-                          [as: {:__aliases__, [alias: false], [:" + imp.alias + "]}]\
+                          {:__aliases__, [alias: false], [:" + imp['name'] + "]},\
+                          [as: {:__aliases__, [alias: false], [:" + imp['alias'] + "]}]\
                         ]}"
                     )
                 else:
                     import_commands.append(
-                        "{:import, [context: Elixir], [{:__aliases__, [alias: false], [:" + imp.name + "]}]}"
+                        "{:import, [context: Elixir], [{:__aliases__, [alias: false], [:" + imp['name'] + "]}]}"
                     )
-        elif node.type == 'from':
-            for imp in node.imports_list:
-                if imp.alias:
-                    raise Exception('no suported')
-                elif '.' not in imp.from_:
-                    import_commands.append(
-                        "{:import, [context: Elixir],\
-                         [{:__aliases__, [alias: false], [:"+imp.from_+"]}, [only: ["+ imp.name +": "+str(imp.arity)+"]]]}\
-                       "
-                   )
+            return "{:__block__, [], [" + ''.join(import_commands) + "]}"
         else:
-            raise "Should not get here"
+            raise NotImplemented()
 
-        if len(import_commands) == 1:
-            return import_commands[0]
-
-        return "{:__block__, [], [" + ''.join(import_commands) + "]}"
+        # if node.type == 'import':
+        #     for imp in node.imports_list:
+        #         if imp.alias:
+        #             import_commands.append(
+        #                 "{:import, [context: Elixir],\
+        #                 [\
+        #                   {:__aliases__, [alias: false], [:" + imp.name + "]},\
+        #                   [as: {:__aliases__, [alias: false], [:" + imp.alias + "]}]\
+        #                 ]}"
+        #             )
+        #         else:
+        #             import_commands.append(
+        #                 "{:import, [context: Elixir], [{:__aliases__, [alias: false], [:" + imp.name + "]}]}"
+        #             )
+        # elif node.type == 'from':
+        #     for imp in node.imports_list:
+        #         if imp.alias:
+        #             raise Exception('no suported')
+        #         elif '.' not in imp.from_:
+        #             import_commands.append(
+        #                 "{:import, [context: Elixir],\
+        #                  [{:__aliases__, [alias: false], [:"+imp.from_+"]}, [only: ["+ imp.name +": "+str(imp.arity)+"]]]}\
+        #                "
+        #            )
+        # else:
+        #     raise "Should not get here"
+        #
+        # if len(import_commands) == 1:
+        #     return import_commands[0]
+        #
+        # return "{:__block__, [], [" + ''.join(import_commands) + "]}"
 
     def convert_CaseNode(self, node: CaseNode):
         expr = self.convert(node.expr)
