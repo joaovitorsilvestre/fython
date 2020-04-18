@@ -12,7 +12,7 @@ def convert(node):
         "ListNode"          -> lambda: "Not implemented for 'ListNode'"
         "VarAssignNode"     -> lambda: "Not implemented for 'VarAssignNode'"
         "IfNode"            -> lambda: "Not implemented for 'IfNode'"
-        "VarAccessNode"     -> lambda: "Not implemented for 'VarAccessNode'"
+        "VarAccessNode"     -> lambda: convert_varaccess_node(node)
         "UnaryOpNode"       -> lambda: UnaryOpNode.convert_unaryop_node(&convert/1, node)
         "BinOpNode"         -> lambda: BinOpNode.convert_binop_node(&convert/1, node)
         "FuncDefNode"       -> lambda: "Not implemented for 'FuncDefNode'"
@@ -37,7 +37,15 @@ def convert_atom_node(node):
     Utils.join_str([":", node |> Map.get("tok") |> Map.get("value")])
 
 def convert_string_node(node):
-    node |> Map.get("tok") |> Map.get("value")
+    Utils.join_str(['"', node |> Map.get("tok") |> Map.get("value"), '"'])
+
+def convert_varaccess_node(node):
+    tok_value = node |> Map.get("var_name_tok") |> Map.get("value")
+
+    case tok_value:
+        "True" -> "true"
+        "False" -> "false"
+        _ -> Utils.join_str(["{:", tok_value, ", [], Elixir}"])
 
 def convert_statements_node(node):
     line = make_line(node)
@@ -49,5 +57,5 @@ def convert_statements_node(node):
     case Enum.count(content):
         1 -> content
         _ -> Utils.join_str([
-            "{:__block__, ", line, ", [", Enum.join(content, ", "), "]}"
+            '{:__block__, ', line, ', [', Enum.join(content, ', '), ']}'
         ])

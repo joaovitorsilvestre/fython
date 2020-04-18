@@ -174,7 +174,8 @@ class Conversor:
             return "{:" + node.node_to_call.var_name_tok.value + ", [], " + arguments + "}"
 
     def convert_StringNode(self, node: StringNode):
-        return f'"{node.tok.value}"'
+        value = node.tok.value.replace('"', '\\"')
+        return f'"{value}"'
 
     def convert_PipeNode(self, node: PipeNode):
         assert not isinstance(node.left_node, PipeNode), "" \
