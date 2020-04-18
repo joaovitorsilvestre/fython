@@ -18,9 +18,8 @@ def convert(node):
         "FuncDefNode"       -> lambda: "Not implemented for 'FuncDefNode'"
         "LambdaNode"        -> lambda: "Not implemented for 'LambdaNode'"
         "CallNode"          -> lambda: "Not implemented for 'CallNode'"
-        "StringNode"        -> lambda: "Not implemented for 'StringNode'"
+        "StringNode"        -> lambda: convert_string_node(node)
         "PipeNode"          -> lambda: "Not implemented for 'PipeNode'"
-        "e_pipe"            -> lambda: "Not implemented for 'e_pipe'"
         "MapNode"           -> lambda: "Not implemented for 'MapNode'"
         "ImportNode"        -> lambda: "Not implemented for 'ImportNode'"
         "CaseNode"          -> lambda: "Not implemented for 'CaseNode'"
@@ -36,6 +35,9 @@ def convert_number_node(node):
 
 def convert_atom_node(node):
     Utils.join_str([":", node |> Map.get("tok") |> Map.get("value")])
+
+def convert_string_node(node):
+    node |> Map.get("tok") |> Map.get("value")
 
 def convert_statements_node(node):
     line = make_line(node)
