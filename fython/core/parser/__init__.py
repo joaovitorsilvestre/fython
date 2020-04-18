@@ -837,25 +837,26 @@ class Parser:
 
                 arity = self.current_tok.value
 
-            res.register_advancement()
-            self.advance()
-
             alias = None
 
-            if self.current_tok.matches(TT_KEYWORD, 'as'):
+            if self.current_tok.type != TT_COMMA:
                 res.register_advancement()
                 self.advance()
 
-                if self.current_tok.type != TT_IDENTIFIER:
-                    return None, res.failure(InvalidSyntaxError(
-                        pos_start, self.current_tok.pos_end,
-                        "Expected a module name"
-                    ))
+                if self.current_tok.matches(TT_KEYWORD, 'as'):
+                    res.register_advancement()
+                    self.advance()
 
-                alias = self.current_tok.value
+                    if self.current_tok.type != TT_IDENTIFIER:
+                        return None, res.failure(InvalidSyntaxError(
+                            pos_start, self.current_tok.pos_end,
+                            "Expected a module name"
+                        ))
 
-                res.register_advancement()
-                self.advance()
+                    alias = self.current_tok.value
+
+                    res.register_advancement()
+                    self.advance()
 
             return {"arity": arity, "name": to_import_name, "alias": alias}, None
 

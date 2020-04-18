@@ -1,12 +1,4 @@
-import IO
-
-import System
-
-import File
-
-import ParserNode
-
-import Utils
+import IO, System, File, ParserNode, Utils
 
 def read_file_content(file_full_path):
     file_full_path

@@ -238,7 +238,7 @@ class Conversor:
                     import_commands.append(
                         "{:import, [context: Elixir], [{:__aliases__, [alias: false], [:" + imp['name'] + "]}]}"
                     )
-            return "{:__block__, [], [" + ''.join(import_commands) + "]}"
+            return "{:__block__, [], [" + ', '.join(import_commands) + "]}"
         else:
             raise NotImplemented()
 
