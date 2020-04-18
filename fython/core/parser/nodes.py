@@ -11,7 +11,6 @@ class Node:
             }
         }
 
-
 class NumberNode(Node):
     def __init__(self, tok):
         self.tok = tok

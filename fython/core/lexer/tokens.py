@@ -66,3 +66,9 @@ class Token:
         if self.value is not None:
             return f'{self.type}:{self.value}'
         return self.type
+
+
+    def debug_me(self):
+        from fython.core.parser.utils import string_with_arrows
+        print(string_with_arrows(self.pos_start.ftxt, self.pos_start, self.pos_end))
+

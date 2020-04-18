@@ -107,8 +107,14 @@ class Parser:
                     res.register_advancement()
                     self.advance()
 
+                if self.get_next_token().type == TT_RSQUARE:
+                    res.register_advancement()
+                    self.advance()
+                    break
+
                 element_nodes.append(res.register(self.expr()))
-                if res.error: return res
+                if res.error:
+                    return res
 
             while self.current_tok.type == TT_NEWLINE:
                 res.register_advancement()
@@ -345,8 +351,6 @@ class Parser:
         if res.error: return res
         statements.append(statement)
 
-        more_statements = False
-
         while True:
             while self.current_tok.type == TT_NEWLINE:
                 res.register_advancement()
@@ -367,12 +371,7 @@ class Parser:
             statement = res.try_register(self.statement())
 
             if not statement:
-                self.reverse(res.to_reverse_count)
-                more_statements = False
-
-                if stop_if_no_more_statements:
-                    break
-                continue
+                break
 
             statements.append(statement)
 

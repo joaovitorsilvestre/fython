@@ -1,3 +1,5 @@
+import AUtils
+
 def convert(node):
     IO.inspect(node)
 
@@ -10,7 +12,7 @@ def convert(node):
         "IfNode"            -> lambda: "Not implemented for 'IfNode'"
         "VarAccessNode"     -> lambda: "Not implemented for 'VarAccessNode'"
         "UnaryOpNode"       -> lambda: "Not implemented for 'UnaryOpNode'"
-        "BinOpNode"         -> lambda: convert_binop_node(node)
+        "BinOpNode"         -> lambda: BinOpNode.convert_binop_node(node)
         "FuncDefNode"       -> lambda: "Not implemented for 'FuncDefNode'"
         "LambdaNode"        -> lambda: "Not implemented for 'LambdaNode'"
         "CallNode"          -> lambda: "Not implemented for 'CallNode'"
@@ -23,28 +25,16 @@ def convert(node):
 
     func()
 
-def join_str(list):
-    list |> Enum.map(lambda i: i |> to_string()) |> Enum.join('')
-
 def make_line(node):
     number = node |> Map.get("pos_start") |> Map.get("ln")
-    join_str(["[line: ", number, "]"])
+    AUtils.join_str(["[line: ", number, "]"])
 
 def convert_number_node(node):
     node |> Map.get("tok") |> Map.get("value") |> to_string()
 
 def convert_atom_node(node):
-    join_str([":", node |> Map.get("tok") |> Map.get("value")])
+    AUtils.join_str([":", node |> Map.get("tok") |> Map.get("value")])
 
-def convert_binop_node(node):
-    a = node |> convert(Map.get(node, "left_node"))
-    b = node |> convert(Map.get(node, "right_node"))
-
-    simple_ops = [
-        '+', '-', '*', '/', '>', '>=', '<', '<=', '==',
-    ]
-
-    ## todo
 
 def convert_statements_node(node):
     line = make_line(node)
@@ -55,6 +45,6 @@ def convert_statements_node(node):
 
     case Enum.count(content):
         1 -> content
-        _ -> join_str([
+        _ -> AUtils.join_str([
             "{:__block__, ", line, ", [", Enum.join(content, ", "), "]}"
         ])
