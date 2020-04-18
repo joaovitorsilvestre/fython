@@ -15,7 +15,7 @@ def convert(node):
         "VarAccessNode"     -> lambda: convert_varaccess_node(node)
         "UnaryOpNode"       -> lambda: UnaryOpNode.convert_unaryop_node(&convert/1, node)
         "BinOpNode"         -> lambda: BinOpNode.convert_binop_node(&convert/1, node)
-        "FuncDefNode"       -> lambda: "Not implemented for 'FuncDefNode'"
+        "FuncDefNode"       -> lambda: convert_deffunc_node(node)
         "LambdaNode"        -> lambda: "Not implemented for 'LambdaNode'"
         "CallNode"          -> lambda: "Not implemented for 'CallNode'"
         "StringNode"        -> lambda: convert_string_node(node)
@@ -25,10 +25,6 @@ def convert(node):
         "CaseNode"          -> lambda: "Not implemented for 'CaseNode'"
 
     func()
-
-def make_line(node):
-    number = node |> Map.get("pos_start") |> Map.get("ln")
-    Utils.join_str(["[line: ", number, "]"])
 
 def convert_number_node(node):
     node |> Map.get("tok") |> Map.get("value") |> to_string()
@@ -79,8 +75,6 @@ def convert_list_node(node):
     ])
 
 def convert_map_node(node):
-    IO.inspect(pairs = node |> Map.get("pairs_list"))
-
     pairs = node
         |> Map.get("pairs_list")
         |> Enum.map(lambda pair:
@@ -93,8 +87,6 @@ def convert_map_node(node):
     Utils.join_str(["{:%{}, [], [", pairs, "]}"])
 
 def convert_statements_node(node):
-    line = make_line(node)
-
     content = node
         |> Map.get("statement_nodes")
         |> Enum.map(lambda i: convert(i))
@@ -102,5 +94,21 @@ def convert_statements_node(node):
     case Enum.count(content):
         1 -> content
         _ -> Utils.join_str([
-            '{:__block__, ', line, ', [', Enum.join(content, ', '), ']}'
+            '{:__block__, [line: 0], [', Enum.join(content, ', '), ']}'
         ])
+
+def convert_deffunc_node(node):
+    name = node |> Map.get("var_name_tok") |> Map.get("value")
+    statements_node = node |> Map.get("body_node")
+
+    arguments = node
+        |> Map.get("arg_name_toks")
+        |> Enum.map(lambda argument:
+            Utils.join_str(["{:", Map.get(argument, "value"), ", [], Elixir}"])
+        )
+        |> Enum.join(', ')
+
+    Utils.join_str([
+        "{:def, [line: 0], [{:", name, ", [line: 0], [",
+        arguments, "]}, [do: ", convert(statements_node), "]]}"
+    ])
