@@ -85,7 +85,7 @@ class PosParser:
 
     def ensure_local_call_nodes(self, func: FuncDefNode):
         # This function has a important job
-        # Check if the function that is being called was defined inside this function
+        # Check if the function that is being called was defined inside this function or received by parameters
         # if this function is local the syntax in elixir is different, therefore is ast
         # e.g in elixir local call:  func_local.()   << notice the dot
 
@@ -97,6 +97,8 @@ class PosParser:
 
         for func_call in func_calls:
             if func_call.node_to_call.var_name_tok.value in self._get_defined_variables_in_func(func):
+                func_call.set_to_local_call()
+            elif func_call.node_to_call.var_name_tok.value in [i.value for i in func.arg_name_toks]:
                 func_call.set_to_local_call()
 
         return res
