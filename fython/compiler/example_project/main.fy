@@ -1,1 +1,1 @@
-[1, 2, 3, 10 if True else False]
+[1, 2, 3, 10 if True else False, {"a": "oii"}]

@@ -20,7 +20,7 @@ def convert(node):
         "CallNode"          -> lambda: "Not implemented for 'CallNode'"
         "StringNode"        -> lambda: convert_string_node(node)
         "PipeNode"          -> lambda: "Not implemented for 'PipeNode'"
-        "MapNode"           -> lambda: "Not implemented for 'MapNode'"
+        "MapNode"           -> lambda: convert_map_node(node)
         "ImportNode"        -> lambda: "Not implemented for 'ImportNode'"
         "CaseNode"          -> lambda: "Not implemented for 'CaseNode'"
 
@@ -77,6 +77,20 @@ def convert_list_node(node):
         Enum.join(Enum.map(node |> Map.get("element_nodes"), &convert/1), ", "),
         "]"
     ])
+
+def convert_map_node(node):
+    IO.inspect(pairs = node |> Map.get("pairs_list"))
+
+    pairs = node
+        |> Map.get("pairs_list")
+        |> Enum.map(lambda pair:
+            key = pair |> Enum.at(0)
+            value = pair |> Enum.at(1)
+            Utils.join_str(["{", convert(key), ", ", convert(value), "}"])
+        )
+        |> Enum.join(', ')
+
+    Utils.join_str(["{:%{}, [], [", pairs, "]}"])
 
 def convert_statements_node(node):
     line = make_line(node)
