@@ -3,8 +3,6 @@ import Utils
 import BinOpNode
 
 def convert(node):
-    IO.inspect(node)
-
     func = case Map.get(node, "NodeType"):
         "StatementsNode"    -> lambda: convert_statements_node(node)
         "NumberNode"        -> lambda: convert_number_node(node)
