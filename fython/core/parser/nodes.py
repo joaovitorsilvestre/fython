@@ -7,9 +7,60 @@ class Node:
         return {
             "NodeType": self.__class__.__name__,
             **{
-                k: v for k, v in self.__dict__.items() if k not in ['to_json', 'gen_import']
+                k: v for k, v in self.__dict__.items()
+                if k not in ['to_json', 'gen_import']
             }
         }
+
+    def get_all_child_nodes_flatten(self):
+        def flatten(l):
+            import collections
+            for el in l:
+                if isinstance(el, collections.Iterable) and not isinstance(el, (str, bytes)):
+                    yield from flatten(el)
+                else:
+                    yield el
+
+        if isinstance(self, StatementsNode):
+            sts = [
+                i.get_all_child_nodes_flatten()
+                for i in self.statement_nodes
+            ]
+
+            result = [*sts]
+        elif isinstance(self, ListNode):
+            return [i.get_all_child_nodes_flatten() for i in self.element_nodes]
+        elif isinstance(self, MapNode):
+            result = [
+                [k.get_all_child_nodes_flatten(), v.get_all_child_nodes_flatten()]
+                for k, v in self.pairs_list
+            ]
+        elif isinstance(self, CaseNode):
+            result = [
+                self.expr.get_all_child_nodes_flatten(),
+                *[[k.get_all_child_nodes_flatten(), v.get_all_child_nodes_flatten()] for k, v in self.cases]
+            ]
+        elif isinstance(self, (BinOpNode, PipeNode)):
+            result = [*self.left_node.get_all_child_nodes_flatten(),
+                      *self.right_node.get_all_child_nodes_flatten()]
+        elif isinstance(self, FuncDefNode):
+            result = [
+                self,
+                *self.arg_name_toks,
+                *self.body_node.get_all_child_nodes_flatten()
+            ]
+        elif isinstance(self, VarAssignNode):
+            result = [self, self.value_node.get_all_child_nodes_flatten()]
+        elif isinstance(self, IfNode):
+            result = [
+                self.comp_expr.get_all_child_nodes_flatten(),
+                self.true_case.get_all_child_nodes_flatten(),
+                self.false_case.get_all_child_nodes_flatten()
+            ]
+        else:
+            result = [self]
+
+        return list(flatten(result))
 
 
 class NumberNode(Node):
@@ -148,6 +199,14 @@ class FuncDefNode(Node):
             self.pos_start = self.body_node.pos_start
 
         self.pos_end = self.body_node.pos_end
+
+    def get_defined_variables(self) -> List[str]:
+        return [
+            i.var_name_tok.value for i in self.body_node.statement_nodes
+            if isinstance(i, VarAssignNode)
+        ] + [
+            i.value for i in self.arg_name_toks
+        ]
 
     def __repr__(self):
         return f"def {self.var_name_tok.value}/{len(self.arg_name_toks)}"

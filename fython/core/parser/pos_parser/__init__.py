@@ -77,12 +77,6 @@ class PosParser:
 
         return res.success(self.node)
 
-    def _get_defined_variables_in_func(self, func: FuncDefNode) -> List[str]:
-        return [
-            i.var_name_tok.value for i in func.body_node.statement_nodes
-            if isinstance(i, VarAssignNode)
-        ]
-
     def ensure_local_call_nodes(self, func: FuncDefNode):
         # This function has a important job
         # Check if the function that is being called was defined inside this function or received by parameters
@@ -92,13 +86,11 @@ class PosParser:
         res = PosParserResult(self.node)
 
         func_calls = [
-            i for i in func.body_node.statement_nodes if isinstance(i, CallNode)
+            i for i in func.body_node.get_all_child_nodes_flatten() if isinstance(i, CallNode)
         ]
 
         for func_call in func_calls:
-            if func_call.node_to_call.var_name_tok.value in self._get_defined_variables_in_func(func):
-                func_call.set_to_local_call()
-            elif func_call.node_to_call.var_name_tok.value in [i.value for i in func.arg_name_toks]:
+            if func_call.node_to_call.var_name_tok.value in func.get_defined_variables():
                 func_call.set_to_local_call()
 
         return res
