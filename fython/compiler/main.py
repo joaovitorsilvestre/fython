@@ -57,7 +57,8 @@ class File:
 
         if error:
             self.error = error
-            return
+            print(self.error.as_string())
+            raise "Compilation error"
 
         return [
             i for i in ast.statement_nodes if isinstance(i, ImportNode)

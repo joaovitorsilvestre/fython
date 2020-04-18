@@ -283,6 +283,12 @@ class Parser:
             if res.error:
                 return res
             return res.success(case_def)
+        elif self.current_tok.type == TT_ECOM:
+            func_as_var_expr = res.register(self.func_as_var_expr())
+            if res.error:
+                return res
+
+            return res.success(func_as_var_expr)
 
         return res.failure(InvalidSyntaxError(
             tok.pos_start, tok.pos_end,
@@ -1047,3 +1053,45 @@ class Parser:
         return res.success(
             CaseNode(expr, cases, pos_start, self.current_tok.pos_start.copy())
         )
+
+    def func_as_var_expr(self):
+        res = ParseResult()
+        pos_start = self.current_tok.pos_start.copy()
+
+        res.register_advancement()
+        self.advance()
+
+        var_name_tok = self.current_tok
+
+        if self.current_tok.type != TT_IDENTIFIER:
+            return res.failure(InvalidSyntaxError(
+                pos_start, self.current_tok.pos_start.copy(),
+                "Expected the function name and arity. E.g: &sum/2"
+            ))
+
+        res.register_advancement()
+        self.advance()
+
+        if self.current_tok.type != TT_DIV:
+            return res.failure(InvalidSyntaxError(
+                pos_start, self.current_tok.pos_start.copy(),
+                "Expected '/"
+            ))
+
+        res.register_advancement()
+        self.advance()
+
+        if self.current_tok.type != TT_INT:
+            return res.failure(InvalidSyntaxError(
+                pos_start, self.current_tok.pos_start.copy(),
+                "Expected arity number as int"
+            ))
+
+        arity = int(self.current_tok.value)
+
+        res.register_advancement()
+        self.advance()
+
+        return res.success(FuncAsVariableNode(
+            var_name_tok, arity, pos_start, self.current_tok.pos_start.copy()
+        ))

@@ -3,6 +3,7 @@ TT_STRING           = 'STRING'
 TT_ARROW            = 'ARROW'
 TT_KEYWORD          = 'KEYWORD'
 TT_IDENTIFIER       = 'IDENTIFIER'
+TT_ECOM             = 'ECOM'
 TT_ATOM             = 'TT_ATOM'
 TT_FLOAT            = "FLOAT"
 TT_PLUS             = 'PLUS'

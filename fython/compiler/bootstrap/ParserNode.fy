@@ -14,7 +14,7 @@ def convert(node):
         "IfNode"            -> lambda: "Not implemented for 'IfNode'"
         "VarAccessNode"     -> lambda: "Not implemented for 'VarAccessNode'"
         "UnaryOpNode"       -> lambda: "Not implemented for 'UnaryOpNode'"
-        "BinOpNode"         -> lambda: BinOpNode.convert_binop_node(node)
+        "BinOpNode"         -> lambda: BinOpNode.convert_binop_node(&convert/1, node)
         "FuncDefNode"       -> lambda: "Not implemented for 'FuncDefNode'"
         "LambdaNode"        -> lambda: "Not implemented for 'LambdaNode'"
         "CallNode"          -> lambda: "Not implemented for 'CallNode'"
@@ -36,7 +36,6 @@ def convert_number_node(node):
 
 def convert_atom_node(node):
     Utils.join_str([":", node |> Map.get("tok") |> Map.get("value")])
-
 
 def convert_statements_node(node):
     line = make_line(node)

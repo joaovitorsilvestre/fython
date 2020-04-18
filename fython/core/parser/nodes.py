@@ -11,6 +11,7 @@ class Node:
             }
         }
 
+
 class NumberNode(Node):
     def __init__(self, tok):
         self.tok = tok
@@ -39,6 +40,17 @@ class VarAccessNode(Node):
 
     def __repr__(self):
         return f'{self.var_name_tok}'
+
+
+class FuncAsVariableNode(Node):
+    def __init__(self, var_name_tok, arity: int, pos_start, pos_end):
+        self.var_name_tok = var_name_tok
+        self.arity = arity
+        self.pos_start = pos_start
+        self.pos_end = pos_end
+
+    def __repr__(self):
+        return f'function as variable: f{self.var_name_tok.value}/{self.arity}'
 
 
 class AtomNode(Node):

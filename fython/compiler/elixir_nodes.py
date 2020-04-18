@@ -2,7 +2,7 @@ from fython.core.lexer.tokens import TT_POW, TT_PLUS, TT_MINUS, TT_MUL, TT_DIV, 
     TT_KEYWORD
 from fython.core.parser import NumberNode, ListNode, BinOpNode, \
     UnaryOpNode, VarAccessNode, VarAssignNode, StatementsNode, IfNode, FuncDefNode, CallNode, StringNode, PipeNode, \
-    MapNode, AtomNode, ImportNode, LambdaNode, CaseNode
+    MapNode, AtomNode, ImportNode, LambdaNode, CaseNode, FuncAsVariableNode
 
 
 class ElixirAST:
@@ -266,3 +266,8 @@ class Conversor:
         arguments = ", ".join(arguments)
 
         return "{:case, [], [" + expr + ", [do: [" + arguments + "]]]}"
+
+    def convert_FuncAsVariableNode(self, node: FuncAsVariableNode):
+        name = node.var_name_tok.value
+        arity = str(node.arity)
+        return "{:&, [], [{:/, [context: Elixir, import: Kernel], [{:"+name+", [], Elixir}, "+arity+"]}]}"

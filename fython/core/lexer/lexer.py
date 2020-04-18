@@ -37,6 +37,9 @@ class Lexer:
                 tokens.append(tok)
             elif self.current_char == '#':
                 self.skip_comment()
+            elif self.current_char == '&':
+                tokens.append(Token(TT_ECOM, self.current_ident_level, pos_start=self.pos))
+                self.advance()
             elif self.current_char in DIGISTS:
                 tokens.append(self.make_number())
             elif self.current_char in LETTERS + '_':
@@ -208,13 +211,18 @@ class Lexer:
                 self.pos, "expected letters or digits (to create an atom), new line or space after ':'"
             )
 
-    def make_identifier(self):
+    def _get_identifier(self):
         id_str = ''
-        pos_start = self.pos.copy()
 
         while self.current_char != None and self.current_char in LETTERS_DIGITS + '_.?':
             id_str += self.current_char
             self.advance()
+
+        return id_str
+
+    def make_identifier(self):
+        pos_start = self.pos.copy()
+        id_str = self._get_identifier()
 
         tok_type = TT_KEYWORD if id_str in KEYWORDS else TT_IDENTIFIER
         return Token(tok_type, self.current_ident_level, id_str, pos_start, self.pos.copy())
