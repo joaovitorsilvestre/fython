@@ -1,6 +1,8 @@
 import os
 import shutil
 import pathlib
+import subprocess
+
 from fython.compiler.elixir_nodes import EModule
 from collections import defaultdict
 
@@ -155,24 +157,23 @@ def run(project_path):
 
     for file in c.ordered_files_by_dependencies():
         compiled = file.compiled
+        print(f'FILE: {file.name}')
         print('Compiled to elixir!. Resulting quoted:')
         print(compiled)
         print("Generating beam files")
 
-        quoted_name = f'{project_path}/{project_name}.{file.name}.fyc'
-
-        with open(quoted_name, 'w+') as f:
-            f.write(compiled)
-
-        project_path = f"{project_path}/{project_name}.{file.name}.fyc".replace('/', ' ')
-
-        output = os.popen(f'elixir {CURRENT_PATH}/compile_quoted.exs {project_path}').read()
+        output = subprocess.check_output([
+            'elixir',
+            f'{CURRENT_PATH}/compile_quoted.exs',
+            compiled,
+            project_path
+        ]).decode('utf-8')
 
         if 'FAILED' in output:
             print(output)
             raise ValueError(f"Failed to compile file: {file.name}")
 
-        os.remove(quoted_name)
+        print('************')
 
     copy_jason('./jason_dep', f'./{project_name}/compiled/')
 

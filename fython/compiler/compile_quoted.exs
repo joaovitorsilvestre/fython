@@ -1,10 +1,8 @@
 defmodule M do
-  def f(quoted_path) do
-    root = "/#{quoted_path |> Enum.slice(0..-2) |> Enum.join("/")}"
-    quoted_path = "/#{Enum.join(quoted_path, "/")}"
+  def f([quoted_as_string, project_path]) do
+    Code.append_path("#{project_path}/compiled")
 
-    quoted = File.read(quoted_path)
-      |> elem(1)
+    quoted = quoted_as_string
       |> Code.eval_string
       |> elem(0)
       |> Code.compile_quoted
@@ -12,7 +10,7 @@ defmodule M do
     result = quoted
       |> Enum.each(fn {module, content} ->
         File.write(
-          "#{root}/compiled/#{module |> to_string}.beam",
+          "#{project_path}/compiled/#{module |> to_string}.beam",
           content,
           mode: :binary
         )

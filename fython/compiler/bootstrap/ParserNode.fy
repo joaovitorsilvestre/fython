@@ -1,5 +1,7 @@
 import Utils
 
+import BinOpNode
+
 def convert(node):
     IO.inspect(node)
 

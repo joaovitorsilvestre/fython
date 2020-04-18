@@ -1,8 +1,8 @@
-import ParserResult
-
 import Utils
 
 def convert_binop_node(node):
+    import ParserResult
+
     a = node |> ParserResult.convert(Map.get(node, "left_node"))
     b = node |> ParserResult.convert(Map.get(node, "right_node"))
 
