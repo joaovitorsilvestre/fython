@@ -10,7 +10,7 @@ def convert(node):
         "NumberNode"        -> lambda: convert_number_node(node)
         "AtomNode"          -> lambda: convert_atom_node(node)
         "ListNode"          -> lambda: "Not implemented for 'ListNode'"
-        "VarAssignNode"     -> lambda: "Not implemented for 'VarAssignNode'"
+        "VarAssignNode"     -> lambda: convert_varassign_node(node)
         "IfNode"            -> lambda: convert_if_node(node)
         "VarAccessNode"     -> lambda: convert_varaccess_node(node)
         "UnaryOpNode"       -> lambda: UnaryOpNode.convert_unaryop_node(&convert/1, node)
@@ -46,6 +46,15 @@ def convert_varaccess_node(node):
         "True" -> "true"
         "False" -> "false"
         _ -> Utils.join_str(["{:", tok_value, ", [], Elixir}"])
+
+def convert_varassign_node(node):
+    Utils.join_str([
+        "{:=, [], [{:",
+        node |> Map.get("var_name_tok") |> Map.get("value"),
+        ", [], Elixir}, ",
+        convert(node |> Map.get("value_node")),
+        "]}"
+    ])
 
 def convert_if_node(node):
     comp_expr = convert(node |> Map.get("comp_expr"))

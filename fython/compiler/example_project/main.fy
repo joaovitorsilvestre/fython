@@ -1,1 +1,1 @@
-10 if True else 90
+a = 10 if True else 90
