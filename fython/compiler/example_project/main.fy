@@ -1,1 +1,1 @@
-a = 10 if True else 90
+[1, 2, 3, 10 if True else False]

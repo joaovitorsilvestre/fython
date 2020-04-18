@@ -9,7 +9,7 @@ def convert(node):
         "StatementsNode"    -> lambda: convert_statements_node(node)
         "NumberNode"        -> lambda: convert_number_node(node)
         "AtomNode"          -> lambda: convert_atom_node(node)
-        "ListNode"          -> lambda: "Not implemented for 'ListNode'"
+        "ListNode"          -> lambda: convert_list_node(node)
         "VarAssignNode"     -> lambda: convert_varassign_node(node)
         "IfNode"            -> lambda: convert_if_node(node)
         "VarAccessNode"     -> lambda: convert_varaccess_node(node)
@@ -69,6 +69,13 @@ def convert_if_node(node):
         ", else: ",
         false_case,
         "]]}"
+    ])
+
+def convert_list_node(node):
+    Utils.join_str([
+        "[",
+        Enum.join(Enum.map(node |> Map.get("element_nodes"), &convert/1), ", "),
+        "]"
     ])
 
 def convert_statements_node(node):
