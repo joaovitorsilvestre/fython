@@ -18,7 +18,7 @@ class File:
         self.compiled = None
 
     def __repr__(self):
-        return f"File: {self.full_path}"
+        return f"File: {self.path_from_root}"
 
     def module_name(self):
         if self.path_from_root:
@@ -153,23 +153,26 @@ def run(project_path):
             print(i.error.as_string())
             return
 
-    compiled = c.merge_compiled()
-    print('Compiled to elixir!. Resulting quoted:')
-    print(compiled)
-    print("Generating beam files")
+    for file in c.ordered_files_by_dependencies():
+        compiled = file.compiled
+        print('Compiled to elixir!. Resulting quoted:')
+        print(compiled)
+        print("Generating beam files")
 
-    quoted_name = f'{project_path}/{project_name}.fyc'
+        quoted_name = f'{project_path}/{project_name}.{file.name}.fyc'
 
-    with open(quoted_name, 'w+') as f:
-        f.write(compiled)
+        with open(quoted_name, 'w+') as f:
+            f.write(compiled)
 
-    project_path = f"{project_path}/{project_name}.fyc".replace('/', ' ')
+        project_path = f"{project_path}/{project_name}.{file.name}.fyc".replace('/', ' ')
 
-    output = os.popen(f'elixir {CURRENT_PATH}/compile_quoted.exs {project_path}').read()
+        output = os.popen(f'elixir {CURRENT_PATH}/compile_quoted.exs {project_path}').read()
 
-    print(output)
+        if 'FAILED' in output:
+            print(output)
+            raise ValueError(f"Failed to compile file: {file.name}")
 
-    os.remove(quoted_name)
+        os.remove(quoted_name)
 
     copy_jason('./jason_dep', f'./{project_name}/compiled/')
 
