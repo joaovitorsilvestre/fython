@@ -11,7 +11,7 @@ def convert(node):
         "AtomNode"          -> lambda: convert_atom_node(node)
         "ListNode"          -> lambda: "Not implemented for 'ListNode'"
         "VarAssignNode"     -> lambda: "Not implemented for 'VarAssignNode'"
-        "IfNode"            -> lambda: "Not implemented for 'IfNode'"
+        "IfNode"            -> lambda: convert_if_node(node)
         "VarAccessNode"     -> lambda: convert_varaccess_node(node)
         "UnaryOpNode"       -> lambda: UnaryOpNode.convert_unaryop_node(&convert/1, node)
         "BinOpNode"         -> lambda: BinOpNode.convert_binop_node(&convert/1, node)
@@ -46,6 +46,21 @@ def convert_varaccess_node(node):
         "True" -> "true"
         "False" -> "false"
         _ -> Utils.join_str(["{:", tok_value, ", [], Elixir}"])
+
+def convert_if_node(node):
+    comp_expr = convert(node |> Map.get("comp_expr"))
+    true_case = convert(node |> Map.get("true_case"))
+    false_case = convert(node |> Map.get("false_case"))
+
+    Utils.join_str([
+        "{:if, [context: Elixir, import: Kernel], [",
+        comp_expr,
+        ", [do: ",
+        true_case,
+        ", else: ",
+        false_case,
+        "]]}"
+    ])
 
 def convert_statements_node(node):
     line = make_line(node)

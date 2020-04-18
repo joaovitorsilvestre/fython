@@ -1,2 +1,1 @@
-False
-"dasdsa"
+10 if True else 90
