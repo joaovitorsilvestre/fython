@@ -2,6 +2,8 @@ import Utils
 
 import BinOpNode
 
+import UnaryOpNode
+
 def convert(node):
     func = case Map.get(node, "NodeType"):
         "StatementsNode"    -> lambda: convert_statements_node(node)
@@ -11,7 +13,7 @@ def convert(node):
         "VarAssignNode"     -> lambda: "Not implemented for 'VarAssignNode'"
         "IfNode"            -> lambda: "Not implemented for 'IfNode'"
         "VarAccessNode"     -> lambda: "Not implemented for 'VarAccessNode'"
-        "UnaryOpNode"       -> lambda: "Not implemented for 'UnaryOpNode'"
+        "UnaryOpNode"       -> lambda: UnaryOpNode.convert_unaryop_node(&convert/1, node)
         "BinOpNode"         -> lambda: BinOpNode.convert_binop_node(&convert/1, node)
         "FuncDefNode"       -> lambda: "Not implemented for 'FuncDefNode'"
         "LambdaNode"        -> lambda: "Not implemented for 'LambdaNode'"
