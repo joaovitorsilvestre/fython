@@ -1,12 +1,14 @@
 #!/usr/bin/env escript
 %% -*- erlang -*-
 %%! -smp enable -sname factorial -mnesia debug verbose
--define(elixir__example, 'Elixir.Example').
+-define(main, 'Elixir.Main').
 
 main([String]) ->
-    N = list_to_integer(String),
-    G = ?elixir__example:oi(),
-    io:format("factorial ~w = ~w\n", [N,G]);
+    code:add_patha("./beams/elixir_beams"),
+    code:add_patha("./beams/fython_compiler_beams"),
+    code:add_patha("./compiled"),
+    G = ?main:compile(String),
+    io:format("factorial ~w = ~w\n", [String,G]);
 
 main(_) ->
     usage().
