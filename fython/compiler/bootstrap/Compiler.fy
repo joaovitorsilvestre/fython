@@ -6,9 +6,7 @@ def compile_project(project_path):
 
     all_modules_compiled = compile_project_to_binary(project_path)
 
-    File.mkdir_p!(
-        Utils.join_str([Path.dirname(project_path), "/compiled"])
-    )
+    File.mkdir_p!([project_path, "compiled"] |> Enum.join('/'))
 
     all_modules_compiled
         |> Enum.map(lambda modulename_n_coted:

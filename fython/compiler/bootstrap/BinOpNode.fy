@@ -20,9 +20,6 @@ def convert_binop_node(convert, node):
         tok_type == "KEYWORD" and tok_value == "and"
     ]
 
-    IO.puts("tok_type")
-    IO.inspect(tok_type)
-
     case cases:
         [True, _, _, _] -> simple_op_node(simple_ops, node, a, b)
         [_, True, _, _] -> power_op(a, b)

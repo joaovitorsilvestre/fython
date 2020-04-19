@@ -51,6 +51,15 @@ class Node:
             ]
         elif isinstance(self, VarAssignNode):
             result = [self, self.value_node.get_all_child_nodes_flatten()]
+        elif isinstance(self, CallNode):
+            result = [
+                self,
+                *[i.get_all_child_nodes_flatten() for i in self.arg_nodes],
+                *[
+                    v.get_all_child_nodes_flatten()
+                    for v in self.keywords.values()
+                ]
+            ]
         elif isinstance(self, IfNode):
             result = [
                 self.comp_expr.get_all_child_nodes_flatten(),

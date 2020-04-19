@@ -6,6 +6,8 @@ import UnaryOpNode
 
 import ImportNode
 
+import CallNode
+
 def convert(node):
     func = case Map.get(node, "NodeType"):
         "StatementsNode"    -> convert_statements_node(node)
@@ -19,7 +21,7 @@ def convert(node):
         "BinOpNode"         -> BinOpNode.convert_binop_node(&convert/1, node)
         "FuncDefNode"       -> convert_deffunc_node(node)
         "LambdaNode"        -> convert_lambda_node(node)
-        "CallNode"          -> "Not implemented for 'CallNode'"
+        "CallNode"          -> CallNode.convert_call_node(&convert/1, node)
         "StringNode"        -> convert_string_node(node)
         "PipeNode"          -> "Not implemented for 'PipeNode'"
         "MapNode"           -> convert_map_node(node)
@@ -78,6 +80,8 @@ def convert_lambda_node(node):
             ])
         )
         |> Enum.join(", ")
+
+    params = ['[', params, ']'] |> Enum.join('')
 
     Utils.join_str([
         "{:fn, [], [{:->, [], [",

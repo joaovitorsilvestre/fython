@@ -169,9 +169,6 @@ class Conversor:
 
         arguments = "[" + ', '.join([*args, *keywords]) + "]"
 
-        if keywords:
-            print('')
-
         if node.local_call:
             return "{{:., [], [{:" + node.node_to_call.var_name_tok.value + ", [], Elixir}]}, [], " + arguments + "}"
         elif '.' in node.get_name():
