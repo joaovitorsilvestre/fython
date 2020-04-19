@@ -26,7 +26,7 @@ def convert(node):
         "PipeNode"          -> "Not implemented for 'PipeNode'"
         "MapNode"           -> convert_map_node(node)
         "ImportNode"        -> ImportNode.convert_import_node(node)
-        "CaseNode"          -> "Not implemented for 'CaseNode'"
+        "CaseNode"          -> convert_case_node(node)
 
 def convert_number_node(node):
     node |> Map.get("tok") |> Map.get("value") |> to_string()
@@ -135,4 +135,23 @@ def convert_deffunc_node(node):
     Utils.join_str([
         "{:def, [line: 0], [{:", name, ", [line: 0], [",
         arguments, "]}, [do: ", convert(statements_node), "]]}"
+    ])
+
+def convert_case_node(node):
+    expr = convert(node |> Map.get("expr"))
+
+    arguments = node
+        |> Map.get("cases")
+        |> Enum.map(lambda left_right:
+            left = Enum.at(left_right, 0)
+            right = Enum.at(left_right, 1)
+
+            Enum.join([
+                "{:->, [], [[", convert(left), "], ", convert(right), "]}"
+            ], '')
+        )
+        |> Enum.join(', ')
+
+    Enum.join([
+        "{:case, [], [", expr, ", [do: [", arguments, "]]]}"
     ])
