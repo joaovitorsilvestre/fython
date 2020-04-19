@@ -27,15 +27,13 @@ def convert_call_node(convert, node):
         |> Map.get("value")
 
     cases = [
-        Map.get(node, "local_call"),
-        Map.get(node, "name", "") |> String.contains?(".")
+        func_name |> String.contains?("."),
+        Map.get(node, "local_call")
     ]
 
     case cases:
-        [True, _] -> local_call_case(func_name, arguments)
-        [_, True] -> module_function_call_case(
-            func_name, node |> Map.get("arity"), arguments
-        )
+        [True, _] -> module_function_call_case(func_name, arguments)
+        [_, True] -> local_call_case(func_name, arguments)
         _         -> Enum.join(["{:", func_name, ", [], ", arguments, "}"])
 
 def local_call_case(func_name, arguments):
@@ -43,16 +41,16 @@ def local_call_case(func_name, arguments):
         "{{:., [], [{:", func_name, ", [], Elixir}]}, [], ", arguments, "}"
     ])
 
-def module_function_call_case(name, arity, arguments):
-    module = name |> String.split(".") |> List.pop_at(-1)
+def module_function_call_case(name,  arguments):
+    modules = name |> String.split(".") |> List.pop_at(-1) |> elem(1)
     function = name |> String.split(".") |> Enum.at(-1)
 
-    Enum.join([
-        "{{:., [], [{:__aliases__, [alias: false], [:",
-        module,
-        "]}, :",
-        function,
-        "]}, [], ",
-        arguments,
-        "}"
-    ], '')
+    modules = modules
+        |> Enum.map(lambda i: Enum.join([':', i], ''))
+        |> Enum.join(', ')
+
+    r = Enum.join([
+        '{{:., [], [{:__aliases__, [alias: false], [',
+        modules,
+        ']}, :', function,']}, [], ', arguments, '}'
+    ])

@@ -2,11 +2,19 @@ import IO, System, File, ParserNode, Utils
 
 
 def compile_project(project_path):
+    compiled_folder = [project_path, "compiled"] |> Enum.join('/')
+
+    # Ensure compiled folder is created
+    File.mkdir_p!(compiled_folder)
+
+    # Copy elixir beams to folder
+    copy_elixir_beams(project_path)
+
+    # Add elixir dependencies
+    Code.append_path(compiled_folder)
+
     # Compile project and save files into subfolder 'compiled'
-
     all_modules_compiled = compile_project_to_binary(project_path)
-
-    File.mkdir_p!([project_path, "compiled"] |> Enum.join('/'))
 
     all_modules_compiled
         |> Enum.map(lambda modulename_n_coted:
@@ -17,6 +25,24 @@ def compile_project(project_path):
                 Utils.join_str([project_path, "/compiled/", module_name, ".beam"]), compiled, mode=:binary
             )
         )
+
+
+def copy_elixir_beams(project_path):
+    compiled_folder = Enum.join([project_path, 'compiled'], '/')
+
+    elixir_path = '/usr/lib/elixir/lib/elixir/ebin'
+
+    case File.exists?(elixir_path):
+        True -> Enum.join([elixir_path, '*.beam'], '/')
+            |> Path.wildcard()
+            |> Enum.each(lambda beam_file:
+                file_name = beam_file
+                    |> String.split('/')
+                    |> List.last()
+
+                File.cp!(beam_file, Enum.join([compiled_folder, file_name], '/'))
+            )
+        False -> :error
 
 
 def compile_project_to_binary(directory_path):

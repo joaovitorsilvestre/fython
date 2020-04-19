@@ -1,2 +1,2 @@
 def compile(path):
-    [-1, 3, 10]
+    IO.puts("ddd")
