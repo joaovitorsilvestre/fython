@@ -1,0 +1,16 @@
+#!/usr/bin/env escript
+%% -*- erlang -*-
+%%! -smp enable -sname factorial -mnesia debug verbose
+-define(elixir__example, 'Elixir.Example').
+
+main([String]) ->
+    N = list_to_integer(String),
+    G = ?elixir__example:oi(),
+    io:format("factorial ~w = ~w\n", [N,G]);
+
+main(_) ->
+    usage().
+
+usage() ->
+    io:format("usage: factorial integer\n"),
+    halt(1).
