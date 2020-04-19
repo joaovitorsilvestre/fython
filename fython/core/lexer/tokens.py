@@ -30,6 +30,9 @@ TT_NEWLINE          = 'NEWLINE'
 TT_PIPE             = 'PIPE'
 TT_EOF              = 'EOF'
 
+# True, False and None are treated as identifiers
+# We just care about they in the convert to elixir ast part
+
 KEYWORDS = [
     'import',
     'from',
@@ -43,7 +46,7 @@ KEYWORDS = [
     'def',
     'lambda',
     'return',
-    'case'
+    'case',
 ]
 
 

@@ -100,6 +100,8 @@ class Conversor:
             return "false"
         elif node.var_name_tok.value == 'True':
             return "true"
+        elif node.var_name_tok.value == 'None':
+            return "nil"
 
         return "{:" + node.var_name_tok.value + ", [], Elixir}"
 

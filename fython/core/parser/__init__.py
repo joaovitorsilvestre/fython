@@ -918,9 +918,6 @@ class Parser:
             alias = None
 
             if self.current_tok.type != TT_COMMA:
-                res.register_advancement()
-                self.advance()
-
                 if self.current_tok.matches(TT_KEYWORD, 'as'):
                     res.register_advancement()
                     self.advance()
@@ -929,6 +926,11 @@ class Parser:
                         return None, res.failure(InvalidSyntaxError(
                             pos_start, self.current_tok.pos_end,
                             "Expected a module name"
+                        ))
+                    elif self.current_tok.value[0] != self.current_tok.value[0].upper():
+                        return None, res.failure(InvalidSyntaxError(
+                            self.current_tok.pos_start, self.current_tok.pos_end,
+                            "Alias name for module must start with capital letter"
                         ))
 
                     alias = self.current_tok.value

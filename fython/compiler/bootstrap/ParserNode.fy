@@ -4,6 +4,8 @@ import BinOpNode
 
 import UnaryOpNode
 
+import ImportNode
+
 def convert(node):
     func = case Map.get(node, "NodeType"):
         "StatementsNode"    -> convert_statements_node(node)
@@ -21,7 +23,7 @@ def convert(node):
         "StringNode"        -> convert_string_node(node)
         "PipeNode"          -> "Not implemented for 'PipeNode'"
         "MapNode"           -> convert_map_node(node)
-        "ImportNode"        -> "Not implemented for 'ImportNode'"
+        "ImportNode"        -> ImportNode.convert_import_node(node)
         "CaseNode"          -> "Not implemented for 'CaseNode'"
 
 def convert_number_node(node):
