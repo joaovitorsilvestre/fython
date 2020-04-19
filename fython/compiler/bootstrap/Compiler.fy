@@ -15,11 +15,6 @@ def compile_project(project_path):
             module_name = modulename_n_coted |> elem(0)
             compiled = modulename_n_coted |> elem(1)
 
-            IO.puts("args---")
-            IO.inspect(Utils.join_str([project_path, "/compiled/", module_name, ".beam"]))
-            IO.inspect(compiled)
-            IO.inspect(:binary)
-
             File.write(
                 Utils.join_str([project_path, "/compiled/", module_name, ".beam"]), compiled, mode=:binary
             )
@@ -45,7 +40,12 @@ def compile_project_to_binary(directory_path):
                 |> String.replace('.fy', '')
                 |> String.capitalize()
 
-            [module_name, lexer_and_parse_file_content_in_python(module_name, full_path)]
+            [
+                module_name,
+                lexer_and_parse_file_content_in_python(
+                    module_name, full_path
+                )
+            ]
         )
         |> Enum.map(lambda modulename_n_content:
             module_name = modulename_n_content |> Enum.at(0)
@@ -79,7 +79,10 @@ def lexer_and_parse_file_content_in_python(module_name, file_full_path):
         'print(get_lexed_and_jsonified(a))'
     ] |> Enum.join('')
 
-    json = System.cmd("python3.6", ["-c", command]) |> elem(0) |> Jason.decode() |> elem(1)
+    json = System.cmd("python3.6", ["-c", command])
+        |> elem(0)
+        |> Jason.decode()
+        |> elem(1)
 
     # 2º Convert each node from json to Fython format
     ParserNode.convert(json)
