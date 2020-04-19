@@ -2,7 +2,7 @@ import Utils
 
 def convert_import_node(node):
     case Map.get(node, "modules_import"):
-        None -> "not implemened from" # we will only implement this when change parser to Fython
+        None -> "not implemened from"
         _    -> import_case(node)
 
 

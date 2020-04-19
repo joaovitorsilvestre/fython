@@ -18,7 +18,7 @@ def convert(node):
         "UnaryOpNode"       -> UnaryOpNode.convert_unaryop_node(&convert/1, node)
         "BinOpNode"         -> BinOpNode.convert_binop_node(&convert/1, node)
         "FuncDefNode"       -> convert_deffunc_node(node)
-        "LambdaNode"        -> "Not implemented for 'LambdaNode'"
+        "LambdaNode"        -> convert_lambda_node(node)
         "CallNode"          -> "Not implemented for 'CallNode'"
         "StringNode"        -> convert_string_node(node)
         "PipeNode"          -> "Not implemented for 'PipeNode'"
@@ -65,6 +65,26 @@ def convert_if_node(node):
         ", else: ",
         false_case,
         "]]}"
+    ])
+
+def convert_lambda_node(node):
+    params = node
+        |> Map.get("arg_name_toks")
+        |> Enum.map(lambda param:
+            Utils.join_str([
+                "{:",
+                param |> Map.get('value'),
+                ", [context: Elixir, import: IEx.Helpers], Elixir}"
+            ])
+        )
+        |> Enum.join(", ")
+
+    Utils.join_str([
+        "{:fn, [], [{:->, [], [",
+        params,
+        ", ",
+        convert(node |> Map.get('body_node')),
+        "]}]}"
     ])
 
 def convert_list_node(node):
