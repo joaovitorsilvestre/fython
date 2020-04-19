@@ -81,7 +81,6 @@ class Lexer:
                 tokens.append(tok)
             elif self.current_char == '=':
                 tokens.append(self.make_equals())
-                self.advance()
             elif self.current_char == '<':
                 tokens.append(self.make_less_than())
                 self.advance()
@@ -214,7 +213,7 @@ class Lexer:
     def _get_identifier(self):
         id_str = ''
 
-        while self.current_char != None and self.current_char in LETTERS_DIGITS + '_.?':
+        while self.current_char != None and self.current_char in LETTERS_DIGITS + '_.?!':
             id_str += self.current_char
             self.advance()
 

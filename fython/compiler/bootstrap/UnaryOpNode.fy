@@ -13,11 +13,9 @@ def convert_unaryop_node(convert, node):
     ]
 
     builder = case cases:
-        [True, _, _] -> lambda: not_case(value)
-        [_, True, _] -> lambda: plus_case(value)
-        [_, _, True] -> lambda: minus_case(value)
-
-    builder()
+        [True, _, _] -> not_case(value)
+        [_, True, _] -> plus_case(value)
+        [_, _, True] -> minus_case(value)
 
 
 def not_case(value):

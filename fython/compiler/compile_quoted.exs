@@ -9,6 +9,12 @@ defmodule M do
 
     result = quoted
       |> Enum.each(fn {module, content} ->
+        IO.puts("args---")
+        IO.inspect("#{project_path}/compiled/#{module |> to_string}.beam")
+        IO.inspect(content)
+        IO.inspect(:binary)
+
+
         File.write(
           "#{project_path}/compiled/#{module |> to_string}.beam",
           content,

@@ -1,38 +1,39 @@
 import IO, System, File, ParserNode, Utils
 
 
-def compile_to_file(project_path):
+def compile_project(project_path):
     # Compile project and save files into subfolder 'compiled'
 
-    all_modules_compiled = compile_project_to_ast_string(project_path)
+    all_modules_compiled = compile_project_to_binary(project_path)
+
+    File.mkdir_p!(
+        Utils.join_str([Path.dirname(project_path), "/compiled"])
+    )
 
     all_modules_compiled
-        |> Enum.map(lambda module:
-            quoted = module
-                |> Code.eval_string()
-                |> elem(0)
-                |> Code.compile_quoted()
+        |> Enum.map(lambda modulename_n_coted:
+            module_name = modulename_n_coted |> elem(0)
+            compiled = modulename_n_coted |> elem(1)
 
-            result = quoted
-                |> Enum.each(lambda module_n_content:
-                    module = module_n_content |> Tuple.to_list() |> Enum.at(0)
-                    content = module_n_content |> Tuple.to_list() |> Enum.at(1)
+            IO.puts("args---")
+            IO.inspect(Utils.join_str([project_path, "/compiled/", module_name, ".beam"]))
+            IO.inspect(compiled)
+            IO.inspect(:binary)
 
-                    # TODO allow options.. -> mode: :binary
-                    File.write(
-                        Utils.join_str(project_path, "/compiled/", module, ".beam"), content
-                    )
-                )
+            File.write(
+                Utils.join_str([project_path, "/compiled/", module_name, ".beam"]), compiled, mode=:binary
+            )
         )
 
 
-def compile_project_to_ast_string(directory_path):
-    # Return a list of each module compiled into elixir AST
+def compile_project_to_binary(directory_path):
+    # Return a list of each module compiled into elixir AST in binary
     # read to be evaluated in Elixir
     # Ex:
     # iex> Compiler.compile_project(ABSOLUTE_PATH_TO_PROJECT_FOLDER)
-    #    |> Enum.map(fn i -> i |> Code.eval_string |> Code.eval_quoted end)
-    # after this, you should be able to call any module of this project in iex
+    # exit the shell
+    # go to compiled folder and start iex again.
+    # Now, you should be able to call any module of this project in iex
 
     [directory_path, "*.fy"]
         |> Enum.join('/')
@@ -42,8 +43,24 @@ def compile_project_to_ast_string(directory_path):
                 |> String.split('/')
                 |> Enum.at(-1)
                 |> String.replace('.fy', '')
+                |> String.capitalize()
 
-            lexer_and_parse_file_content_in_python(module_name, full_path)
+            [module_name, lexer_and_parse_file_content_in_python(module_name, full_path)]
+        )
+        |> Enum.map(lambda modulename_n_content:
+            module_name = modulename_n_content |> Enum.at(0)
+            compiled = modulename_n_content |> Enum.at(1)
+
+            module = Utils.join_str([
+                "{:defmodule, [line: 1], ",
+                "[{:__aliases__, [line: 1], [:", module_name, "]}, ",
+                "[do: ", compiled, "]]}"
+            ])
+
+            quoted = module
+                |> Code.eval_string()
+                |> Code.compile_quoted()
+                |> Enum.at(0)
         )
 
 

@@ -23,13 +23,11 @@ def convert_binop_node(convert, node):
     IO.puts("tok_type")
     IO.inspect(tok_type)
 
-    builder = case cases:
-        [True, _, _, _] -> lambda: simple_op_node(simple_ops, node, a, b)
-        [_, True, _, _] -> lambda: power_op(a, b)
-        [_, _,True, _] -> lambda: or_op(a, b)
-        [_, _, _,True] -> lambda: and_op(a, b)
-
-    builder()
+    case cases:
+        [True, _, _, _] -> simple_op_node(simple_ops, node, a, b)
+        [_, True, _, _] -> power_op(a, b)
+        [_, _,True, _]  -> or_op(a, b)
+        [_, _, _,True]  -> and_op(a, b)
 
 
 def simple_op_node(simple_ops, node, a, b):

@@ -162,7 +162,13 @@ class Conversor:
                  ]}"
 
     def convert_CallNode(self, node: CallNode):
-        arguments = "[" + ','.join([self.convert(i) for i in node.arg_nodes]) + ']'
+        args = [self.convert(i) for i in node.arg_nodes]
+        keywords = [f"[{k}: {self.convert(v)}]" for k, v in node.keywords.items()]
+
+        arguments = "[" + ', '.join([*args, *keywords]) + "]"
+
+        if keywords:
+            print('')
 
         if node.local_call:
             return "{{:., [], [{:" + node.node_to_call.var_name_tok.value + ", [], Elixir}]}, [], " + arguments + "}"

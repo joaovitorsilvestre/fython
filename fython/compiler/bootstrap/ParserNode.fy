@@ -6,25 +6,23 @@ import UnaryOpNode
 
 def convert(node):
     func = case Map.get(node, "NodeType"):
-        "StatementsNode"    -> lambda: convert_statements_node(node)
-        "NumberNode"        -> lambda: convert_number_node(node)
-        "AtomNode"          -> lambda: convert_atom_node(node)
-        "ListNode"          -> lambda: convert_list_node(node)
-        "VarAssignNode"     -> lambda: convert_varassign_node(node)
-        "IfNode"            -> lambda: convert_if_node(node)
-        "VarAccessNode"     -> lambda: convert_varaccess_node(node)
-        "UnaryOpNode"       -> lambda: UnaryOpNode.convert_unaryop_node(&convert/1, node)
-        "BinOpNode"         -> lambda: BinOpNode.convert_binop_node(&convert/1, node)
-        "FuncDefNode"       -> lambda: convert_deffunc_node(node)
-        "LambdaNode"        -> lambda: "Not implemented for 'LambdaNode'"
-        "CallNode"          -> lambda: "Not implemented for 'CallNode'"
-        "StringNode"        -> lambda: convert_string_node(node)
-        "PipeNode"          -> lambda: "Not implemented for 'PipeNode'"
-        "MapNode"           -> lambda: convert_map_node(node)
-        "ImportNode"        -> lambda: "Not implemented for 'ImportNode'"
-        "CaseNode"          -> lambda: "Not implemented for 'CaseNode'"
-
-    func()
+        "StatementsNode"    -> convert_statements_node(node)
+        "NumberNode"        -> convert_number_node(node)
+        "AtomNode"          -> convert_atom_node(node)
+        "ListNode"          -> convert_list_node(node)
+        "VarAssignNode"     -> convert_varassign_node(node)
+        "IfNode"            -> convert_if_node(node)
+        "VarAccessNode"     -> convert_varaccess_node(node)
+        "UnaryOpNode"       -> UnaryOpNode.convert_unaryop_node(&convert/1, node)
+        "BinOpNode"         -> BinOpNode.convert_binop_node(&convert/1, node)
+        "FuncDefNode"       -> convert_deffunc_node(node)
+        "LambdaNode"        -> "Not implemented for 'LambdaNode'"
+        "CallNode"          -> "Not implemented for 'CallNode'"
+        "StringNode"        -> convert_string_node(node)
+        "PipeNode"          -> "Not implemented for 'PipeNode'"
+        "MapNode"           -> convert_map_node(node)
+        "ImportNode"        -> "Not implemented for 'ImportNode'"
+        "CaseNode"          -> "Not implemented for 'CaseNode'"
 
 def convert_number_node(node):
     node |> Map.get("tok") |> Map.get("value") |> to_string()
@@ -92,7 +90,7 @@ def convert_statements_node(node):
         |> Enum.map(lambda i: convert(i))
 
     case Enum.count(content):
-        1 -> content
+        1 -> Enum.at(content, 0)
         _ -> Utils.join_str([
             '{:__block__, [line: 0], [', Enum.join(content, ', '), ']}'
         ])

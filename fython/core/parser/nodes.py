@@ -224,9 +224,10 @@ class LambdaNode(FuncDefNode):
 
 
 class CallNode(Node):
-    def __init__(self, node_to_call: VarAccessNode, arg_nodes):
+    def __init__(self, node_to_call: VarAccessNode, arg_nodes, keywords: Union[Dict, None]):
         self.node_to_call = node_to_call
         self.arg_nodes = arg_nodes
+        self.keywords = keywords
         self.arity = len(arg_nodes)
         self.pos_start = self.node_to_call.pos_start
         self.local_call = False
