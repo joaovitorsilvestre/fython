@@ -3,16 +3,24 @@
 %%! -smp enable -sname factorial -mnesia debug verbose
 -define(main, 'Elixir.Main').
 
-main([String]) ->
-    code:add_patha("./beams/elixir_beams"),
-    code:add_patha("./beams/fython_compiler_beams"),
-    code:add_patha("./compiled"),
-    G = ?main:compile(String),
-    io:format("factorial ~w = ~w\n", [String,G]);
+main(["compile"]) ->
+    load_deps(),
+    G = ?main:compile(param),
+    io:format("~w\n", [G]);
+
+main(["shell"]) ->
+    load_deps(),
+    ?main:shell();
 
 main(_) ->
     usage().
 
+
 usage() ->
-    io:format("usage: factorial integer\n"),
+    io:format("usage: fython [compile|shell]\n"),
     halt(1).
+
+load_deps() ->
+    code:add_patha("./beams/elixir_beams"),
+    code:add_patha("./beams/fython_compiler_beams"),
+    code:add_patha("./compiled").
