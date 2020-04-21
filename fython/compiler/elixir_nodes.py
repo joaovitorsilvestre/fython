@@ -1,5 +1,5 @@
 from fython.core.lexer.tokens import TT_POW, TT_PLUS, TT_MINUS, TT_MUL, TT_DIV, TT_LTE, TT_LT, TT_GTE, TT_GT, TT_EE, \
-    TT_KEYWORD
+    TT_KEYWORD, TT_NE
 from fython.core.parser import NumberNode, ListNode, BinOpNode, \
     UnaryOpNode, VarAccessNode, VarAssignNode, StatementsNode, IfNode, FuncDefNode, CallNode, StringNode, PipeNode, \
     MapNode, AtomNode, ImportNode, LambdaNode, CaseNode, FuncAsVariableNode
@@ -120,7 +120,7 @@ class Conversor:
         simple_ops = {
             TT_PLUS: '+', TT_MINUS: '-', TT_MUL: '*', TT_DIV: '/',
             TT_GT: '>', TT_GTE: '>=', TT_LT: '<', TT_LTE: '<=',
-            TT_EE: '==',
+            TT_EE: '==', TT_NE: '!='
         }
 
         if node.op_tok.type in simple_ops:

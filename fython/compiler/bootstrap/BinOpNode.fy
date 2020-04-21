@@ -7,7 +7,7 @@ def convert_binop_node(convert, node):
     simple_ops = {
         "PLUS": '+', "MINUS": '-', "MUL": '*', "DIV": '/',
         "GT": '>', "GTE": '>=', "LT": '<', "LTE": '<=',
-        "EE": '==',
+        "EE": '==', 'NE': '!='
     }
 
     tok_type = node |> Map.get("op_tok") |> Map.get("type")

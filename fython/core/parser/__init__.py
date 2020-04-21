@@ -1097,6 +1097,9 @@ class Parser:
             if res.error:
                 return res
 
+            if self.current_tok.type == TT_EOF:
+                break
+
             left_expr = res.register(self.expr())
 
             if res.error:
