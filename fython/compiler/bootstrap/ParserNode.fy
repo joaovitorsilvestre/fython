@@ -29,6 +29,7 @@ def convert(node):
         "MapNode"           -> convert_map_node(node)
         "ImportNode"        -> ImportNode.convert_import_node(node)
         "CaseNode"          -> convert_case_node(node)
+        "InNode"            -> convert_in_node(node)
 
 def convert_number_node(node):
     node |> Map.get("tok") |> Map.get("value") |> to_string()
@@ -157,6 +158,14 @@ def convert_case_node(node):
 
     Enum.join([
         "{:case, [], [", expr, ", [do: [", arguments, "]]]}"
+    ])
+
+def convert_in_node(node):
+    left = Map.get(node, "left_expr") |> convert()
+    right = Map.get(node, "right_expr") |> convert()
+
+    Enum.join([
+        "{: in, [context: Elixir, import: Kernel], [", left, ", ", right, "]}"
     ])
 
 def convert_module_to_ast(module_name, compiled_body):

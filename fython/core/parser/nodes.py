@@ -320,3 +320,24 @@ class CaseNode(Node):
 
     def __repr__(self):
         return f"case {str(self.expr)} do: {len(self.cases)} cases"
+
+
+class RaiseNode(Node):
+    def __init__(self, expr, pos_start, pos_end,):
+        self.expr = expr
+        self.pos_start = pos_start
+        self.pos_end = pos_end
+
+    def __repr__(self):
+        return f"raise : {self.expr()}"
+
+
+class InNode(Node):
+    def __init__(self, left_expr, right_expr, pos_start, pos_end,):
+        self.left_expr = left_expr
+        self.right_expr = right_expr
+        self.pos_start = pos_start
+        self.pos_end = pos_end
+
+    def __repr__(self):
+        return f"raise : {self.expr()}"

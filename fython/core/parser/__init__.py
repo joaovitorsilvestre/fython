@@ -508,6 +508,7 @@ class Parser:
 
     def expr(self):
         res = ParseResult()
+        pos_start = self.current_tok.pos_start.copy()
 
         next_token = self.get_next_token()
 
@@ -540,6 +541,21 @@ class Parser:
             if res.error:
                 return res
             return res.success(node)
+
+        if self.current_tok.matches(TT_KEYWORD, 'in'):
+            if res.error:
+                return res
+            res.register_advancement()
+            self.advance()
+
+            right_node = res.register(self.expr())
+            if res.error:
+                return res
+
+            return res.success(
+                InNode(left_expr=node, right_expr=right_node,
+                       pos_start=pos_start, pos_end=self.current_tok.pos_end.copy())
+            )
 
         if self.current_tok.type in [TT_PIPE, TT_NEWLINE]:
             new_lines_skiped = 0
