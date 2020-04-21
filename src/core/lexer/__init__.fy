@@ -1,7 +1,7 @@
 def execute(text):
     state = {
         "text": text,
-        "position": position(-1, 0, -1),
+        "position": position(-1, -1, -1),
         "current_ident_level": 0,
         "error": None,
         "current_char": None,
@@ -21,22 +21,14 @@ def advance(state):
     col = state |> Map.get("position") |> Map.get("col")
     text = state |> Map.get("text")
 
-    number_of_lines = String.split(text, "\n") |> Enum.count()
+    idx = idx + 1
+    IO.inspect("index")
+    IO.inspect(idx)
+    current_char = text |> String.at(idx)
 
-    number_of_cols = String.split(text, "\n") |> Enum.at(ln, "") |> String.length()
-
-    to_sum = case col + 1 >= number_of_cols:
-        True -> 'ln'
-        False -> 'col'
-
-    ln = ln + 1 if to_sum == 'ln' else ln
-    col = col + 1 if to_sum == 'col' else col
-
-    new_pos = position(idx, ln, col)
-
-    current_char = case ln > number_of_lines or col > number_of_cols:
-        True -> None
-        False -> text |> String.split('\\n') |> Enum.at(ln, "") |> String.at(col)
+    new_pos = case current_char == '\n':
+        True -> position(idx, ln + 1, 0)
+        False -> position(idx, ln, col + 1)
 
     new_state = {"position": new_pos, "current_char": current_char}
 
@@ -51,10 +43,12 @@ def parse(state):
             state = advance(state)
 
             case  state |> Map.get("current_char"):
-                ' ' -> parse(make_ident(state))
-                '\\n' ->
-                    ident = Integer.max(0, Map.get("current_ident_level") - 4)
-                    Code.Lexer.Tokens.add_token(state, "TT_NEWLINE")
+                " " -> parse(make_ident(state))
+                "\n" ->
+                    ident = max(0, Map.get(state, "current_ident_level") - 4)
+                    parse(
+                        Core.Lexer.Tokens.add_token(state, "TT_NEWLINE")
+                    )
                 None -> state
         _ -> state
 
