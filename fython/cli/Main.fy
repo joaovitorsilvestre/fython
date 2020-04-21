@@ -1,5 +1,8 @@
 def compile(path):
-    IO.puts("Compilando")
+    a = {"a": {"b": {"c": 1}}}
 
-def shell():
-    IO.gets("fython> ")
+    a
+        |> Map.get("a")
+        |> Map.get("b")
+        |> Map.get("c")
+        |> IO.inspect()

@@ -8,6 +8,8 @@ import ImportNode
 
 import CallNode
 
+import PipeNode
+
 def convert(node):
     func = case Map.get(node, "NodeType"):
         "StatementsNode"    -> convert_statements_node(node)
@@ -23,7 +25,7 @@ def convert(node):
         "LambdaNode"        -> convert_lambda_node(node)
         "CallNode"          -> CallNode.convert_call_node(&convert/1, node)
         "StringNode"        -> convert_string_node(node)
-        "PipeNode"          -> "Not implemented for 'PipeNode'"
+        "PipeNode"          -> PipeNode.convert_pipe_node(node)
         "MapNode"           -> convert_map_node(node)
         "ImportNode"        -> ImportNode.convert_import_node(node)
         "CaseNode"          -> convert_case_node(node)
