@@ -420,7 +420,7 @@ class Parser:
     def arith_expr(self):
         return self.bin_op(self.term, (TT_PLUS, TT_MINUS))
 
-    def statements(self, stop_if_no_more_statements=False):
+    def statements(self, only_ident_gte=None):
         res = ParseResult()
         statements = []
         pos_start = self.current_tok.pos_start.copy()
@@ -429,7 +429,7 @@ class Parser:
             res.register_advancement()
             self.advance()
 
-        first_node = self.current_tok
+        expected_ident = only_ident_gte or self.current_tok.ident
 
         statement = res.register(self.statement())
         if res.error: return res
@@ -440,7 +440,7 @@ class Parser:
                 res.register_advancement()
                 self.advance()
 
-            if self.current_tok.ident >= first_node.ident:
+            if self.current_tok.ident >= expected_ident:
                 more_statements = True
             else:
                 more_statements = False
@@ -1113,14 +1113,19 @@ class Parser:
             res.register_advancement()
             self.advance()
 
-            result_value = res.register(self.expr())
-            if res.error:
-                return res
+            if self.current_tok.type == TT_NEWLINE:
+                result_value = res.register(
+                    self.statements(only_ident_gte=initial_ident + 8),
+                )
+            else:
+                result_value = res.register(self.expr())
+                if res.error:
+                    return res
+                res.register_advancement()
+                self.advance()
 
             cases.append((left_expr, result_value))
 
-            res.register_advancement()
-            self.advance()
 
             if self.current_tok.ident != initial_ident + 4:
                 break

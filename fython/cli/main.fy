@@ -1,3 +1,5 @@
+import Utils
+
 def compile(path):
     a = {"a": {"b": {"c": 1}}}
 
@@ -6,3 +8,5 @@ def compile(path):
         |> Map.get("b")
         |> Map.get("c")
         |> IO.inspect()
+
+    [a, Utils.Printer.print(1)]

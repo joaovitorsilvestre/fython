@@ -157,3 +157,24 @@ def convert_case_node(node):
     Enum.join([
         "{:case, [], [", expr, ", [do: [", arguments, "]]]}"
     ])
+
+def convert_module_to_ast(module_name, compiled_body):
+    module_name = case String.contains?(module_name, "."):
+        False -> Enum.join([":", module_name])
+        True ->
+            module_name = module_name
+                |> String.split('.')
+                |> Enum.map(lambda i: Enum.join([":", i]))
+                |> Enum.join(", ")
+
+            Enum.join([
+                "{:__aliases__, [alias: false], [",
+                module_name,
+                "]}"
+            ])
+
+    Utils.join_str([
+        "{:defmodule, [line: 1], ",
+        "[{:__aliases__, [line: 1], [", module_name, "]}, ",
+        "[do: ", compiled_body, "]]}"
+    ])

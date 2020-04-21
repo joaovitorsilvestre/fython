@@ -54,15 +54,13 @@ def compile_project_to_binary(directory_path):
     # go to compiled folder and start iex again.
     # Now, you should be able to call any module of this project in iex
 
-    [directory_path, "*.fy"]
+    [directory_path, "**/*.fy"]
         |> Enum.join('/')
         |> Path.wildcard()
         |> Enum.map(lambda full_path:
-            module_name = full_path
-                |> String.split('/')
-                |> Enum.at(-1)
-                |> String.replace('.fy', '')
-                |> String.capitalize()
+            module_name = get_module_name(directory_path, full_path)
+
+            IO.inspect(Enum.join(["Compiling module: ", module_name]))
 
             [
                 module_name,
@@ -75,11 +73,7 @@ def compile_project_to_binary(directory_path):
             module_name = modulename_n_content |> Enum.at(0)
             compiled = modulename_n_content |> Enum.at(1)
 
-            module = Utils.join_str([
-                "{:defmodule, [line: 1], ",
-                "[{:__aliases__, [line: 1], [:", module_name, "]}, ",
-                "[do: ", compiled, "]]}"
-            ])
+            module = ParserNode.convert_module_to_ast(module_name, compiled)
 
             quoted = module
                 |> Code.eval_string()
@@ -110,3 +104,21 @@ def lexer_and_parse_file_content_in_python(module_name, file_full_path):
 
     # 2º Convert each node from json to Fython format
     ParserNode.convert(json)
+
+def get_module_name(project_full_path, module_full_path):
+    # input > /home/joao/fythonproject/module/utils.fy
+    # output > ModuleA.Utils
+
+    directory_path = project_full_path |> String.replace(".", "\.")
+
+    regex = Regex.compile(Enum.join(["^", project_full_path, "/"]))
+        |> elem(1)
+
+    name = Regex.replace(regex, module_full_path, "")
+        |> String.replace("/", ".")
+
+    Regex.compile("\.fy$") |> elem(1)
+        |> Regex.replace(name, "")
+        |> String.split('.')
+        |> Enum.map(lambda i: String.capitalize(i))
+        |> Enum.join('.')
