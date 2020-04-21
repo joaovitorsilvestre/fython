@@ -1,37 +1,18 @@
+import Code.Lexer.Tokens
+
 def execute(text):
     state = {
         "text": text,
         "position": position(-1, 0, -1),
         "current_ident_level": 0,
         "error": None,
+        "current_char": None,
         "tokens": []
     }
     parse(state) |> Map.get("tokens")
 
 def position(idx, ln, col):
     {"idx": idx, "ln": ln, "col": col}
-
-def add_token(state, token):
-    Map.put(state, "tokens", [Map.get(state, "tokens"), token] |> List.flatten())
-
-def get_char(state):
-    text = state |> Map.get("text")
-    position = state |> Map.get("position")
-    get_char(text, position)
-
-def get_char(text, position):
-    ln = position |> Map.get("ln")
-    col = position |> Map.get("col")
-
-    number_of_lines = String.split(text, "\n") |> Enum.count()
-
-    number_of_cols = String.split(text, "\n")
-        |> Enum.at(ln, "")
-        |> String.length()
-
-    case ln > number_of_lines or col > number_of_cols:
-        True -> None
-        False -> text |> String.split('\\n') |> Enum.at(ln) |> String.at(col)
 
 def advance(state):
     idx = state |> Map.get("position") |> Map.get("idx")
@@ -52,14 +33,14 @@ def advance(state):
     col = col + 1 if to_sum == 'col' else col
 
     new_pos = position(idx, ln, col)
-    new_state = {
-        "position": new_pos,
-        "current_char": get_char(state |> Map.get("text"), new_pos)
-    }
 
-    Map.merge(
-        state, new_state
-    )
+    current_char = case ln > number_of_lines or col > number_of_cols:
+        True -> None
+        False -> text |> String.split('\\n') |> Enum.at(ln) |> String.at(col)
+
+    new_state = {"position": new_pos, "current_char": current_char}
+
+    Map.merge(state, new_state)
 
 def set_error(state, error):
     Map.put(state, "error", error)
@@ -68,16 +49,18 @@ def parse(state):
     case Map.get(state, "error"):
         None ->
             state = advance(state)
-            char = get_char(state)
 
-            case char:
+            case  state |> Map.get("current_char"):
                 ' ' -> parse(make_ident(state))
+                '\n' ->
+                    ident = Integer.max(0, Map.get("current_ident_level") - 4)
+                    Code.Lexer.Tokens.add_token(state, "")
                 None -> state
         _ -> state
 
 
 def make_ident(state):
-    current_char = get_char(state)
+    current_char = state |> Map.get("current_char")
     total_spaces = Map.get(state, "total_spaces", 0)
 
     case current_char == " ":

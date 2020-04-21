@@ -50,3 +50,25 @@ def KEYWORDS():
         'return',
         'case'
     ]
+
+def add_token(state, type):
+    add_token(state, type, ident, None)
+
+def add_token(state, type, value):
+    pos_start = Map.get("pos_start")
+    pos_end = Map.get("pos_end")
+
+    add_token(state, type, value, pos_start, pos_end)
+
+def add_token(state, type, value, pos_start, pos_end):
+    ident = state |> Map.get("current_ident_level")
+
+    token = {
+        "type": type,
+        "value": value,
+        "ident": ident,
+        "pos_start": pos_start,
+        "pos_end": pos_end,
+    }
+
+    Map.put(state, "tokens", [Map.get(state, "tokens"), token] |> List.flatten())
