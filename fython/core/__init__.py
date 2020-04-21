@@ -41,7 +41,10 @@ def get_lexed_and_jsonified(file_path):
                 return {"NodeType": x.__class__.__name__, **x.__dict__}
             return ""
 
-    return json.dumps(to_json(ast), default=lambda x: to_json(x), indent=2)
+    return json.dumps({
+        "ast": json.dumps(to_json(ast), default=lambda x: to_json(x), indent=2),
+        "error": str(error.as_string()) if error else None
+    })
 
 
 if __name__ == '__main__':
