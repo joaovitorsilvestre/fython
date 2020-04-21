@@ -165,8 +165,13 @@ def convert_in_node(node):
     right = Map.get(node, "right_expr") |> convert()
 
     Enum.join([
-        "{: in, [context: Elixir, import: Kernel], [", left, ", ", right, "]}"
+        "{:in, [context: Elixir, import: Kernel], [", left, ", ", right, "]}"
     ])
+
+def convert_raise_node(node):
+    expr = Map.get(node, "expr") |> convert()
+
+    Enum.join(["{:raise, [context: Elixir, import: Kernel], [", expr, "]}"])
 
 def convert_module_to_ast(module_name, compiled_body):
     module_name = case String.contains?(module_name, "."):

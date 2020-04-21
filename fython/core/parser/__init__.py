@@ -492,6 +492,17 @@ class Parser:
                 expr, pos_start, self.current_tok.pos_start.copy()
             ))
 
+        if self.current_tok.matches(TT_KEYWORD, 'raise'):
+            res.register_advancement()
+            self.advance()
+
+            expr = res.register(self.expr())
+            if res.error:
+                return res
+            return res.success(RaiseNode(
+                expr, pos_start, self.current_tok.pos_end.copy()
+            ))
+
         while self.current_tok.type == TT_NEWLINE:
             res.register_advancement()
             self.advance()

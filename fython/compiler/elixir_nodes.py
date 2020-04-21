@@ -2,7 +2,7 @@ from fython.core.lexer.tokens import TT_POW, TT_PLUS, TT_MINUS, TT_MUL, TT_DIV, 
     TT_KEYWORD, TT_NE
 from fython.core.parser import NumberNode, ListNode, BinOpNode, \
     UnaryOpNode, VarAccessNode, VarAssignNode, StatementsNode, IfNode, FuncDefNode, CallNode, StringNode, PipeNode, \
-    MapNode, AtomNode, ImportNode, LambdaNode, CaseNode, FuncAsVariableNode, InNode
+    MapNode, AtomNode, ImportNode, LambdaNode, CaseNode, FuncAsVariableNode, InNode, RaiseNode
 
 
 class ElixirAST:
@@ -299,4 +299,8 @@ class Conversor:
     def convert_InNode(self, node: InNode):
         left = self.convert(node.left_expr)
         right = self.convert(node.right_expr)
-        return "{: in, [context: Elixir, import: Kernel], [" + left + ", " + right + "]}"
+        return "{:in, [context: Elixir, import: Kernel], [" + left + ", " + right + "]}"
+
+    def convert_RaiseNode(self, node: RaiseNode):
+        expr = self.convert(node.expr)
+        return "{:raise, [context: Elixir, import: Kernel], [" + expr + "]}"
