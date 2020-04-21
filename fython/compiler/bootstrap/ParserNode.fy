@@ -30,6 +30,7 @@ def convert(node):
         "ImportNode"        -> ImportNode.convert_import_node(node)
         "CaseNode"          -> convert_case_node(node)
         "InNode"            -> convert_in_node(node)
+        "RaiseNode"         -> convert_raise_node(node)
 
 def convert_number_node(node):
     node |> Map.get("tok") |> Map.get("value") |> to_string()

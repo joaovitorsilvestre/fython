@@ -1146,7 +1146,7 @@ class Parser:
                     self.statements(only_ident_gte=initial_ident + 8),
                 )
             else:
-                result_value = res.register(self.expr())
+                result_value = res.register(self.statement())
                 if res.error:
                     return res
                 res.register_advancement()

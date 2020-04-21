@@ -172,9 +172,12 @@ class Conversor:
         if node.local_call:
             return "{{:., [], [{:" + node.node_to_call.var_name_tok.value + ", [], Elixir}]}, [], " + arguments + "}"
         elif '.' in node.get_name():
-            module, func_name = node.get_name().split('.')
+            *modules, func_name = node.get_name().split('.')
             func_name, _ = func_name.split('/')
-            return "{{:., [], [{:__aliases__, [alias: false], [:"+module+"]}, :"+func_name+"]}, [], " + arguments + "}"
+
+            modules = "[" + ', '.join([':' + i for i in modules]) + "]"
+
+            return "{{:., [], [{:__aliases__, [alias: false], " + modules + "}, :"+func_name+"]}, [], " + arguments + "}"
         else:
             return "{:" + node.node_to_call.var_name_tok.value + ", [], " + arguments + "}"
 

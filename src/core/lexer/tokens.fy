@@ -1,4 +1,4 @@
-def valid_token(token):
+def valid_token_type?(type):
     tokens = [
         "TT_INT",
         "TT_STRING",
@@ -32,7 +32,7 @@ def valid_token(token):
         "TT_PIPE",
         "TT_EOF"
     ]
-    List.member?(String.to_atom(token), tokens)
+    Enum.member?(tokens, type)
 
 def KEYWORDS():
     [
@@ -51,17 +51,20 @@ def KEYWORDS():
         'case'
     ]
 
+def add_eof_token(state):
+    state |> add_token("TT_EOF", None, None, None)
+
 def add_token(state, type):
-    add_token(state, type, ident, None)
-
-def add_token(state, type, value):
-    pos_start = Map.get("pos_start")
-    pos_end = Map.get("pos_end")
-
-    add_token(state, type, value, pos_start, pos_end)
+    pos_start = Map.get(state, 'position')
+    pos_end = Map.get(state, 'position')
+    add_token(state, type, None, pos_start, pos_end)
 
 def add_token(state, type, value, pos_start, pos_end):
     ident = state |> Map.get("current_ident_level")
+
+    case valid_token_type?(type):
+        False -> raise Enum.join(["Invalid Token Type: ", type])
+        True -> None
 
     token = {
         "type": type,
