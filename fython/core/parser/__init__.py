@@ -596,8 +596,6 @@ class Parser:
             ))
 
         if self.current_tok.ident != 0:
-            # if enters here, causes a infinite loop in some while loop
-            print('Entered in a errors message that causes inifinite loop. You need to fix it.')
             return res.failure(InvalidSyntaxError(
                 self.current_tok.pos_start, self.current_tok.pos_end,
                 f"'def' is not allowed inside functions. Use 'lambda' instead."

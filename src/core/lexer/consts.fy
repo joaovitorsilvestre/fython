@@ -1,8 +1,8 @@
-def DIGISTS():
+def digists():
     '0123456789'
 
-def LETTERS():
+def letters():
     'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
-def LETTERS_DIGITS():
-    List.flatten([LETTERS(), DIGISTS()])
+def letters_digits():
+    List.flatten([letters(), digists()])

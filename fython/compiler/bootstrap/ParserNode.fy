@@ -45,6 +45,7 @@ def convert_varaccess_node(node):
     case tok_value:
         "True" -> "true"
         "False" -> "false"
+        "None" -> "nil"
         _ -> Utils.join_str(["{:", tok_value, ", [], Elixir}"])
 
 def convert_varassign_node(node):

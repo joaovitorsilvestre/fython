@@ -142,7 +142,7 @@ def get_module_name(project_full_path, module_full_path):
         |> Enum.map(lambda i: String.capitalize(i))
 
     case final |> List.last():
-        "__ini__" ->
+        "__init__" ->
             final
                 |> List.pop_at(-1)
                 |> elem(1)
