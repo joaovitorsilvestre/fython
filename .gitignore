@@ -1,2 +1,3 @@
 .idea
-/fython/compiler/example_project/compiled/
+/fython/compiler/*/compiled/
+/fython/cli/compiled/

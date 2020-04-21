@@ -37,9 +37,12 @@ class Lexer:
                 tokens.append(tok)
             elif self.current_char == '#':
                 self.skip_comment()
+            elif self.current_char == '&':
+                tokens.append(Token(TT_ECOM, self.current_ident_level, pos_start=self.pos))
+                self.advance()
             elif self.current_char in DIGISTS:
                 tokens.append(self.make_number())
-            elif self.current_char in LETTERS:
+            elif self.current_char in LETTERS + '_':
                 tokens.append(self.make_identifier())
             elif self.current_char in ["'", '"']:
                 tokens.append(self.make_string())
@@ -47,8 +50,7 @@ class Lexer:
                 tokens.append(Token(TT_PLUS, self.current_ident_level, pos_start=self.pos))
                 self.advance()
             elif self.current_char == '-':
-                tokens.append(Token(TT_MINUS, self.current_ident_level, pos_start=self.pos))
-                self.advance()
+                tokens.append(self.make_minus_arrow())
             elif self.current_char == '*':
                 tokens.append(self.make_mul_or_power())
             elif self.current_char == '/':
@@ -79,7 +81,6 @@ class Lexer:
                 tokens.append(tok)
             elif self.current_char == '=':
                 tokens.append(self.make_equals())
-                self.advance()
             elif self.current_char == '<':
                 tokens.append(self.make_less_than())
                 self.advance()
@@ -126,9 +127,21 @@ class Lexer:
             )
         self.current_ident_level = max(0, total_spaces)
 
+    def make_minus_arrow(self):
+        self.advance()
+
+        if self.current_char == '>':
+            self.advance()
+            return Token(TT_ARROW, self.current_ident_level, pos_start=self.pos)
+
+        return Token(TT_MINUS, self.current_ident_level, pos_start=self.pos)
+
     def make_string(self):
         string = ''
         pos_start = self.pos.copy()
+
+        string_cote_type = self.current_char
+
         escape_character = False
         self.advance()
 
@@ -137,7 +150,7 @@ class Lexer:
             't': '\t'
         }
 
-        while self.current_char != None and (self.current_char not in ["'", '"'] or escape_character):
+        while self.current_char != None and (self.current_char != string_cote_type or escape_character):
             if escape_character:
                 string += escape_characters.get(self.current_char, self.current_char)
             else:
@@ -197,13 +210,18 @@ class Lexer:
                 self.pos, "expected letters or digits (to create an atom), new line or space after ':'"
             )
 
-    def make_identifier(self):
+    def _get_identifier(self):
         id_str = ''
-        pos_start = self.pos.copy()
 
-        while self.current_char != None and self.current_char in LETTERS_DIGITS + '_.':
+        while self.current_char != None and self.current_char in LETTERS_DIGITS + '_.?!':
             id_str += self.current_char
             self.advance()
+
+        return id_str
+
+    def make_identifier(self):
+        pos_start = self.pos.copy()
+        id_str = self._get_identifier()
 
         tok_type = TT_KEYWORD if id_str in KEYWORDS else TT_IDENTIFIER
         return Token(tok_type, self.current_ident_level, id_str, pos_start, self.pos.copy())

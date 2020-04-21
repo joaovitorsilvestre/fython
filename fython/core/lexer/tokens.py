@@ -1,7 +1,9 @@
 TT_INT              = 'INT'
 TT_STRING           = 'STRING'
+TT_ARROW            = 'ARROW'
 TT_KEYWORD          = 'KEYWORD'
 TT_IDENTIFIER       = 'IDENTIFIER'
+TT_ECOM             = 'ECOM'
 TT_ATOM             = 'TT_ATOM'
 TT_FLOAT            = "FLOAT"
 TT_PLUS             = 'PLUS'
@@ -28,6 +30,9 @@ TT_NEWLINE          = 'NEWLINE'
 TT_PIPE             = 'PIPE'
 TT_EOF              = 'EOF'
 
+# True, False and None are treated as identifiers
+# We just care about they in the convert to elixir ast part
+
 KEYWORDS = [
     'import',
     'from',
@@ -40,7 +45,8 @@ KEYWORDS = [
     'else',
     'def',
     'lambda',
-    'return'
+    'return',
+    'case',
 ]
 
 
@@ -64,3 +70,9 @@ class Token:
         if self.value is not None:
             return f'{self.type}:{self.value}'
         return self.type
+
+
+    def debug_me(self):
+        from fython.core.parser.utils import string_with_arrows
+        print(string_with_arrows(self.pos_start.ftxt, self.pos_start, self.pos_end))
+

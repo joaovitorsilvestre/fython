@@ -2,7 +2,7 @@ from fython.core.lexer.tokens import TT_POW, TT_PLUS, TT_MINUS, TT_MUL, TT_DIV, 
     TT_KEYWORD
 from fython.core.parser import NumberNode, ListNode, BinOpNode, \
     UnaryOpNode, VarAccessNode, VarAssignNode, StatementsNode, IfNode, FuncDefNode, CallNode, StringNode, PipeNode, \
-    MapNode, AtomNode, ImportNode, LambdaNode
+    MapNode, AtomNode, ImportNode, LambdaNode, CaseNode, FuncAsVariableNode
 
 
 class ElixirAST:
@@ -100,6 +100,8 @@ class Conversor:
             return "false"
         elif node.var_name_tok.value == 'True':
             return "true"
+        elif node.var_name_tok.value == 'None':
+            return "nil"
 
         return "{:" + node.var_name_tok.value + ", [], Elixir}"
 
@@ -162,9 +164,14 @@ class Conversor:
                  ]}"
 
     def convert_CallNode(self, node: CallNode):
-        arguments = "[" + ','.join([self.convert(i) for i in node.arg_nodes]) + ']'
+        args = [self.convert(i) for i in node.arg_nodes]
+        keywords = [f"[{k}: {self.convert(v)}]" for k, v in node.keywords.items()]
 
-        if '.' in node.get_name():
+        arguments = "[" + ', '.join([*args, *keywords]) + "]"
+
+        if node.local_call:
+            return "{{:., [], [{:" + node.node_to_call.var_name_tok.value + ", [], Elixir}]}, [], " + arguments + "}"
+        elif '.' in node.get_name():
             module, func_name = node.get_name().split('.')
             func_name, _ = func_name.split('/')
             return "{{:., [], [{:__aliases__, [alias: false], [:"+module+"]}, :"+func_name+"]}, [], " + arguments + "}"
@@ -172,7 +179,8 @@ class Conversor:
             return "{:" + node.node_to_call.var_name_tok.value + ", [], " + arguments + "}"
 
     def convert_StringNode(self, node: StringNode):
-        return f'"{node.tok.value}"'
+        value = node.tok.value.replace('"', '\\"')
+        return f'"{value}"'
 
     def convert_PipeNode(self, node: PipeNode):
         assert not isinstance(node.left_node, PipeNode), "" \
@@ -201,8 +209,12 @@ class Conversor:
                 if last is None:
                     last = build_one_pipe(left, right)
                 else:
-                    last_one = self.convert(left)
-                    last = "{:|>, [context: Elixir, import: Kernel], [" + last + ", " + last_one + "]}"
+                    left = self.convert(left)
+                    last = "{:|>, [context: Elixir, import: Kernel], [" + last + ", " + left + "]}"
+                    if right:
+                        right = self.convert(right)
+                        last = "{:|>, [context: Elixir, import: Kernel], [" + last + ", " + right + "]}"
+
 
             return last
 
@@ -215,36 +227,71 @@ class Conversor:
         return "{:%{}, [], [" + ', '.join(values) + "]}"
 
     def convert_ImportNode(self, node: ImportNode):
-        import_commands = []
+        if node.modules_import:
+            import_commands = []
 
-        if node.type == 'import':
-            for imp in node.imports_list:
-                if imp.alias:
+            for imp in node.modules_import:
+                if imp.get('alias'):
                     import_commands.append(
                         "{:import, [context: Elixir],\
                         [\
-                          {:__aliases__, [alias: false], [:" + imp.name + "]},\
-                          [as: {:__aliases__, [alias: false], [:Oi]}]\
+                          {:__aliases__, [alias: false], [:" + imp['name'] + "]},\
+                          [as: {:__aliases__, [alias: false], [:" + imp['alias'] + "]}]\
                         ]}"
                     )
                 else:
                     import_commands.append(
-                        "{:import, [context: Elixir], [{:__aliases__, [alias: false], [:" + imp.name + "]}]}"
+                        "{:import, [context: Elixir], [{:__aliases__, [alias: false], [:" + imp['name'] + "]}]}"
                     )
-        elif node.type == 'from':
-            for imp in node.imports_list:
-                if imp.alias:
-                    continue
-                else:
-                    import_commands.append(
-                        "{:import, [context: Elixir],\
-                         [{:__aliases__, [alias: false], [:"+imp.from_+"]}, [only: ["+ imp.name +": "+str(imp.arity)+"]]]}\
-                       "
-                   )
+            return "{:__block__, [], [" + ', '.join(import_commands) + "]}"
         else:
-            raise "Should not get here"
+            raise NotImplemented()
 
-        if len(import_commands) == 1:
-            return import_commands[0]
+        # if node.type == 'import':
+        #     for imp in node.imports_list:
+        #         if imp.alias:
+        #             import_commands.append(
+        #                 "{:import, [context: Elixir],\
+        #                 [\
+        #                   {:__aliases__, [alias: false], [:" + imp.name + "]},\
+        #                   [as: {:__aliases__, [alias: false], [:" + imp.alias + "]}]\
+        #                 ]}"
+        #             )
+        #         else:
+        #             import_commands.append(
+        #                 "{:import, [context: Elixir], [{:__aliases__, [alias: false], [:" + imp.name + "]}]}"
+        #             )
+        # elif node.type == 'from':
+        #     for imp in node.imports_list:
+        #         if imp.alias:
+        #             raise Exception('no suported')
+        #         elif '.' not in imp.from_:
+        #             import_commands.append(
+        #                 "{:import, [context: Elixir],\
+        #                  [{:__aliases__, [alias: false], [:"+imp.from_+"]}, [only: ["+ imp.name +": "+str(imp.arity)+"]]]}\
+        #                "
+        #            )
+        # else:
+        #     raise "Should not get here"
+        #
+        # if len(import_commands) == 1:
+        #     return import_commands[0]
+        #
+        # return "{:__block__, [], [" + ''.join(import_commands) + "]}"
 
-        return "{:__block__, [], [" + ''.join(import_commands) + "]}"
+    def convert_CaseNode(self, node: CaseNode):
+        expr = self.convert(node.expr)
+
+        arguments = [
+            "{:->, [], [[" + self.convert(left) + "], " + self.convert(right) + "]}"
+            for left, right in node.cases
+        ]
+
+        arguments = ", ".join(arguments)
+
+        return "{:case, [], [" + expr + ", [do: [" + arguments + "]]]}"
+
+    def convert_FuncAsVariableNode(self, node: FuncAsVariableNode):
+        name = node.var_name_tok.value
+        arity = str(node.arity)
+        return "{:&, [], [{:/, [context: Elixir, import: Kernel], [{:"+name+", [], Elixir}, "+arity+"]}]}"

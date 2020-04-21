@@ -1,4 +1,4 @@
-class InterityResult:
+class PosParserResult:
     def __init__(self, node):
         self.node = node
         self.error = None
