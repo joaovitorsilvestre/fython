@@ -1,16 +1,16 @@
 def execute(text):
     state = {
         "text": text,
-        "position": position(-1, -1, -1),
+        "position": position(-1, 0, -1),
         "current_ident_level": 0,
         "error": None,
         "current_char": None,
         "tokens": []
     }
-    parse(state)
+    state
+        |> advance()
+        |> parse()
         |> Core.Lexer.Tokens.add_eof_token()
-        |> Map.get("tokens")
-
 
 def position(idx, ln, col):
     {"idx": idx, "ln": ln, "col": col}
@@ -22,8 +22,6 @@ def advance(state):
     text = state |> Map.get("text")
 
     idx = idx + 1
-    IO.inspect("index")
-    IO.inspect(idx)
     current_char = text |> String.at(idx)
 
     new_pos = case current_char == '\n':
@@ -40,15 +38,16 @@ def set_error(state, error):
 def parse(state):
     case Map.get(state, "error"):
         None ->
-            state = advance(state)
-
-            case  state |> Map.get("current_char"):
+            case state |> Map.get("current_char"):
                 " " -> parse(make_ident(state))
                 "\n" ->
-                    ident = max(0, Map.get(state, "current_ident_level") - 4)
-                    parse(
-                        Core.Lexer.Tokens.add_token(state, "TT_NEWLINE")
-                    )
+                    state
+                        |> Map.put("current_ident_level", 0)
+                        |> Core.Lexer.Tokens.add_token("TT_NEWLINE")
+                        |> advance()
+                        |> parse()
+                '\t' -> parse(advance(state))
+                ':' -> parse(make_do_or_token(state))
                 None -> state
         _ -> state
 
@@ -67,6 +66,39 @@ def make_ident(state):
 
             state = case rem(total_spaces, 4) != 0:
                 True -> set_error(state, "Identation problem")
-                False -> state
+                False -> state |> Map.put("current_ident_level", max(0, total_spaces))
 
             state |> Map.delete("total_spaces")
+
+def loop(st):
+    st = advance(st)
+    cc = Map.get(st, "current_char")
+    result = Map.get(st, "result")
+
+    valid = cc != None and String.contains?(Core.Lexer.Consts.letters_digits(), cc)
+
+    case valid:
+        True -> Map.put(st, "result", Enum.join([result, cc])) |> loop()
+        False -> st
+
+
+def make_do_or_token(state):
+    pos_start = Map.get(state, "position")
+    state = advance(state)
+
+    case String.contains?(Core.Lexer.Consts.letters(), Map.get(state, "current_char")):
+        True ->
+            state = state
+                |> Map.put("result",  Map.get(state, "current_char"))
+                |> loop()
+            state = state
+                |> Core.Lexer.Tokens.add_token(
+                    "TT_ATOM", Map.get(state, "result"), pos_start
+                )
+                |> Map.delete("result")
+
+            state
+        False ->
+            state
+                |> advance
+                |> Core.Lexer.Tokens.add_token("TT_DO")

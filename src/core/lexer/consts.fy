@@ -5,4 +5,4 @@ def letters():
     'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
 def letters_digits():
-    List.flatten([letters(), digists()])
+    Enum.join([letters(), digists()])

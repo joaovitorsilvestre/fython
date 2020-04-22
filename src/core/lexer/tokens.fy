@@ -52,15 +52,18 @@ def KEYWORDS():
     ]
 
 def add_eof_token(state):
-    state |> add_token("TT_EOF", None, None, None)
+    state |> add_token("TT_EOF", None, None)
 
 def add_token(state, type):
-    pos_start = Map.get(state, 'position')
-    pos_end = Map.get(state, 'position')
-    add_token(state, type, None, pos_start, pos_end)
+    add_token(state, type, None)
 
-def add_token(state, type, value, pos_start, pos_end):
+def add_token(state, type, value):
+    pos_start = Map.get(state, 'position')
+    add_token(state, type, value, pos_start)
+
+def add_token(state, type, value, pos_start):
     ident = state |> Map.get("current_ident_level")
+    pos_end = state |> Map.get("position")
 
     case valid_token_type?(type):
         False -> raise Enum.join(["Invalid Token Type: ", type])

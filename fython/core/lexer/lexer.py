@@ -25,7 +25,8 @@ class Lexer:
                 if error:
                     return [], error
             elif self.current_char in ';\n':
-                self.current_ident_level = max(0, self.current_ident_level - 4)
+                # Importante, every new line we change ident level to 0
+                self.current_ident_level = 0
                 tokens.append(Token(TT_NEWLINE, self.current_ident_level, pos_start=self.pos))
                 self.advance()
             elif self.current_char in ' \t':
