@@ -31,6 +31,7 @@ def convert(node):
         "CaseNode"          -> convert_case_node(node)
         "InNode"            -> convert_in_node(node)
         "RaiseNode"         -> convert_raise_node(node)
+        "FuncAsVariableNode" -> convert_funcasvariable_node(node)
 
 def convert_number_node(node):
     node |> Map.get("tok") |> Map.get("value") |> to_string()
@@ -173,6 +174,14 @@ def convert_raise_node(node):
     expr = Map.get(node, "expr") |> convert()
 
     Enum.join(["{:raise, [context: Elixir, import: Kernel], [", expr, "]}"])
+
+def convert_funcasvariable_node(node):
+    name = node |> Map.get("var_name_tok") |> Map.get("value")
+    arity = node |> Map.get("arity")
+    Enum.join([
+        "{:&, [], [{:/, [context: Elixir, import: Kernel], [{:",
+        name, ", [], Elixir}, ", arity, "]}]}"
+    ])
 
 def convert_module_to_ast(module_name, compiled_body):
     module_name = case String.contains?(module_name, "."):

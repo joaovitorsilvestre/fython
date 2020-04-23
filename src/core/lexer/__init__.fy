@@ -70,15 +70,15 @@ def make_ident(state):
 
             state |> Map.delete("total_spaces")
 
-def loop(st):
+def loop_while(st, func):
     st = advance(st)
     cc = Map.get(st, "current_char")
     result = Map.get(st, "result")
 
-    valid = cc != None and String.contains?(Core.Lexer.Consts.letters_digits(), cc)
+    valid = func(cc)
 
     case valid:
-        True -> Map.put(st, "result", Enum.join([result, cc])) |> loop()
+        True -> Map.put(st, "result", Enum.join([result, cc])) |> loop_while(func)
         False -> st
 
 
@@ -90,7 +90,9 @@ def make_do_or_token(state):
         True ->
             state = state
                 |> Map.put("result",  Map.get(state, "current_char"))
-                |> loop()
+                |> loop_while(lambda cc:
+                    cc != None and String.contains?(Core.Lexer.Consts.letters_digits(), cc)
+                )
             state = state
                 |> Core.Lexer.Tokens.add_token(
                     "TT_ATOM", Map.get(state, "result"), pos_start

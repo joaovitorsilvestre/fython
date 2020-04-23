@@ -3,8 +3,7 @@ import Utils
 def convert_call_node(convert, node):
     args = node
         |> Map.get("arg_nodes")
-        # TODO we dont have support for: Enum.map(&convert/1)
-        |> Enum.map(lambda i: convert(i))
+        |> Enum.map(convert)
 
     keywords = node
         |> Map.get("keywords")
