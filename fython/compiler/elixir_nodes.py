@@ -283,7 +283,10 @@ class Conversor:
         # return "{:__block__, [], [" + ''.join(import_commands) + "]}"
 
     def convert_CaseNode(self, node: CaseNode):
-        expr = self.convert(node.expr)
+        if node.expr is not None:
+            expr = self.convert(node.expr)
+        else:
+            expr = None
 
         arguments = [
             "{:->, [], [[" + self.convert(left) + "], " + self.convert(right) + "]}"
@@ -292,7 +295,10 @@ class Conversor:
 
         arguments = ", ".join(arguments)
 
-        return "{:case, [], [" + expr + ", [do: [" + arguments + "]]]}"
+        if expr:
+            return "{:case, [], [" + expr + ", [do: [" + arguments + "]]]}"
+        else:
+            return "{:cond, [], [[do: [" + arguments + "]]]}"
 
     def convert_FuncAsVariableNode(self, node: FuncAsVariableNode):
         name = node.var_name_tok.value

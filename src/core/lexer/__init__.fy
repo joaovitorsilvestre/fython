@@ -36,19 +36,21 @@ def set_error(state, error):
     Map.put(state, "error", error)
 
 def parse(state):
+
     case Map.get(state, "error"):
         None ->
-            case state |> Map.get("current_char"):
-                " " -> parse(make_ident(state))
-                "\n" ->
+            cc = state |> Map.get("current_char")
+            case:
+                cc == " " -> parse(make_ident(state))
+                cc == "\n" ->
                     state
                         |> Map.put("current_ident_level", 0)
                         |> Core.Lexer.Tokens.add_token("TT_NEWLINE")
                         |> advance()
                         |> parse()
-                '\t' -> parse(advance(state))
-                ':' -> parse(make_do_or_token(state))
-                None -> state
+                cc == '\t' -> parse(advance(state))
+                cc == ':' -> parse(make_do_or_token(state))
+                True -> state
         _ -> state
 
 

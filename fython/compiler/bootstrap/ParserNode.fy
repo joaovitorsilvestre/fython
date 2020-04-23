@@ -144,7 +144,7 @@ def convert_deffunc_node(node):
     ])
 
 def convert_case_node(node):
-    expr = convert(node |> Map.get("expr"))
+    expr = convert(node |> Map.get("expr")) if node |> Map.get("expr") else None
 
     arguments = node
         |> Map.get("cases")
@@ -158,9 +158,13 @@ def convert_case_node(node):
         )
         |> Enum.join(', ')
 
-    Enum.join([
-        "{:case, [], [", expr, ", [do: [", arguments, "]]]}"
-    ])
+    case expr:
+        None -> Enum.join([
+                "{:cond, [], [[do: [", arguments, "]]]}"
+            ])
+        _ -> Enum.join([
+                "{:case, [], [", expr, ", [do: [", arguments, "]]]}"
+            ])
 
 def convert_in_node(node):
     left = Map.get(node, "left_expr") |> convert()

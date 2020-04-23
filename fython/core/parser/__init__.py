@@ -1085,12 +1085,16 @@ class Parser:
 
         initial_ident = self.current_tok.ident
 
+        # whe is none, this case is treated as a elixir cond
+        expr = None
+
         res.register_advancement()
         self.advance()
 
-        expr = res.register(self.expr())
-        if res.error:
-            return res
+        if self.current_tok.type != TT_DO:
+            expr = res.register(self.expr())
+            if res.error:
+                return res
 
         if self.current_tok.type != TT_DO:
             return res.failure(InvalidSyntaxError(

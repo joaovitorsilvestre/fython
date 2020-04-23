@@ -46,6 +46,7 @@ atom                : INT|FLOAT|IDENTIFIER|STRING|ATOM
                     : func-def
                     : lambda-def
                     : case-def
+                    : case-no-expr-def
                     : func-as-var-expr
 
 list-expr           : LSQUARE (expr (COMMA expr)*)? RSQUARE
@@ -55,7 +56,7 @@ map-expr            : LCURLY ((expr DO expr) (COMMA (expr DO expr))*)? RCURLY
 if-expr             : expr KEYWORD:if expr DO expr
                     : (KEYWORD:else expr)?
 
-case-def            : KEYWORD:case expr DO NEWLINE
+case-def            : KEYWORD:case expr? DO NEWLINE
                     (expr ARROW expr NEWLINE)+
 
 pipe-expr           : expr (PIPE expr)+
