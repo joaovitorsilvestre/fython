@@ -1,3 +1,5 @@
+import re
+
 from fython.core.lexer.tokens import TT_POW, TT_PLUS, TT_MINUS, TT_MUL, TT_DIV, TT_LTE, TT_LT, TT_GTE, TT_GT, TT_EE, \
     TT_KEYWORD, TT_NE
 from fython.core.parser import NumberNode, ListNode, BinOpNode, \
@@ -182,7 +184,8 @@ class Conversor:
             return "{:" + node.node_to_call.var_name_tok.value + ", [], " + arguments + "}"
 
     def convert_StringNode(self, node: StringNode):
-        value = node.tok.value.replace('"', '\\"')
+        value = re.sub(r'(?<!\\)\"', r'\\\\\"', node.tok.value)
+
         return f'"{value}"'
 
     def convert_PipeNode(self, node: PipeNode):

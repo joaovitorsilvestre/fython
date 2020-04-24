@@ -1,3 +1,7 @@
+
+def parse(cc):
+    '"'
+
 def digists():
     '0123456789'
 

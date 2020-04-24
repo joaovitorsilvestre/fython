@@ -36,7 +36,6 @@ def set_error(state, error):
     Map.put(state, "error", error)
 
 def parse(state):
-
     case Map.get(state, "error"):
         None ->
             cc = state |> Map.get("current_char")
@@ -50,6 +49,7 @@ def parse(state):
                         |> parse()
                 cc == '\t' -> parse(advance(state))
                 cc == ':' -> parse(make_do_or_token(state))
+                cc == "'" -> parse(make_string(state))
                 True -> state
         _ -> state
 
@@ -106,3 +106,17 @@ def make_do_or_token(state):
             state
                 |> advance
                 |> Core.Lexer.Tokens.add_token("TT_DO")
+
+
+def make_string(state):
+    pos_start = Map.get(state, "position")
+    string_char_type = Map.get(state, "current_char") # ' or "
+    state = advance(state)
+
+    state = loop_while(state, lambda cc: cc != string_char_type)
+
+    state = state
+        |> Core.Lexer.Tokens.add_token(
+            "TT_STRING", Map.get(state, "result"), pos_start
+        )
+        |> Map.delete("result")

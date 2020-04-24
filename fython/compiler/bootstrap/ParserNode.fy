@@ -40,7 +40,15 @@ def convert_atom_node(node):
     Utils.join_str([":", node |> Map.get("tok") |> Map.get("value")])
 
 def convert_string_node(node):
-    Utils.join_str(['"', node |> Map.get("tok") |> Map.get("value"), '"'])
+    value = node
+        |> Map.get("tok")
+        |> Map.get("value")
+
+    value = Regex.replace(
+        Regex.compile('(?<!\\)\"') |> elem(1), value, 'uat'
+    )
+
+    Utils.join_str(['"', value, '"'])
 
 def convert_varaccess_node(node):
     tok_value = node |> Map.get("var_name_tok") |> Map.get("value")
