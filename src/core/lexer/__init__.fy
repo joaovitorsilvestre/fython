@@ -41,18 +41,26 @@ def parse(state):
     case Map.get(state, "error"):
         None ->
             cc = state |> Map.get("current_char")
+            pos = state |> Map.get("position")
             case:
                 cc == None -> state
-                cc == " " -> parse(make_ident(state))
+                cc == " " and Map.get(pos, "col") == 0 -> parse(make_ident(state))
+                cc == " " or cc == '\t' -> parse(advance(state))
                 cc == "\n" ->
                     state
                         |> Map.put("current_ident_level", 0)
                         |> Core.Lexer.Tokens.add_token("TT_NEWLINE")
                         |> advance()
                         |> parse()
-                cc == '\t' -> parse(advance(state))
+                cc == "#" -> parse(skip_comment(state))
                 cc == ':' -> parse(make_do_or_token(state))
                 cc == "'" or cc == '"' -> parse(make_string(state))
+                cc == "&" ->
+                    state
+                        |> Core.Lexer.Tokens.add_token("TT_ECOM")
+                        |> advance()
+                        |> parse()
+                String.contains?(Core.Lexer.Consts.digists(), cc) -> parse(make_number(state))
                 True -> set_error(state, Enum.join(["IllegalCharError: ", cc]))
         _ -> state
 
@@ -91,7 +99,9 @@ def make_do_or_token(state):
     pos_start = Map.get(state, "position")
     state = advance(state)
 
-    case String.contains?(Core.Lexer.Consts.letters(), Map.get(state, "current_char")):
+    first_char = Map.get(state, "current_char")
+
+    case first_char != None and String.contains?(Core.Lexer.Consts.letters(), first_char):
         True ->
             state = state
                 |> Map.put("result",  Map.get(state, "current_char"))
@@ -127,3 +137,36 @@ def make_string(state):
             "TT_STRING", Map.get(state, "result"), pos_start
         )
         |> Map.delete("result")
+
+def skip_comment(state):
+    state = advance(state)
+
+    state = loop_while(state, lambda cc:
+        cc != '\n'
+    )
+    Map.delete(state, "result")
+
+def make_number(state):
+    pos_start = Map.get(state, "position")
+    first_number = Map.get(state, "current_char")
+
+    state = loop_while(state, lambda cc:
+        cc != None and String.contains?(Enum.join([Core.Lexer.Consts.digists(), '._']), cc)
+    )
+    result = Enum.join([first_number, Map.get(state, "result")])
+
+    state = case:
+        (String.split(result, ".") |> Enum.count()) > 2 ->
+            set_error(state, Enum.join(["IllegalCharError: ."]))
+        String.contains?(result, '.') ->
+            state
+                |> Core.Lexer.Tokens.add_token(
+                    "TT_FLOAT", result, pos_start
+                )
+        True ->
+            state
+                |> Core.Lexer.Tokens.add_token(
+                    "TT_INT", result, pos_start
+                )
+
+    state |> Map.delete("result")
