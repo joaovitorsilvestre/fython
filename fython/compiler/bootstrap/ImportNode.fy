@@ -13,10 +13,18 @@ def import_case(node):
             name = Map.get(imp, "name")
             alias = Map.get(imp, "alias")
 
+            case String.contains?(name, "."):
+                True ->
+                    name = name
+                        |> String.split(".")
+                        |> Enum.map(lambda i: Enum.join([':', i]))
+                        |> Enum.join(', ')
+                False -> Enum.join([':', name])
+
             import_command = Utils.join_str([
                 "{:import, [context: Elixir], ",
                 "[{:__aliases__, [alias: false], ",
-                "[:", name, "]}]}"
+                "[", name, "]}]}"
             ])
 
             result = case Map.get(imp, "alias"):
@@ -25,7 +33,7 @@ def import_case(node):
                     "{:__block__, [], [",
                         import_command,
                         ", {:alias, [context: Elixir], [",
-                        "{:__aliases__, [alias: false], [:", name, "]},",
+                        "{:__aliases__, [alias: false], [", name, "]},",
                         "[as: {:__aliases__, [alias: ", name, "], [:", alias,"]}]",
                         "]}",
                     "]}"

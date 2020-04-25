@@ -23,7 +23,9 @@ def build_single_pipe(left, right):
         True -> left |> apply_convert()
         False -> left
 
-    right = right |> apply_convert()
+    right = case is_map(right):
+        True -> right |> apply_convert()
+        False -> right
 
     Enum.join([
         "{:|>, [context: Elixir, import: Kernel], [",

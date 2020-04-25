@@ -37,7 +37,7 @@ class Node:
             ]
         elif isinstance(self, CaseNode):
             result = [
-                self.expr.get_all_child_nodes_flatten(),
+                self.expr.get_all_child_nodes_flatten() if self.expr else [],
                 *[[k.get_all_child_nodes_flatten(), v.get_all_child_nodes_flatten()] for k, v in self.cases]
             ]
         elif isinstance(self, (BinOpNode, PipeNode)):
@@ -312,7 +312,7 @@ class ImportNode(Node):
 
 
 class CaseNode(Node):
-    def __init__(self, expr: Node, cases: List[Tuple[Node, Node]], pos_start, pos_end,):
+    def __init__(self, expr: Union[None, Node], cases: List[Tuple[Node, Node]], pos_start, pos_end,):
         self.expr = expr
         self.cases = cases
         self.pos_start = pos_start
@@ -320,3 +320,24 @@ class CaseNode(Node):
 
     def __repr__(self):
         return f"case {str(self.expr)} do: {len(self.cases)} cases"
+
+
+class RaiseNode(Node):
+    def __init__(self, expr, pos_start, pos_end,):
+        self.expr = expr
+        self.pos_start = pos_start
+        self.pos_end = pos_end
+
+    def __repr__(self):
+        return f"raise : {self.expr()}"
+
+
+class InNode(Node):
+    def __init__(self, left_expr, right_expr, pos_start, pos_end,):
+        self.left_expr = left_expr
+        self.right_expr = right_expr
+        self.pos_start = pos_start
+        self.pos_end = pos_end
+
+    def __repr__(self):
+        return f"raise : {self.expr()}"

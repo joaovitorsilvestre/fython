@@ -1,3 +1,2 @@
 .idea
-/fython/compiler/*/compiled/
-/fython/cli/compiled/
+**/compiled/

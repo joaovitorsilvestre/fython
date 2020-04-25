@@ -54,32 +54,36 @@ def compile_project_to_binary(directory_path):
     # go to compiled folder and start iex again.
     # Now, you should be able to call any module of this project in iex
 
-    [directory_path, "*.fy"]
+    [directory_path, "**/*.fy"]
         |> Enum.join('/')
         |> Path.wildcard()
         |> Enum.map(lambda full_path:
-            module_name = full_path
-                |> String.split('/')
-                |> Enum.at(-1)
-                |> String.replace('.fy', '')
-                |> String.capitalize()
+            module_name = get_module_name(directory_path, full_path)
 
-            [
-                module_name,
-                lexer_and_parse_file_content_in_python(
-                    module_name, full_path
-                )
-            ]
+            IO.puts(Enum.join(["Compiling module: ", module_name]))
+
+            IO.puts("* lexing")
+            compiled_n_error = lexer_and_parse_file_content_in_python(
+                module_name, full_path
+            )
+
+            compiled = compiled_n_error |> Enum.at(0)
+            error = compiled_n_error |> Enum.at(1)
+
+            case error:
+                None -> None
+                _ ->
+                    IO.puts("Compilation error:")
+                    IO.puts(error)
+
+            [module_name, compiled]
         )
         |> Enum.map(lambda modulename_n_content:
+            IO.puts("* compiling")
             module_name = modulename_n_content |> Enum.at(0)
             compiled = modulename_n_content |> Enum.at(1)
 
-            module = Utils.join_str([
-                "{:defmodule, [line: 1], ",
-                "[{:__aliases__, [line: 1], [:", module_name, "]}, ",
-                "[do: ", compiled, "]]}"
-            ])
+            module = ParserNode.convert_module_to_ast(module_name, compiled)
 
             quoted = module
                 |> Code.eval_string()
@@ -108,5 +112,39 @@ def lexer_and_parse_file_content_in_python(module_name, file_full_path):
         |> Jason.decode()
         |> elem(1)
 
+    ast = json |> Map.get("ast") |> Jason.decode() |> elem(1)
+    error = json |> Map.get("error")
+
     # 2º Convert each node from json to Fython format
-    ParserNode.convert(json)
+    case error:
+        None -> [ParserNode.convert(ast), error]
+        _ -> [None, error]
+
+def get_module_name(project_full_path, module_full_path):
+    # input > /home/joao/fythonproject/module/utils.fy
+    # output > ModuleA.Utils
+
+    # if file name is __init__.fy
+    # we wil remove this name and the module name passes to be
+    # the name of this file parent folder
+
+    directory_path = project_full_path |> String.replace(".", "\.")
+
+    regex = Regex.compile(Enum.join(["^", project_full_path, "/"]))
+        |> elem(1)
+
+    name = Regex.replace(regex, module_full_path, "")
+        |> String.replace("/", ".")
+
+    final = Regex.compile("\.fy$") |> elem(1)
+        |> Regex.replace(name, "")
+        |> String.split('.')
+        |> Enum.map(lambda i: String.capitalize(i))
+
+    case final |> List.last():
+        "__init__" ->
+            final
+                |> List.pop_at(-1)
+                |> elem(1)
+                |> Enum.join('.')
+        _ -> final |> Enum.join('.')

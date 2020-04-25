@@ -1,3 +1,4 @@
 def oi():
-    [-1, 3, 10]
-    IO.puts("ssss")
+    a = {"a": {"b": {"c": 1}}}
+
+    IO.puts(a |> Map.get("a") |> Map.get("b") |> Map.get("c"))

@@ -29,6 +29,9 @@ def convert(node):
         "MapNode"           -> convert_map_node(node)
         "ImportNode"        -> ImportNode.convert_import_node(node)
         "CaseNode"          -> convert_case_node(node)
+        "InNode"            -> convert_in_node(node)
+        "RaiseNode"         -> convert_raise_node(node)
+        "FuncAsVariableNode" -> convert_funcasvariable_node(node)
 
 def convert_number_node(node):
     node |> Map.get("tok") |> Map.get("value") |> to_string()
@@ -37,7 +40,13 @@ def convert_atom_node(node):
     Utils.join_str([":", node |> Map.get("tok") |> Map.get("value")])
 
 def convert_string_node(node):
-    Utils.join_str(['"', node |> Map.get("tok") |> Map.get("value"), '"'])
+    value = node
+        |> Map.get("tok")
+        |> Map.get("value")
+
+    # Maybe is good to remove this dependency, eventually
+    # Converto to json is te easiest way that we found for scape `"` and `/` (and probably others too)
+    Jason.encode(value) |> elem(1)
 
 def convert_varaccess_node(node):
     tok_value = node |> Map.get("var_name_tok") |> Map.get("value")
@@ -45,6 +54,7 @@ def convert_varaccess_node(node):
     case tok_value:
         "True" -> "true"
         "False" -> "false"
+        "None" -> "nil"
         _ -> Utils.join_str(["{:", tok_value, ", [], Elixir}"])
 
 def convert_varassign_node(node):
@@ -140,7 +150,7 @@ def convert_deffunc_node(node):
     ])
 
 def convert_case_node(node):
-    expr = convert(node |> Map.get("expr"))
+    expr = convert(node |> Map.get("expr")) if node |> Map.get("expr") else None
 
     arguments = node
         |> Map.get("cases")
@@ -154,6 +164,52 @@ def convert_case_node(node):
         )
         |> Enum.join(', ')
 
+    case expr:
+        None -> Enum.join([
+                "{:cond, [], [[do: [", arguments, "]]]}"
+            ])
+        _ -> Enum.join([
+                "{:case, [], [", expr, ", [do: [", arguments, "]]]}"
+            ])
+
+def convert_in_node(node):
+    left = Map.get(node, "left_expr") |> convert()
+    right = Map.get(node, "right_expr") |> convert()
+
     Enum.join([
-        "{:case, [], [", expr, ", [do: [", arguments, "]]]}"
+        "{:in, [context: Elixir, import: Kernel], [", left, ", ", right, "]}"
+    ])
+
+def convert_raise_node(node):
+    expr = Map.get(node, "expr") |> convert()
+
+    Enum.join(["{:raise, [context: Elixir, import: Kernel], [", expr, "]}"])
+
+def convert_funcasvariable_node(node):
+    name = node |> Map.get("var_name_tok") |> Map.get("value")
+    arity = node |> Map.get("arity")
+    Enum.join([
+        "{:&, [], [{:/, [context: Elixir, import: Kernel], [{:",
+        name, ", [], Elixir}, ", arity, "]}]}"
+    ])
+
+def convert_module_to_ast(module_name, compiled_body):
+    module_name = case String.contains?(module_name, "."):
+        False -> Enum.join([":", module_name])
+        True ->
+            module_name = module_name
+                |> String.split('.')
+                |> Enum.map(lambda i: Enum.join([":", i]))
+                |> Enum.join(", ")
+
+            Enum.join([
+                "{:__aliases__, [alias: false], [",
+                module_name,
+                "]}"
+            ])
+
+    Utils.join_str([
+        "{:defmodule, [line: 1], ",
+        "[{:__aliases__, [line: 1], [", module_name, "]}, ",
+        "[do: ", compiled_body, "]]}"
     ])

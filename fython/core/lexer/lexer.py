@@ -25,7 +25,8 @@ class Lexer:
                 if error:
                     return [], error
             elif self.current_char in ';\n':
-                self.current_ident_level = max(0, self.current_ident_level - 4)
+                # Importante, every new line we change ident level to 0
+                self.current_ident_level = 0
                 tokens.append(Token(TT_NEWLINE, self.current_ident_level, pos_start=self.pos))
                 self.advance()
             elif self.current_char in ' \t':
@@ -153,13 +154,13 @@ class Lexer:
         while self.current_char != None and (self.current_char != string_cote_type or escape_character):
             if escape_character:
                 string += escape_characters.get(self.current_char, self.current_char)
+                escape_character = False
             else:
                 if self.current_char == '\\':
                     escape_character = True
                 else:
                     string += self.current_char
             self.advance()
-            escape_character = False
 
         self.advance()
         return Token(TT_STRING, self.current_ident_level, string, pos_start, self.pos.copy())

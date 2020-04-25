@@ -1,8 +1,10 @@
+import re
+
 from fython.core.lexer.tokens import TT_POW, TT_PLUS, TT_MINUS, TT_MUL, TT_DIV, TT_LTE, TT_LT, TT_GTE, TT_GT, TT_EE, \
-    TT_KEYWORD
+    TT_KEYWORD, TT_NE
 from fython.core.parser import NumberNode, ListNode, BinOpNode, \
     UnaryOpNode, VarAccessNode, VarAssignNode, StatementsNode, IfNode, FuncDefNode, CallNode, StringNode, PipeNode, \
-    MapNode, AtomNode, ImportNode, LambdaNode, CaseNode, FuncAsVariableNode
+    MapNode, AtomNode, ImportNode, LambdaNode, CaseNode, FuncAsVariableNode, InNode, RaiseNode
 
 
 class ElixirAST:
@@ -120,7 +122,7 @@ class Conversor:
         simple_ops = {
             TT_PLUS: '+', TT_MINUS: '-', TT_MUL: '*', TT_DIV: '/',
             TT_GT: '>', TT_GTE: '>=', TT_LT: '<', TT_LTE: '<=',
-            TT_EE: '==',
+            TT_EE: '==', TT_NE: '!='
         }
 
         if node.op_tok.type in simple_ops:
@@ -172,15 +174,18 @@ class Conversor:
         if node.local_call:
             return "{{:., [], [{:" + node.node_to_call.var_name_tok.value + ", [], Elixir}]}, [], " + arguments + "}"
         elif '.' in node.get_name():
-            module, func_name = node.get_name().split('.')
+            *modules, func_name = node.get_name().split('.')
             func_name, _ = func_name.split('/')
-            return "{{:., [], [{:__aliases__, [alias: false], [:"+module+"]}, :"+func_name+"]}, [], " + arguments + "}"
+
+            modules = "[" + ', '.join([':' + i for i in modules]) + "]"
+
+            return "{{:., [], [{:__aliases__, [alias: false], " + modules + "}, :"+func_name+"]}, [], " + arguments + "}"
         else:
             return "{:" + node.node_to_call.var_name_tok.value + ", [], " + arguments + "}"
 
     def convert_StringNode(self, node: StringNode):
-        value = node.tok.value.replace('"', '\\"')
-        return f'"{value}"'
+        import json
+        return json.dumps(node.tok.value)
 
     def convert_PipeNode(self, node: PipeNode):
         assert not isinstance(node.left_node, PipeNode), "" \
@@ -280,7 +285,10 @@ class Conversor:
         # return "{:__block__, [], [" + ''.join(import_commands) + "]}"
 
     def convert_CaseNode(self, node: CaseNode):
-        expr = self.convert(node.expr)
+        if node.expr is not None:
+            expr = self.convert(node.expr)
+        else:
+            expr = None
 
         arguments = [
             "{:->, [], [[" + self.convert(left) + "], " + self.convert(right) + "]}"
@@ -289,9 +297,21 @@ class Conversor:
 
         arguments = ", ".join(arguments)
 
-        return "{:case, [], [" + expr + ", [do: [" + arguments + "]]]}"
+        if expr:
+            return "{:case, [], [" + expr + ", [do: [" + arguments + "]]]}"
+        else:
+            return "{:cond, [], [[do: [" + arguments + "]]]}"
 
     def convert_FuncAsVariableNode(self, node: FuncAsVariableNode):
         name = node.var_name_tok.value
         arity = str(node.arity)
         return "{:&, [], [{:/, [context: Elixir, import: Kernel], [{:"+name+", [], Elixir}, "+arity+"]}]}"
+
+    def convert_InNode(self, node: InNode):
+        left = self.convert(node.left_expr)
+        right = self.convert(node.right_expr)
+        return "{:in, [context: Elixir, import: Kernel], [" + left + ", " + right + "]}"
+
+    def convert_RaiseNode(self, node: RaiseNode):
+        expr = self.convert(node.expr)
+        return "{:raise, [context: Elixir, import: Kernel], [" + expr + "]}"

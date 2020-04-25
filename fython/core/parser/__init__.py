@@ -420,7 +420,7 @@ class Parser:
     def arith_expr(self):
         return self.bin_op(self.term, (TT_PLUS, TT_MINUS))
 
-    def statements(self, stop_if_no_more_statements=False):
+    def statements(self, only_ident_gte=None):
         res = ParseResult()
         statements = []
         pos_start = self.current_tok.pos_start.copy()
@@ -429,7 +429,7 @@ class Parser:
             res.register_advancement()
             self.advance()
 
-        first_node = self.current_tok
+        expected_ident = only_ident_gte or self.current_tok.ident
 
         statement = res.register(self.statement())
         if res.error: return res
@@ -440,7 +440,7 @@ class Parser:
                 res.register_advancement()
                 self.advance()
 
-            if self.current_tok.ident >= first_node.ident:
+            if self.current_tok.ident >= expected_ident:
                 more_statements = True
             else:
                 more_statements = False
@@ -492,6 +492,17 @@ class Parser:
                 expr, pos_start, self.current_tok.pos_start.copy()
             ))
 
+        if self.current_tok.matches(TT_KEYWORD, 'raise'):
+            res.register_advancement()
+            self.advance()
+
+            expr = res.register(self.expr())
+            if res.error:
+                return res
+            return res.success(RaiseNode(
+                expr, pos_start, self.current_tok.pos_end.copy()
+            ))
+
         while self.current_tok.type == TT_NEWLINE:
             res.register_advancement()
             self.advance()
@@ -508,6 +519,7 @@ class Parser:
 
     def expr(self):
         res = ParseResult()
+        pos_start = self.current_tok.pos_start.copy()
 
         next_token = self.get_next_token()
 
@@ -540,6 +552,21 @@ class Parser:
             if res.error:
                 return res
             return res.success(node)
+
+        if self.current_tok.matches(TT_KEYWORD, 'in'):
+            if res.error:
+                return res
+            res.register_advancement()
+            self.advance()
+
+            right_node = res.register(self.expr())
+            if res.error:
+                return res
+
+            return res.success(
+                InNode(left_expr=node, right_expr=right_node,
+                       pos_start=pos_start, pos_end=self.current_tok.pos_end.copy())
+            )
 
         if self.current_tok.type in [TT_PIPE, TT_NEWLINE]:
             new_lines_skiped = 0
@@ -596,8 +623,6 @@ class Parser:
             ))
 
         if self.current_tok.ident != 0:
-            # if enters here, causes a infinite loop in some while loop
-            print('Entered in a errors message that causes inifinite loop. You need to fix it.')
             return res.failure(InvalidSyntaxError(
                 self.current_tok.pos_start, self.current_tok.pos_end,
                 f"'def' is not allowed inside functions. Use 'lambda' instead."
@@ -1060,12 +1085,16 @@ class Parser:
 
         initial_ident = self.current_tok.ident
 
+        # whe is none, this case is treated as a elixir cond
+        expr = None
+
         res.register_advancement()
         self.advance()
 
-        expr = res.register(self.expr())
-        if res.error:
-            return res
+        if self.current_tok.type != TT_DO:
+            expr = res.register(self.expr())
+            if res.error:
+                return res
 
         if self.current_tok.type != TT_DO:
             return res.failure(InvalidSyntaxError(
@@ -1099,6 +1128,9 @@ class Parser:
             if res.error:
                 return res
 
+            if self.current_tok.type == TT_EOF:
+                break
+
             left_expr = res.register(self.expr())
 
             if res.error:
@@ -1113,14 +1145,19 @@ class Parser:
             res.register_advancement()
             self.advance()
 
-            result_value = res.register(self.expr())
-            if res.error:
-                return res
+            if self.current_tok.type == TT_NEWLINE:
+                result_value = res.register(
+                    self.statements(only_ident_gte=initial_ident + 8),
+                )
+            else:
+                result_value = res.register(self.statement())
+                if res.error:
+                    return res
+                res.register_advancement()
+                self.advance()
 
             cases.append((left_expr, result_value))
 
-            res.register_advancement()
-            self.advance()
 
             if self.current_tok.ident != initial_ident + 4:
                 break

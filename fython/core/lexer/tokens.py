@@ -47,6 +47,8 @@ KEYWORDS = [
     'lambda',
     'return',
     'case',
+    'in',
+    'raise'
 ]
 
 
