@@ -11,7 +11,8 @@ def execute(text):
 
     case Map.get(state, "error"):
         None -> [:ok, state]
-        _ -> [:error, Map.get(state, "error")]
+        _ ->
+            [:error, Map.get(state, "error")]
 
 
 def position(idx, ln, col):
@@ -35,7 +36,7 @@ def advance(state):
     Map.merge(state, new_state)
 
 def set_error(state, error):
-    Map.put(state, "error", error)
+    Map.put(state, "error", {"msg": error, "position": Map.get(state, 'position')})
 
 def parse(state):
     case Map.get(state, "error"):
@@ -57,15 +58,49 @@ def parse(state):
                 cc == "'" or cc == '"' -> parse(make_string(state))
                 String.contains?(Core.Lexer.Consts.identifier_chars(True), cc) ->
                     state |> make_identifier() |> parse()
-                cc == "&" ->
-                    state
-                        |> Core.Lexer.Tokens.add_token("TT_ECOM")
-                        |> advance()
-                        |> parse()
+                cc == "&" -> simple_maker(state, "TT_ECOM")
                 String.contains?(Core.Lexer.Consts.digists(), cc) -> parse(make_number(state))
+                cc == "," -> simple_maker(state, "TT_COMMA")
+                cc == "+" -> simple_maker(state, "TT_PLUS")
+                cc == '-' -> double_maker(state, "TT_MINUS", ">", "TT_ARROW")
+                cc == '*' -> double_maker(state, "TT_MUL", "*", "TT_POW")
+                cc == '>' -> double_maker(state, "TT_GT", "=", "TT_GTE")
+                cc == '<' -> double_maker(state, "TT_LT", "=", "TT_LTE")
+                cc == "+" -> simple_maker(state, "TT_DIV")
+                cc == '(' -> simple_maker(state, 'TT_LPAREN')
+                cc == ')' -> simple_maker(state, 'TT_RPAREN')
+                cc == '[' -> simple_maker(state, 'TT_LSQUARE')
+                cc == ']' -> simple_maker(state, 'TT_RSQUARE')
+                cc == '{' -> simple_maker(state, 'TT_LCURLY')
+                cc == '}' -> simple_maker(state, 'TT_RCURLY')
+                cc == '=' -> double_maker(state, "TT_EQ", "=", "TT_EE")
+                cc == '!' -> expected_double_maker(state, "!", "TT_NE", "=")
+                cc == '|' -> expected_double_maker(state, "|", "TT_PIPE", ">")
                 True -> set_error(state, Enum.join(["IllegalCharError: ", cc]))
         _ -> state
 
+def simple_maker(st, type):
+    st
+        |> Core.Lexer.Tokens.add_token(type)
+        |> advance()
+        |> parse()
+
+def double_maker(st, type_1, second_char, type_2):
+    st = st |> advance()
+    cc = Map.get(st, "current_char")
+
+    case:
+        cc == second_char -> st |> Core.Lexer.Tokens.add_token(type_2) |> advance() |> parse()
+        True -> st |> Core.Lexer.Tokens.add_token(type_1) |> parse()
+
+
+def expected_double_maker(st, first, type, expected):
+    st = st |> advance()
+    cc = Map.get(st, "current_char")
+
+    case:
+        cc == expected -> st |> Core.Lexer.Tokens.add_token(type) |> advance() |> parse()
+        True -> st |> set_error(Enum.join(["Expected '", expected, "' after '", first, "'"]))
 
 def make_ident(state):
     current_char = state |> Map.get("current_char")
