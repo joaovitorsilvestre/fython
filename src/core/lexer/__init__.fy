@@ -28,7 +28,7 @@ def advance(state):
     current_char = text |> String.at(idx)
 
     new_pos = case current_char == '\n':
-        True -> position(idx, ln + 1, 0)
+        True -> position(idx, ln + 1, -1)
         False -> position(idx, ln, col + 1)
 
     new_state = {"position": new_pos, "current_char": current_char}
@@ -43,6 +43,7 @@ def parse(state):
         None ->
             cc = state |> Map.get("current_char")
             pos = state |> Map.get("position")
+
             case:
                 cc == None -> state
                 cc == "#" -> parse(skip_comment(state))
@@ -103,22 +104,19 @@ def expected_double_maker(st, first, type, expected):
         True -> st |> set_error(Enum.join(["Expected '", expected, "' after '", first, "'"]))
 
 def make_ident(state):
-    current_char = state |> Map.get("current_char")
-    total_spaces = Map.get(state, "total_spaces", 0)
+    first_char = Map.get(state, "current_char")
 
-    case current_char == " ":
-        True ->
-            advance(state)
-                |> Map.put("total_spaces", total_spaces + 1)
-                |> make_ident()
-        False ->
-            total_spaces = Map.fetch(state, "total_spaces") |> elem(1)
+    state = loop_while(state, lambda cc:
+        cc != None and cc == " "
+    )
 
-            state = case rem(total_spaces, 4) != 0:
-                True -> set_error(state, "Identation problem")
-                False -> state |> Map.put("current_ident_level", max(0, total_spaces))
+    total_spaces = Enum.join([first_char, Map.get(state, "result")]) |> String.length()
 
-            state |> Map.delete("total_spaces")
+    state = case rem(total_spaces, 4) != 0:
+        True -> set_error(state, "Identation problem")
+        False -> state |> Map.put("current_ident_level", max(0, total_spaces))
+
+    state |> Map.delete("result")
 
 def loop_while(st, func):
     st = advance(st)
@@ -213,6 +211,7 @@ def make_identifier(state):
     first_char = Map.get(state, "current_char")
 
     state = loop_while(state, lambda cc:
+        IO.inspect(cc)
         cc != None and String.contains?(Core.Lexer.Consts.identifier_chars(False), cc)
     )
 
