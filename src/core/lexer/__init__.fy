@@ -7,10 +7,12 @@ def execute(text):
         "current_char": None,
         "tokens": []
     }
-    state
-        |> advance()
-        |> parse()
-        |> Core.Lexer.Tokens.add_eof_token()
+    state = state |> advance() |> parse() |> Core.Lexer.Tokens.add_eof_token()
+
+    case Map.get(state, "error"):
+        None -> [:ok, state]
+        _ -> [:error, Map.get(state, "error")]
+
 
 def position(idx, ln, col):
     {"idx": idx, "ln": ln, "col": col}
@@ -40,6 +42,7 @@ def parse(state):
         None ->
             cc = state |> Map.get("current_char")
             case:
+                cc == None -> state
                 cc == " " -> parse(make_ident(state))
                 cc == "\n" ->
                     state
@@ -49,8 +52,8 @@ def parse(state):
                         |> parse()
                 cc == '\t' -> parse(advance(state))
                 cc == ':' -> parse(make_do_or_token(state))
-                cc == "'" -> parse(make_string(state))
-                True -> state
+                cc == "'" or cc == '"' -> parse(make_string(state))
+                True -> set_error(state, Enum.join(["IllegalCharError: ", cc]))
         _ -> state
 
 
@@ -111,9 +114,13 @@ def make_do_or_token(state):
 def make_string(state):
     pos_start = Map.get(state, "position")
     string_char_type = Map.get(state, "current_char") # ' or "
-    state = advance(state)
 
-    state = loop_while(state, lambda cc: cc != string_char_type)
+    state = loop_while(state, lambda cc:
+        cc != string_char_type and cc != None
+    )
+
+    # to advance the end string char
+    state = advance(state)
 
     state = state
         |> Core.Lexer.Tokens.add_token(
