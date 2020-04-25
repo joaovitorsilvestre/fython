@@ -44,6 +44,7 @@ def parse(state):
             pos = state |> Map.get("position")
             case:
                 cc == None -> state
+                cc == "#" -> parse(skip_comment(state))
                 cc == " " and Map.get(pos, "col") == 0 -> parse(make_ident(state))
                 cc == " " or cc == '\t' -> parse(advance(state))
                 cc == "\n" ->
@@ -52,9 +53,10 @@ def parse(state):
                         |> Core.Lexer.Tokens.add_token("TT_NEWLINE")
                         |> advance()
                         |> parse()
-                cc == "#" -> parse(skip_comment(state))
                 cc == ':' -> parse(make_do_or_token(state))
                 cc == "'" or cc == '"' -> parse(make_string(state))
+                String.contains?(Core.Lexer.Consts.identifier_chars(True), cc) ->
+                    state |> make_identifier() |> parse()
                 cc == "&" ->
                     state
                         |> Core.Lexer.Tokens.add_token("TT_ECOM")
@@ -170,3 +172,21 @@ def make_number(state):
                 )
 
     state |> Map.delete("result")
+
+def make_identifier(state):
+    pos_start = Map.get(state, "position")
+    first_char = Map.get(state, "current_char")
+
+    state = loop_while(state, lambda cc:
+        cc != None and String.contains?(Core.Lexer.Consts.identifier_chars(False), cc)
+    )
+
+    result = Enum.join([first_char, Map.get(state, "result")])
+
+    type = case Enum.member?(Core.Lexer.Tokens.keywords(), result):
+        True -> "TT_KEYWORD"
+        False -> "TT_IDENTIFIER"
+
+    state
+        |> Core.Lexer.Tokens.add_token(type, result, pos_start)
+        |> Map.delete("result")

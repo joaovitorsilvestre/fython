@@ -34,7 +34,7 @@ def valid_token_type?(type):
     ]
     Enum.member?(tokens, type)
 
-def KEYWORDS():
+def keywords():
     [
         'import',
         'from',
