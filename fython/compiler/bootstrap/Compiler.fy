@@ -85,8 +85,6 @@ def compile_project_to_binary(directory_path):
 
             module = ParserNode.convert_module_to_ast(module_name, compiled)
 
-            IO.inspect(module)
-
             quoted = module
                 |> Code.eval_string()
                 |> Code.compile_quoted()

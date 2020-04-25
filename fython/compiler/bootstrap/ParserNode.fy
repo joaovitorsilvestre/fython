@@ -44,11 +44,9 @@ def convert_string_node(node):
         |> Map.get("tok")
         |> Map.get("value")
 
-    value = Regex.replace(
-        Regex.compile('(?<!\\)\"') |> elem(1), value, 'uat'
-    )
-
-    Utils.join_str(['"', value, '"'])
+    # Maybe is good to remove this dependency, eventually
+    # Converto to json is te easiest way that we found for scape `"` and `/` (and probably others too)
+    Jason.encode(value) |> elem(1)
 
 def convert_varaccess_node(node):
     tok_value = node |> Map.get("var_name_tok") |> Map.get("value")
