@@ -2,6 +2,11 @@ def start():
     start(0, {"text_per_line": {}})
 
 def start(count, state):
+    # to make space between lines
+    case count:
+        0 -> None
+        _ -> IO.puts(" ")
+
     head = IO.ANSI.format([
         :black, :bright , "[", :cyan, count |> to_string(), :black, :bright, "]: "
     ])
@@ -34,3 +39,4 @@ def start(count, state):
 
 def execute(text):
     lexed = Core.Lexer.execute(text)
+
