@@ -5,7 +5,7 @@ def eval_string(text):
         :ok ->
             tokens = Enum.at(lexed, 1) |> Map.get("tokens")
             ast = Core.Parser.execute(tokens)
-            ast |> Map.get('nodes')
+            ast
         :error ->
             Enum.at(lexed, 1)
 

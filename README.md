@@ -5,6 +5,7 @@ ex:
 a = 5
 {"a": a} == {a}
 ```
+- [] Support to `not in` 
 
 ### Motivation
 Eu etou percebendo o quando programação funcional é poderosa
