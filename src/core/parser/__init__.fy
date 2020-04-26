@@ -57,11 +57,11 @@ def factor(state):
             state = advance(state)
             _factor = factor(state) |> Map.get("nodes") |> Enum.at(-1)
             node = Core.Parser.Nodes.make_unary_node(ct, _factor)
-            state |> Core.Parser.Utils.add_node(node)
+            state |> Core.Parser.Utils.add_node(node) |> advance()
         ct_type in ['INT', 'FLOAT'] ->
             state = advance(state)
             node = Core.Parser.Nodes.make_number_node(ct)
-            state |> Core.Parser.Utils.add_node(node)
+            state |> Core.Parser.Utils.add_node(node) |> advance()
         True ->
             Core.Parser.Utils.set_error(
                 state,
@@ -94,8 +94,7 @@ def bin_op(state, func, ops):
             op_tok = Map.get(st, "current_tok")
             st = advance(st)
 
-            right = func(st) |> Map.get("tokens") |> Enum.at(-1)
-            st = advance(st)
+            right = func(st) |> Map.get("nodes") |> Enum.at(-1)
 
             Map.put(st, "_node", Core.Parser.Nodes.make_bin_op_node(left, op_tok, right))
     )

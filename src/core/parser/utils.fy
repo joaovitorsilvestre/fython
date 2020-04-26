@@ -1,11 +1,20 @@
+def valid_node?(node):
+    case:
+        node == None ->
+            [False, "add node received None"]
+        Map.get(node, "NodeType") == None ->
+            [False, "Node map must have 'NodeType'"]
+        True ->
+            [True, None]
+
 def add_node(state, node):
-    case node:
-        None -> raise "add node received None"
-        _ ->
+    case valid_node?(node):
+        [True, _] ->
             nodes = Map.get(state, 'nodes')
             Map.put(
                 state, 'nodes', List.flatten([nodes, node])
             )
+        [False, reason] -> raise reason
 
 def has_error(state):
     Map.get(state, "error") != None
