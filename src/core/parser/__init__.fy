@@ -18,6 +18,7 @@ def advance(state):
 
     new_state = {
         "current_tok": current_tok,
+        "prev_tok": Enum.at(tokens, idx - 1, None),
         "next_tok": Enum.at(tokens, idx + 1, None),
         "_current_tok_idx": idx,
     }
