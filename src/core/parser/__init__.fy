@@ -1,3 +1,9 @@
+def print_cc(state):
+    cc = Map.get(state, "current_tok")
+    IO.puts(Enum.join([
+        "CC: ", Map.get(cc, "type"), ", value: ", Map.get(cc, 'value') if Map.get(cc, 'value') != None else Map.get(cc, 'value')
+    ]))
+
 def execute(tokens):
     state = {
         "error": None,
@@ -52,16 +58,19 @@ def factor(state):
     ct = Map.get(state, "current_tok")
     ct_type = ct |> Map.get('type')
 
+    IO.puts('factor')
+    print_cc(state)
+
     value = case:
         ct_type in ['PLUS', 'MINUS'] ->
-            state = advance(state)
-            _factor = factor(state) |> Map.get("nodes") |> Enum.at(-1)
+            state = advance(state) |> factor()
+            _factor = state |> Map.get("nodes") |> Enum.at(-1)
             node = Core.Parser.Nodes.make_unary_node(ct, _factor)
             state |> Core.Parser.Utils.add_node(node) |> advance()
         ct_type in ['INT', 'FLOAT'] ->
             state = advance(state)
             node = Core.Parser.Nodes.make_number_node(ct)
-            state |> Core.Parser.Utils.add_node(node) |> advance()
+            state |> Core.Parser.Utils.add_node(node)
         True ->
             Core.Parser.Utils.set_error(
                 state,
