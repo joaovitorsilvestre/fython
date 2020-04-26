@@ -211,7 +211,6 @@ def make_identifier(state):
     first_char = Map.get(state, "current_char")
 
     state = loop_while(state, lambda cc:
-        IO.inspect(cc)
         cc != None and String.contains?(Core.Lexer.Consts.identifier_chars(False), cc)
     )
 
