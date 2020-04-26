@@ -38,5 +38,5 @@ def start(count, state):
             start(count + 1, state)
 
 def execute(text):
-    lexed = Core.Lexer.execute(text)
+    Core.eval_string(text)
 
