@@ -1,4 +1,11 @@
 def eval_string(text):
     lexed = Core.Lexer.execute(text)
 
-    ast = Core.Parser.execute(lexed)
+    case Enum.at(lexed, 0):
+        :ok ->
+            tokens = Enum.at(lexed, 1) |> Map.get("tokens")
+            ast = Core.Parser.execute(tokens)
+            ast |> Map.get('nodes')
+        :error ->
+            Enum.at(lexed, 1)
+

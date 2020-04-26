@@ -241,6 +241,10 @@ class Parser:
                     self.advance()
 
                 while self.current_tok.type == TT_COMMA:
+                    while self.current_tok.type == TT_NEWLINE:
+                        res.register_advancement()
+                        self.advance()
+
                     keywords, error = handle_keywords()
                     if error:
                         return res
@@ -259,6 +263,10 @@ class Parser:
 
                     res.register_advancement()
                     self.advance()
+
+                    while self.current_tok.type == TT_NEWLINE:
+                        res.register_advancement()
+                        self.advance()
 
                     arg_nodes.append(res.register(self.expr()))
                     if res.error:

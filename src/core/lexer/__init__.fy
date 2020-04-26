@@ -152,7 +152,7 @@ def make_do_or_token(state):
             state
         False ->
             state
-                |> advance
+                |> advance()
                 |> Core.Lexer.Tokens.add_token("DO")
 
 

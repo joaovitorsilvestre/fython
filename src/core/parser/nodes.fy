@@ -1,9 +1,8 @@
-def statements_node(nodes_list):
-    pos_start = nodes_list |> Enum.at(0) |> Map.get("pos_start")
-    pos_end = nodes_list |> Enum.at(-1) |> Map.get("pos_end")
+def make_number_node(tok):
+    {"tok": tok, "NodeType": "NumberNode"}
 
-    {
-        "statement_nodes": nodes_list,
-        "pos_start": pos_start,
-        "pos_end": pos_end
-    }
+def make_unary_node(tok, node):
+    {"tok": tok, "node": node, "NodeType": "UnaryOpNode"}
+
+def make_bin_op_node(left, op_tok, right):
+    {"left": left, "op_tok": op_tok, "right": right, "NodeType": "BinOpNode"}

@@ -1,3 +1,11 @@
+### ROADMAP
+- [] Support add variable to map without need to refer the string if is the same name. Just like JS ES6
+ex: 
+```
+a = 5
+{"a": a} == {a}
+```
+
 ### Motivation
 Eu etou percebendo o quando programação funcional é poderosa
 Mas eu estou sempre esbarrando em problems como:

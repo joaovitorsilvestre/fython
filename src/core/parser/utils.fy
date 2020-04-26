@@ -1,13 +1,11 @@
-def loop_while(st, func):
-    st = advance(st)
-    ct = Map.get(st, "current_tok")
-    result = Map.get(st, "result")
-
-    valid = func(ct)
-
-    case valid:
-        True -> Map.put(st, "result", Enum.join([result, ct])) |> loop_while(func)
-        False -> st
+def add_node(state, node):
+    case node:
+        None -> raise "add node received None"
+        _ ->
+            nodes = Map.get(state, 'nodes')
+            Map.put(
+                state, 'nodes', List.flatten([nodes, node])
+            )
 
 def has_error(state):
     Map.get(state, "error") != None
@@ -18,15 +16,18 @@ def tok_matchs(tok, type):
 def tok_matchs(tok, type, value):
     Map.get(tok, "type") == type and Map.get(tok, "value") == value
 
-def skip_new_line_tok(state):
-    loop_while(state, lambda ct:
-        Map.get(ct, "type") == "NEW_LINE"
-    )
-
 def get_next_tok(state):
-    idx = state |> Map.get("position") |> Map.get("idx")
+    idx = state |> Map.get("current_tok_idx")
     tokens = state |> Map.get("tokens")
     idx = idx + 1
     tokens |> Enum.at(idx)
 
-def set_error(state):
+def set_error(state, msg, pos_start, pos_end):
+    case Map.get(state, 'error'):
+        None ->
+            state = Map.put(
+                state, "error", {"msg": msg, "pos_start": pos_start, pos_end: "pos_end"}
+            )
+            IO.inspect(state)
+            state
+        _ -> state
