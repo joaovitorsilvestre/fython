@@ -33,7 +33,7 @@ def parse(state):
 
     ct = Map.get(state, "current_tok")
 
-    case Map.get(state, "error") != None and Map.get(ct, "type") != "EOF":
+    case Map.get(state, "error") == None and Map.get(ct, "type") != "EOF":
         True ->
             Core.Parser.Utils.set_error(
                 state,
@@ -100,6 +100,15 @@ def atom(state):
             [state, None]
 
 
+def loop_while(st, while_func, do_func):
+    ct = Map.get(st, "current_tok")
+
+    valid = while_func(st, ct)
+
+    case valid:
+        True -> do_func(st, ct) |> advance() |> loop_while(while_func, do_func)
+        False -> st
+
 def bin_op(state, func_a, ops, func_b):
     func_b = func_b if func_b != None else func_a
 
@@ -109,16 +118,29 @@ def bin_op(state, func_a, ops, func_b):
 
     ct = Map.get(state, "current_tok")
 
-    # todo add later the OR op here, it will enable and & or to work too
-    case ct != None and Map.get(ct, "type") in ops:
-        True ->
-            op_tok = ct
+    state = loop_while(
+        state,
+        lambda st, ct:
+            Enum.member?(ops, Map.get(ct, "type") if ct != None else None)
+        ,
+        lambda st, ct:
+            left = Map.get(st, "_node", left)
 
-            p_result = state |> advance() |> func_b()
+            op_tok = Map.get(st, 'current_tok')
+            state = advance(state)
+            p_result = func_b(state)
+
             state = p_result |> Enum.at(0)
-            left = p_result |> Enum.at(1)
+            right = p_result |> Enum.at(1)
 
             case Map.get(state, "error"):
-                None -> bin_op(state, func_a, ops, func_b)
-                _ -> [state, None]
-        False -> [state, left]
+                None ->
+                    left = Core.Parser.Nodes.make_bin_op_node(left, op_tok, right)
+                    Map.put(state, "_node", left)
+                _ -> state
+    )
+
+    left = Map.get(state, '_node', left)
+    state = Map.delete(state, '_node')
+
+    [state, left]
