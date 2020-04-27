@@ -16,14 +16,17 @@ def advance(state):
     idx = idx + 1
     current_tok = tokens |> Enum.at(idx, None)
 
-    new_state = {
-        "current_tok": current_tok,
-        "prev_tok": Enum.at(tokens, idx - 1, None),
-        "next_tok": Enum.at(tokens, idx + 1, None),
-        "_current_tok_idx": idx,
-    }
+    case idx >= Enum.count(tokens):
+        True -> state
+        False ->
+            new_state = {
+                "current_tok": current_tok,
+                "prev_tok": Enum.at(tokens, idx - 1, None) if idx > 0 else None,
+                "next_tok": Enum.at(tokens, idx + 1, None),
+                "_current_tok_idx": idx,
+            }
 
-    Map.merge(state, new_state)
+            Map.merge(state, new_state)
 
 def parse(state):
     p_result = expr(state)
@@ -45,7 +48,16 @@ def parse(state):
             Map.merge(state, {"node": node})
 
 def expr(state):
-    bin_op(state, &term/1, ["MINUS", 'PLUS'], None)
+    _and = ["KEYWORD", "and"]
+    _or = ["KEYWORD", "or"]
+    bin_op(state, &comp_expr/1, [_and, _or], None)
+
+def comp_expr(state):
+    # TODO treat not
+    bin_op(state, &arith_expr/1, ["EE", "NE", "LT", "LTE", "GT", "GTE"], None)
+
+def arith_expr(state):
+    bin_op(state, &term/1, ["PLUS", "MINUS"], None)
 
 def term(state):
     bin_op(state, &factor/1, ["MUL", 'DIV'], None)
@@ -121,12 +133,12 @@ def bin_op(state, func_a, ops, func_b):
     state = loop_while(
         state,
         lambda st, ct:
-            Enum.member?(ops, Map.get(ct, "type") if ct != None else None)
+            Enum.member?(ops, Map.get(ct, "type"))
         ,
-        lambda st, ct:
-            left = Map.get(st, "_node", left)
+        lambda state, ct:
+            left = Map.get(state, "_node", left)
 
-            op_tok = Map.get(st, 'current_tok')
+            op_tok = Map.get(state, 'current_tok')
             state = advance(state)
             p_result = func_b(state)
 
