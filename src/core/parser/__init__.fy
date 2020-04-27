@@ -133,7 +133,7 @@ def bin_op(state, func_a, ops, func_b):
     state = loop_while(
         state,
         lambda st, ct:
-            Enum.member?(ops, Map.get(ct, "type"))
+            Enum.member?(ops, Map.get(ct, "type")) or Enum.member?(ops, [Map.get(ct, "type"), Map.get(ct, "value")])
         ,
         lambda state, ct:
             left = Map.get(state, "_node", left)
