@@ -87,10 +87,7 @@ class Parser:
             res.register_advancement()
             self.advance()
 
-        if self.current_tok.type == TT_RSQUARE:
-            res.register_advancement()
-            self.advance()
-        else:
+        if self.current_tok.type != TT_RSQUARE:
             element_nodes.append(res.register(self.expr()))
             if res.error:
                 return res.failure(InvalidSyntaxError(

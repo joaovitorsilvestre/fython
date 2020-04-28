@@ -29,7 +29,7 @@ def advance(state):
             Map.merge(state, new_state)
 
 def parse(state):
-    p_result = expr(state)
+    p_result = statements(state)
 
     state = p_result |> Enum.at(0)
     node = p_result |> Enum.at(1)
@@ -46,6 +46,85 @@ def parse(state):
             )
         False ->
             Map.merge(state, {"node": node})
+
+def statements(state):
+    statements(state, None)
+
+def statements(state, only_ident_gte):
+    expected_ident = case only_ident_gte:
+        None -> Map.get(state, "current_tok") |> Map.get("ident")
+        _ -> only_ident_gte
+
+    p_result = statement(state)
+    state = Enum.at(p_result, 0)
+    first_statement = Enum.at(p_result, 1)
+
+    state = loop_while(
+        state,
+        lambda state, ct:
+            Map.get(state, "_break") != True
+        ,
+        lambda state, ct:
+            _statements = Map.get(state, "_statements", [])
+            ct_type = Map.get(ct, "type")
+
+            more_statements = Map.get(ct, "ident") >= expected_ident
+
+            more_statements = False if ct_type == "RPAREN" else more_statements
+
+            case:
+                not more_statements or ct_type == "EOF" -> Map.put(state, "_break", True)
+                True ->
+                    p_result = statement(state)
+                    state = Enum.at(p_result, 0)
+                    _statement = Enum.at(p_result, 1)
+
+                    case _statement:
+                        None -> Map.put(state, "_break", True)
+                        _ -> Map.put(state, "_statements", List.flatten([_statements, _statement]))
+    )
+
+    _statements = Map.get(state, "_statements", [])
+    _statements = List.flatten([first_statement, _statements])
+
+    case:
+        Map.get(state, "error") != None -> [state, None]
+        _statements == [] ->
+            ct = Map.get(state, "current_tok")
+
+            state = Core.Parser.Utils.set_error(
+                state,
+                "Empty staments are not allowed",
+                Map.get(ct, "pos_start"),
+                Map.get(ct, "pos_end")
+            )
+            [state, None]
+        True ->
+            node = Core.Parser.Nodes.make_statements_node(_statements)
+
+            state = state |> Map.delete("_statements") |> Map.delete("_break")
+
+            [state, node]
+
+
+def statement(state):
+    p_result = expr(state)
+
+    state = Enum.at(p_result, 0)
+    _expr = Enum.at(p_result, 1)
+
+    case Map.get(state, "error"):
+        None -> [state, _expr]
+        _ ->
+            ct = Map.get(state, "current_tok")
+
+            state = Core.Parser.Utils.set_error(
+                state,
+                "Expected int, float, variable, 'not', '+', '-', '(' or '['",
+                Map.get(ct, "pos_start"),
+                Map.get(ct, "pos_end")
+            )
+            [state, None]
 
 def expr(state):
     _and = ["KEYWORD", "and"]

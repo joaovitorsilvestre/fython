@@ -41,7 +41,13 @@ def keywords():
     ]
 
 def add_eof_token(state):
-    state |> add_token("EOF", None, None)
+    tokens = Map.get(state, "tokens")
+
+    start_end = case tokens:
+        [] -> {"idx": 0, "ln": 0, "col": 0}
+        _ -> Map.get(Enum.at(tokens, -1), "pos_end")
+
+    add_token(state, "EOF", None, start_end)
 
 def add_token(state, type):
     add_token(state, type, None)
