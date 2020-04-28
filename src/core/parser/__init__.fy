@@ -118,7 +118,7 @@ def loop_while(st, while_func, do_func):
     valid = while_func(st, ct)
 
     case valid:
-        True -> do_func(st, ct) |> advance() |> loop_while(while_func, do_func)
+        True -> do_func(st, ct) |> loop_while(while_func, do_func)
         False -> st
 
 def bin_op(state, func_a, ops, func_b):
