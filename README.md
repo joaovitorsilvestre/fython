@@ -7,6 +7,8 @@ a = 5
 ```
 - [] Support to `not in` 
 
+- [] Support to `{"a": 2} |> Map.get("a") == 2`. Today we need to put pipe inside parenteses
+
 ### Motivation
 Eu etou percebendo o quando programação funcional é poderosa
 Mas eu estou sempre esbarrando em problems como:

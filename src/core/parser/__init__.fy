@@ -66,7 +66,6 @@ def power(state):
     bin_op(state, &call/1, ["POW"], &call/1)
 
 def call(state):
-    # TODO treat parenteses
     state |> atom()
 
 def factor(state):
@@ -98,6 +97,22 @@ def atom(state):
             node = Core.Parser.Nodes.make_number_node(ct)
             state = state |> advance()
             [state, node]
+        ct_type == 'LPAREN' ->
+            state = advance(state)
+
+            p_result = expr(state)
+            state = Enum.at(p_result, 0)
+            _expr = Enum.at(p_result, 1)
+
+            case:
+                (Map.get(state, 'current_tok') |> Map.get('type')) == 'RPAREN' ->
+                    state = advance(state)
+                    [state, _expr]
+                True ->
+                    state = Core.Parser.Utils.set_error(
+                        state, "Expected ')'", Map.get(ct, "pos_start"), Map.get(ct, "pos_end")
+                    )
+                    [state, None]
         True ->
             state = Core.Parser.Utils.set_error(
                 state,
