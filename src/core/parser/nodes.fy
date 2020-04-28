@@ -1,16 +1,44 @@
 def make_number_node(tok):
     {
+        "NodeType": "NumberNode",
         "tok": tok,
-        "NodeType": "NumberNode"
+        "pos_start": Map.get(tok, "pos_start"),
+        "pos_end": Map.get(tok, "pos_end")
+    }
+
+def make_string_node(tok):
+    {
+        "NodeType": "StringNode",
+        "tok": tok,
+        "pos_start": Map.get(tok, "pos_start"),
+        "pos_end": Map.get(tok, "pos_end")
+    }
+
+def make_varaccess_node(var_name_tok):
+    {
+        "NodeType": "VarAccessNode",
+        "var_name_tok": var_name_tok,
+        "pos_start": Map.get(var_name_tok, "pos_start"),
+        "pos_end": Map.get(var_name_tok, "pos_end")
+    }
+
+def make_atom_node(tok):
+    {
+        "NodeType": "VarAccessNode",
+        "tok": tok,
+        "pos_start": Map.get(tok, "pos_start"),
+        "pos_end": Map.get(tok, "pos_end")
     }
 
 def make_unary_node(tok, node):
     case Core.Parser.Utils.valid_node?(node):
         [False, reason] -> raise reason
         [True, _] -> {
+            "NodeType": "UnaryOpNode",
             "tok": tok,
             "node": node,
-            "NodeType": "UnaryOpNode"
+            "pos_start": Map.get(tok, "pos_start"),
+            "pos_end": Map.get(tok, "pos_end")
         }
 
 def make_bin_op_node(left, op_tok, right):
@@ -21,8 +49,10 @@ def make_bin_op_node(left, op_tok, right):
             case Core.Parser.Utils.valid_node?(right):
                 [False, reason] -> raise reason
                 [True, _] -> {
+                    "NodeType": "BinOpNode",
                     "left": left,
                     "op_tok": op_tok,
                     "right": right,
-                    "NodeType": "BinOpNode"
+                    "pos_start": Map.get(left, "pos_start"),
+                    "pos_end": Map.get(right, "pos_end")
                 }

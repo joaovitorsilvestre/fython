@@ -95,8 +95,16 @@ def atom(state):
     case:
         ct_type in ['INT', 'FLOAT'] ->
             node = Core.Parser.Nodes.make_number_node(ct)
-            state = state |> advance()
-            [state, node]
+            [state |> advance(), node]
+        ct_type == 'STRING' ->
+            node = Core.Parser.Nodes.make_string_node(ct)
+            [state |> advance(), node]
+        ct_type == 'IDENTIFIER' ->
+            node = Core.Parser.Nodes.make_varaccess_node(ct)
+            [state |> advance(), node]
+        ct_type == 'ATOM' ->
+            node = Core.Parser.Nodes.make_atom_node(ct)
+            [state |> advance(), node]
         ct_type == 'LPAREN' ->
             state = advance(state)
 
