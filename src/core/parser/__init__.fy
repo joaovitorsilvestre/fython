@@ -132,8 +132,21 @@ def expr(state):
     bin_op(state, &comp_expr/1, [_and, _or], None)
 
 def comp_expr(state):
-    # TODO treat not
-    bin_op(state, &arith_expr/1, ["EE", "NE", "LT", "LTE", "GT", "GTE"], None)
+    ct = Map.get(state, "current_tok")
+
+    case Core.Parser.Utils.tok_matchs(ct, "KEYWORD", 'not'):
+        True ->
+            state = advance(state)
+
+            p_result = comp_expr(state)
+            state = Enum.at(p_result, 0)
+            c_node = Enum.at(p_result, 1)
+
+            node = Core.Parser.Nodes.make_unary_node(ct, c_node)
+
+            [state, node]
+        False ->
+            bin_op(state, &arith_expr/1, ["EE", "NE", "LT", "LTE", "GT", "GTE"], None)
 
 def arith_expr(state):
     bin_op(state, &term/1, ["PLUS", "MINUS"], None)
