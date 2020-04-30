@@ -38,6 +38,14 @@ def make_atom_node(tok):
         "pos_end": Map.get(tok, "pos_end")
     }
 
+def make_list_node(element_nodes, pos_start, pos_end):
+    {
+        "NodeType": "ListNode",
+        "element_nodes": element_nodes,
+        "pos_start": pos_start,
+        "pos_end": pos_end
+    }
+
 def make_unary_node(tok, node):
     case Core.Parser.Utils.valid_node?(node):
         [False, reason] -> raise reason

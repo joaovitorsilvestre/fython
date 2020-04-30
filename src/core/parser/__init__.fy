@@ -213,6 +213,7 @@ def atom(state):
                         state, "Expected ')'", Map.get(ct, "pos_start"), Map.get(ct, "pos_end")
                     )
                     [state, None]
+        ct_type == 'LSQUARE' -> list_expr(state)
         True ->
             state = Core.Parser.Utils.set_error(
                 state,
@@ -271,3 +272,50 @@ def bin_op(state, func_a, ops, func_b):
     state = Map.delete(state, '_node')
 
     [state, left]
+
+def list_expr(state):
+    pos_start = Map.get(state, "current_tok") |> Map.get("pos_start")
+
+    state = loop_while(
+        state,
+        lambda st, ct:
+            case Map.get(ct, "type"):
+                "RSQUARE" -> False
+                _ -> True
+        ,
+        lambda state, ct:
+            element_nodes = Map.get(state, "_element_nodes", [])
+
+            state = state if Map.get(ct, "type") == "COMMA" and element_nodes == [] else advance(state)
+
+            case Map.get(state, "current_tok") |> Map.get("type"):
+                "RSQUARE" -> state
+                _ ->
+                    p_result = expr(state |> Map.delete("_element_nodes"))
+                    state = p_result |> Enum.at(0) |> Map.put("_element_nodes", element_nodes)
+                    _expr = p_result |> Enum.at(1)
+
+                    Map.put(
+                        state,
+                        "_element_nodes",
+                        List.flatten([element_nodes, _expr])
+                    )
+    )
+
+    element_nodes = Map.get(state, "_element_nodes", [])
+
+    pos_end = Map.get(state, "current_tok") |> Map.get("pos_end")
+
+    node = Core.Parser.Nodes.make_list_node(element_nodes, pos_start, pos_end)
+
+    state = advance(state) |> Map.delete("_element_nodes")
+
+    [state, node]
+
+
+
+
+
+
+
+
