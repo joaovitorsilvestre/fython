@@ -259,6 +259,8 @@ def atom(state):
                     state = advance(state)
                     [state, _expr]
                 True ->
+                    ct = Map.get(state, 'current_tok')
+
                     state = Core.Parser.Utils.set_error(
                         state, "Expected ')'", Map.get(ct, "pos_start"), Map.get(ct, "pos_end")
                     )
@@ -463,8 +465,6 @@ def if_expr(state, expr_for_true):
     state = Enum.at(p_result, 0)
     condition = Enum.at(p_result, 1)
 
-    IO.inspect(Map.get(state, "current_tok"))
-
     case Core.Parser.Utils.tok_matchs(Map.get(state, "current_tok"), "KEYWORD", "else"):
         True ->
             state = advance(state)
@@ -604,9 +604,6 @@ def case_expr(state):
                 lambda state, ct:
                     state = check_ident(state)
 
-                    IO.inspect('ct')
-                    IO.inspect(ct)
-
                     cases = Map.get(state, "_cases", [])
 
                     this_ident = Map.get(state, 'current_tok') |> Map.get('ident')
@@ -630,8 +627,6 @@ def case_expr(state):
 
                             state |> Map.put('_cases', cases)
                         False ->
-                            IO.inspect('erro sem arrow')
-                            IO.inspect(Map.get(state, 'current_tok'))
                             Core.Parser.Utils.set_error(
                                 state,
                                 "Expected '->'",

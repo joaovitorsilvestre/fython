@@ -1,3 +1,8 @@
 case:
-    False  True
-    True -> False
+    False -> True
+    True ->
+        case:
+            False -> True
+            True -> False
+
+

@@ -58,7 +58,12 @@ def add_token(state, type, value):
 
 def add_token(state, type, value, pos_start):
     ident = state |> Map.get("current_ident_level")
+
     pos_end = state |> Map.get("position")
+
+    pos_end = case Map.get(pos_end, 'col') != -1:
+        True -> pos_end
+        False -> Map.get(state, 'prev_position')
 
     case valid_token_type?(type):
         False -> raise Enum.join(["Invalid Token Type: ", type])

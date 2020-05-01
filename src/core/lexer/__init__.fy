@@ -2,6 +2,7 @@ def execute(text):
     state = {
         "text": text,
         "position": position(-1, 0, -1),
+        "prev_position": None,
         "current_ident_level": 0,
         "error": None,
         "current_char": None,
@@ -18,6 +19,8 @@ def advance(state):
     col = state |> Map.get("position") |> Map.get("col")
     text = state |> Map.get("text")
 
+    prev_position = Map.get(state, 'position')
+
     idx = idx + 1
     current_char = text |> String.at(idx)
 
@@ -25,7 +28,11 @@ def advance(state):
         True -> position(idx, ln + 1, -1)
         False -> position(idx, ln, col + 1)
 
-    new_state = {"position": new_pos, "current_char": current_char}
+    new_state = {
+        "position": new_pos,
+        "prev_position": prev_position,
+        "current_char": current_char
+    }
 
     Map.merge(state, new_state)
 
