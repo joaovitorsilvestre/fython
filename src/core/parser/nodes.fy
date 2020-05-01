@@ -22,12 +22,12 @@ def make_varaccess_node(var_name_tok):
         "pos_end": Map.get(var_name_tok, "pos_end")
     }
 
-def make_statements_node(statements):
+def make_statements_node(statements, pos_start, pos_end):
     {
         "NodeType": "StatementsNode",
         "statement_nodes": statements,
-        "pos_start": Map.get(statements |> Enum.at(0), "pos_start"),
-        "pos_end": Map.get(statements |> Enum.at(-1), "pos_end")
+        "pos_start": pos_start,
+        "pos_end": pos_end
     }
 
 def make_atom_node(tok):
@@ -42,6 +42,14 @@ def make_list_node(element_nodes, pos_start, pos_end):
     {
         "NodeType": "ListNode",
         "element_nodes": element_nodes,
+        "pos_start": pos_start,
+        "pos_end": pos_end
+    }
+
+def make_map_node(pairs_list, pos_start, pos_end):
+    {
+        "NodeType": "MapNode",
+        "pairs_list": pairs_list,
         "pos_start": pos_start,
         "pos_end": pos_end
     }

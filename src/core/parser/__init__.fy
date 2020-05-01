@@ -55,6 +55,8 @@ def statements(state, only_ident_gte):
         None -> Map.get(state, "current_tok") |> Map.get("ident")
         _ -> only_ident_gte
 
+    pos_start = Map.get(state, "current_tok") |> Map.get("pos_start")
+
     p_result = statement(state)
     state = Enum.at(p_result, 0)
     first_statement = Enum.at(p_result, 1)
@@ -100,7 +102,8 @@ def statements(state, only_ident_gte):
             )
             [state, None]
         True ->
-            node = Core.Parser.Nodes.make_statements_node(_statements)
+            pos_end = Map.get(state, "current_tok") |> Map.get("pos_end")
+            node = Core.Parser.Nodes.make_statements_node(_statements, pos_start, pos_end)
 
             state = state |> Map.delete("_statements") |> Map.delete("_break")
 
@@ -214,6 +217,7 @@ def atom(state):
                     )
                     [state, None]
         ct_type == 'LSQUARE' -> list_expr(state)
+        ct_type == 'LCURLY' -> map_expr(state)
         True ->
             state = Core.Parser.Utils.set_error(
                 state,
@@ -248,7 +252,7 @@ def bin_op(state, func_a, ops, func_b):
 
     state = loop_while(
         state,
-        lambda st, ct:
+        lambda state, ct:
             Enum.member?(ops, Map.get(ct, "type")) or Enum.member?(ops, [Map.get(ct, "type"), Map.get(ct, "value")])
         ,
         lambda state, ct:
@@ -278,10 +282,12 @@ def list_expr(state):
 
     state = loop_while(
         state,
-        lambda st, ct:
-            case Map.get(ct, "type"):
-                "RSQUARE" -> False
-                _ -> True
+        lambda state, ct:
+            case:
+                Map.get(ct, "type") == "RSQUARE" -> False
+                Map.get(ct, "type") == "EOF" -> False
+                Map.get(ct, "error") != None -> False
+                True -> True
         ,
         lambda state, ct:
             element_nodes = Map.get(state, "_element_nodes", [])
@@ -302,19 +308,107 @@ def list_expr(state):
                     )
     )
 
-    element_nodes = Map.get(state, "_element_nodes", [])
+    ct = Map.get(state, "current_tok")
 
-    pos_end = Map.get(state, "current_tok") |> Map.get("pos_end")
+    case Map.get(ct, 'type'):
+        'RSQUARE' ->
+            element_nodes = Map.get(state, "_element_nodes", [])
 
-    node = Core.Parser.Nodes.make_list_node(element_nodes, pos_start, pos_end)
+            pos_end = Map.get(state, "current_tok") |> Map.get("pos_end")
 
-    state = advance(state) |> Map.delete("_element_nodes")
+            node = Core.Parser.Nodes.make_list_node(element_nodes, pos_start, pos_end)
 
-    [state, node]
+            state = advance(state) |> Map.delete("_element_nodes")
+
+            [state, node]
+        _ ->
+            Core.Parser.Utils.set_error(
+                state,
+                "Expected ']'",
+                Map.get(ct, "pos_start"),
+                Map.get(ct, "pos_end")
+            )
+
+            [state, None]
 
 
+def map_expr(state):
+    pos_start = Map.get(state, "current_tok") |> Map.get("pos_start")
 
+    map_get_pairs = lambda (state):
+        p_result = expr(state)
+        state = p_result |> Enum.at(0)
+        key = p_result |> Enum.at(1)
 
+        case:
+            (Map.get(state, "current_tok") |> Map.get("type")) == "DO" ->
+                state = advance(state)
+
+                p_result = expr(state)
+                state = p_result |> Enum.at(0)
+                value = p_result |> Enum.at(1)
+
+                [state, {key: value}]
+            True ->
+                ct = Map.get(state, "current_tok")
+                Core.Parser.Utils.set_error(
+                    state,
+                    "Empty staments are not allowed",
+                    Map.get(ct, "pos_start"),
+                    Map.get(ct, "pos_end")
+                )
+                [state, None]
+
+    state = loop_while(
+        state,
+        lambda state, ct:
+            case:
+                Map.get(ct, "type") == "RCURLY" -> False
+                Map.get(ct, "type") == "EOF" -> False
+                Map.get(ct, "error") != None -> False
+                True -> True
+        ,
+        lambda state, ct:
+            pairs = Map.get(state, "_pairs", {})
+
+            state = advance(state |> Map.delete("_pairs"))
+
+            case Map.get(state, "current_tok") |> Map.get("type"):
+                "RCURLY" -> state
+                _ ->
+                    p_result = map_get_pairs(state)
+                    state = Enum.at(p_result, 0)
+                    map = Enum.at(p_result, 1)
+
+                    case map:
+                        None -> state
+                        _ -> Map.put(state, "_pairs", Map.merge(pairs, map))
+    )
+
+    ct = Map.get(state, "current_tok")
+
+    case Map.get(ct, 'type'):
+        'RCURLY' ->
+            pairs = Map.get(state, "_pairs", {})
+                |> Map.to_list()
+                |> Enum.map(lambda i: [elem(i, 0), elem(i, 1)])
+
+            pos_end = Map.get(state, "current_tok") |> Map.get("pos_end")
+
+            node = Core.Parser.Nodes.make_map_node(pairs, pos_start, pos_end)
+
+            state = advance(state) |> Map.delete("_pairs") |> Map.delete("_break")
+
+            [state, node]
+        _ ->
+            Core.Parser.Utils.set_error(
+                state,
+                "Expected '}'",
+                Map.get(ct, "pos_start"),
+                Map.get(ct, "pos_end")
+            )
+
+            [state, None]
 
 
 
