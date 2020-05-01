@@ -22,6 +22,16 @@ def make_varaccess_node(var_name_tok):
         "pos_end": Map.get(var_name_tok, "pos_end")
     }
 
+def make_in_node(left_expr, right_expr):
+    {
+        "NodeType": "InNode",
+        "left_expr": left_expr,
+        "right_expr": right_expr,
+        "pos_start": Map.get(left_expr, "pos_start"),
+        "pos_end": Map.get(right_expr, "pos_end")
+    }
+
+
 def make_varassign_node(var_name_tok, value_node):
     {
         "NodeType": "VarAssignNode",

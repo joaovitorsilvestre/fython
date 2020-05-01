@@ -153,7 +153,27 @@ def expr(state):
         True ->
             _and = ["KEYWORD", "and"]
             _or = ["KEYWORD", "or"]
-            bin_op(state, &comp_expr/1, [_and, _or], None)
+
+            p_result = bin_op(state, &comp_expr/1, [_and, _or], None)
+            state = Enum.at(p_result, 0)
+            node = Enum.at(p_result, 1)
+
+            ct = Map.get(state, "current_tok")
+
+            case:
+                Core.Parser.Utils.tok_matchs(ct, 'KEYWORD', 'in') ->
+                    state = advance(state)
+
+                    p_result = expr(state)
+                    state = Enum.at(p_result, 0)
+                    right_node = Enum.at(p_result, 1)
+
+                    node = Core.Parser.Nodes.make_in_node(
+                        node, right_node
+                    )
+                    [state, node]
+                True -> [state, node]
+
 
 def comp_expr(state):
     ct = Map.get(state, "current_tok")
