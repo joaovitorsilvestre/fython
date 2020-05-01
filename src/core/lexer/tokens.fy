@@ -36,8 +36,8 @@ def valid_token_type?(type):
 
 def keywords():
     [
-        'import', 'from', 'as', 'and', 'or', 'not', 'if', 'elif', 'else',
-        'def', 'lambda', 'return', 'case', 'in'
+        'import', 'as', 'and', 'or', 'not', 'if', 'else',
+        'def', 'lambda', 'case', 'in'
     ]
 
 def add_eof_token(state):

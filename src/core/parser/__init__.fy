@@ -161,6 +161,8 @@ def expr(state):
             ct = Map.get(state, "current_tok")
 
             case:
+                Core.Parser.Utils.tok_matchs(ct, 'KEYWORD', 'if') ->
+                    if_expr(state, node)
                 Core.Parser.Utils.tok_matchs(ct, 'KEYWORD', 'in') ->
                     state = advance(state)
 
@@ -363,13 +365,12 @@ def list_expr(state):
 
             [state, node]
         _ ->
-            Core.Parser.Utils.set_error(
+            state = Core.Parser.Utils.set_error(
                 state,
                 "Expected ']'",
                 Map.get(ct, "pos_start"),
                 Map.get(ct, "pos_end")
             )
-
             [state, None]
 
 
@@ -442,15 +443,41 @@ def map_expr(state):
 
             [state, node]
         _ ->
-            Core.Parser.Utils.set_error(
+            state = Core.Parser.Utils.set_error(
                 state,
                 "Expected '}'",
                 Map.get(ct, "pos_start"),
                 Map.get(ct, "pos_end")
             )
-
             [state, None]
 
+def if_expr(state, expr_for_true):
+    state = advance(state)
 
+    p_result = expr(state)
+    state = Enum.at(p_result, 0)
+    condition = Enum.at(p_result, 1)
 
+    IO.inspect(Map.get(state, "current_tok"))
 
+    case Core.Parser.Utils.tok_matchs(Map.get(state, "current_tok"), "KEYWORD", "else"):
+        True ->
+            state = advance(state)
+
+            p_result = expr(state)
+            state = Enum.at(p_result, 0)
+            expr_for_false = Enum.at(p_result, 1)
+
+            node = Core.Parser.Nodes.make_if_node(
+                condition, expr_for_true, expr_for_false
+            )
+            [state, node]
+        False ->
+            state = Core.Parser.Utils.set_error(
+                state,
+                "Expected 'else'",
+                Map.get(Map.get(state, "current_tok"), "pos_start"),
+                Map.get(Map.get(state, "current_tok"), "pos_end")
+            )
+
+            [state, None]

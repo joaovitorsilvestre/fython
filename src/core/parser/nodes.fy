@@ -22,6 +22,16 @@ def make_varaccess_node(var_name_tok):
         "pos_end": Map.get(var_name_tok, "pos_end")
     }
 
+def make_if_node(comp_expr, true_expr, false_expr):
+    {
+        "NodeType": "IfNode",
+        "comp_expr": comp_expr,
+        "true_expr": true_expr,
+        "false_expr": false_expr,
+        "pos_start": Map.get(comp_expr, "pos_start"),
+        "pos_end": Map.get(false_expr, "pos_end")
+    }
+
 def make_in_node(left_expr, right_expr):
     {
         "NodeType": "InNode",

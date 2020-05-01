@@ -1,1 +1,1 @@
-1 in [1,2]
+True if 1 in [1,2] else False
