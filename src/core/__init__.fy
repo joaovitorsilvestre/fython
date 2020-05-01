@@ -1,3 +1,8 @@
+def eval_file(file_path):
+    File.read(file_path)
+        |> elem(1)
+        |> eval_string()
+
 def eval_string(text):
     lexed = Core.Lexer.execute(text)
 

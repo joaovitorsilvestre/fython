@@ -6,7 +6,7 @@ def print_error(module_name, state, text):
     Enum.join([
         'File: ', module_name,
         ', line: ',
-        Map.get(state, "error") |> Map.get('pos_start') |> Map.get('ln'),
+        (Map.get(state, "error") |> Map.get('pos_start') |> Map.get('ln')) + 1,
         '\n\n', guide, '\n\n',
         Map.get(state, "error") |> Map.get('msg')
     ])
@@ -34,9 +34,12 @@ def string_with_arrows(state, text):
                         ln == 0 ->
                             [Map.get(pos_start, 'col'), String.length(Enum.at(lines, 0))]
                         ln == Enum.at(lines_with_error, -1) ->
-                            [0, Map.get(pos_end, 'col')]
+                            [
+                                0 if Enum.count(lines_with_error) > 1 else Map.get(pos_start, 'col'),
+                                Map.get(pos_end, 'col')
+                            ]
                         True -> [0, String.length(Enum.at(lines, 0))]
-                True -> [0, 0]
+                True -> [None, None]
         )
 
     lines_to_display = lines
@@ -54,7 +57,7 @@ def string_with_arrows(state, text):
             arrows = case index in lines_with_error:
                 True ->
                     col_start = col_range_per_line |> Enum.at(index) |> Enum.at(0)
-                    col_end = col_range_per_line |> Enum.at(index) |> Enum.at(0)
+                    col_end = col_range_per_line |> Enum.at(index) |> Enum.at(1)
 
                     arrows = String.duplicate('^', String.length(text))
                     empty = String.duplicate(' ', String.length(text))
@@ -73,12 +76,19 @@ def string_with_arrows(state, text):
             index = Enum.at(item_index_arrows, 1)
             arrows = Enum.at(item_index_arrows, 2)
 
+            prefix = Enum.count(Integer.digits(Map.get(pos_end, 'ln')))
+
             # num_line = Enum.join([index + 1, " "])
-            num_line = IO.ANSI.format([:bright, :black, to_string(index + 1), ' '])
+            num_line = IO.ANSI.format([
+                :bright, :black, to_string(index + 1),
+                String.duplicate(' ', (prefix - Enum.count(Integer.digits(index))) + 1)
+            ])
 
             item = Enum.join([num_line, item])
+
             arrows = Enum.join([
-                String.duplicate(' ', Enum.count(Integer.digits(index + 1)) + 1), arrows
+                String.duplicate(' ', prefix),
+                arrows
             ])
 
             [item, arrows]
