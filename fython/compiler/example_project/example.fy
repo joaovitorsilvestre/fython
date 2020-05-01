@@ -1,1 +1,3 @@
-&add/a
+case:
+    False  True
+    True -> False

@@ -265,6 +265,7 @@ def atom(state):
                     [state, None]
         ct_type == 'LSQUARE' -> list_expr(state)
         ct_type == 'LCURLY' -> map_expr(state)
+        Core.Parser.Utils.tok_matchs(ct, "KEYWORD", "case") == True -> case_expr(state)
         True ->
             state = Core.Parser.Utils.set_error(
                 state,
@@ -333,7 +334,7 @@ def list_expr(state):
             case:
                 Map.get(ct, "type") == "RSQUARE" -> False
                 Map.get(ct, "type") == "EOF" -> False
-                Map.get(ct, "error") != None -> False
+                Map.get(state, "error") != None -> False
                 True -> True
         ,
         lambda state, ct:
@@ -411,7 +412,7 @@ def map_expr(state):
             case:
                 Map.get(ct, "type") == "RCURLY" -> False
                 Map.get(ct, "type") == "EOF" -> False
-                Map.get(ct, "error") != None -> False
+                Map.get(state, "error") != None -> False
                 True -> True
         ,
         lambda state, ct:
@@ -558,3 +559,110 @@ def func_as_var_expr(state):
                 Map.get(Map.get(state, "current_tok"), "pos_end")
             )
             [state, None]
+
+
+def case_expr(state):
+    pos_start = Map.get(state, 'current_tok') |> Map.get('pos_start')
+    initial_ident = Map.get(state, "current_tok") |> Map.get('ident')
+
+    state = advance(state)
+
+    is_cond = (Map.get(state, "current_tok") |> Map.get("type")) == "DO"
+
+    p_result = case is_cond:
+        True -> [state, None]
+        False -> expr(state)
+
+    state = Enum.at(p_result, 0)
+    _expr = Enum.at(p_result, 1)
+
+    do_line = pos_start |> Map.get('ln')
+    state = advance(state)
+
+    check_ident = lambda state:
+        case (Map.get(state, "current_tok") |> Map.get('ident')) <= initial_ident:
+            True ->
+                Core.Parser.Utils.set_error(
+                    state,
+                    "The expresions of case must be idented 4 spaces forward in reference to 'case' keyword",
+                    Map.get(Map.get(state, "current_tok"), "pos_start"),
+                    Map.get(Map.get(state, "current_tok"), "pos_end")
+                )
+            False -> state
+
+    state = case (Map.get(state, "current_tok") |> Map.get("pos_start") |> Map.get('ln')) > do_line:
+        True ->
+            loop_while(
+                state,
+                lambda state, ct:
+                    case:
+                        Map.get(ct, "type") == "EOF" -> False
+                        Map.get(state, "error") != None -> False
+                        Map.get(ct, "ident") != initial_ident + 4 -> False
+                        True -> True
+                ,
+                lambda state, ct:
+                    state = check_ident(state)
+
+                    IO.inspect('ct')
+                    IO.inspect(ct)
+
+                    cases = Map.get(state, "_cases", [])
+
+                    this_ident = Map.get(state, 'current_tok') |> Map.get('ident')
+
+                    p_result = expr(state)
+                    state = p_result |> Enum.at(0)
+                    left_expr = p_result |> Enum.at(1)
+
+                    case (Map.get(state, 'current_tok') |> Map.get('type')) == 'ARROW':
+                        True ->
+                            state = advance(state)
+
+                            p_result = case (Map.get(state, 'current_tok') |> Map.get('ident')) == this_ident:
+                                True -> statement(state |> Map.delete('_cases'))
+                                _ -> statements(state |> Map.delete('_cases'))
+
+                            state = Enum.at(p_result, 0)
+                            right_expr = Enum.at(p_result, 1)
+
+                            cases = List.insert_at(cases, -1, [left_expr, right_expr])
+
+                            state |> Map.put('_cases', cases)
+                        False ->
+                            IO.inspect('erro sem arrow')
+                            IO.inspect(Map.get(state, 'current_tok'))
+                            Core.Parser.Utils.set_error(
+                                state,
+                                "Expected '->'",
+                                Map.get(Map.get(state, "current_tok"), "pos_start"),
+                                Map.get(Map.get(state, "current_tok"), "pos_end")
+                            )
+            )
+        False ->
+            Core.Parser.Utils.set_error(
+                state,
+                "Expected new line after ':'",
+                Map.get(Map.get(state, "current_tok"), "pos_start"),
+                Map.get(Map.get(state, "current_tok"), "pos_end")
+            )
+
+    cases = Map.get(state, '_cases', [])
+
+    case cases:
+        [] ->
+            state = Core.Parser.Utils.set_error(
+                state,
+                "Case must have at least one case",
+                Map.get(Map.get(state, "current_tok"), "pos_start"),
+                Map.get(Map.get(state, "current_tok"), "pos_end")
+            )
+            [state, None]
+        _ ->
+            state = Map.delete(state, '_cases')
+
+            node = Core.Parser.Nodes.make_case_node(
+                _expr, cases, pos_start, Map.get(state, 'current_tok') |> Map.get('pos_start')
+            )
+
+            [state, node]

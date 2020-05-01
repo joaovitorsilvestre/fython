@@ -50,6 +50,14 @@ def make_pipe_node(left_node, right_node):
         "pos_end": Map.get(right_node, "pos_end")
     }
 
+def make_case_node(expr, cases, pos_start, pos_end):
+    {
+        "NodeType": "CaseNode",
+        "expr": expr,
+        "cases": cases,
+        "pos_start": pos_start,
+        "pos_end": pos_end
+    }
 
 def make_in_node(left_expr, right_expr):
     {
