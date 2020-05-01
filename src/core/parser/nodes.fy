@@ -32,6 +32,16 @@ def make_if_node(comp_expr, true_expr, false_expr):
         "pos_end": Map.get(false_expr, "pos_end")
     }
 
+def make_pipe_node(left_node, right_node):
+    {
+        "NodeType": "PipeNode",
+        "left_node": left_node,
+        "right_node": right_node,
+        "pos_start": Map.get(left_node, "pos_start"),
+        "pos_end": Map.get(right_node, "pos_end")
+    }
+
+
 def make_in_node(left_expr, right_expr):
     {
         "NodeType": "InNode",

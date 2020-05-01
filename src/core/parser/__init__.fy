@@ -163,6 +163,8 @@ def expr(state):
             case:
                 Core.Parser.Utils.tok_matchs(ct, 'KEYWORD', 'if') ->
                     if_expr(state, node)
+                Map.get(ct, 'type') == 'PIPE' ->
+                    pipe_expr(state, node)
                 Core.Parser.Utils.tok_matchs(ct, 'KEYWORD', 'in') ->
                     state = advance(state)
 
@@ -476,6 +478,28 @@ def if_expr(state, expr_for_true):
             state = Core.Parser.Utils.set_error(
                 state,
                 "Expected 'else'",
+                Map.get(Map.get(state, "current_tok"), "pos_start"),
+                Map.get(Map.get(state, "current_tok"), "pos_end")
+            )
+
+            [state, None]
+
+
+def pipe_expr(state, left_node):
+    state = advance(state)
+
+    p_result = expr(state)
+    state = Enum.at(p_result, 0)
+    right_node = Enum.at(p_result, 1)
+
+    case Map.get(state, 'error'):
+        None ->
+            node = Core.Parser.Nodes.make_pipe_node(left_node, right_node)
+            [state, node]
+        _ ->
+            state = Core.Parser.Utils.set_error(
+                state,
+                "Expected and expression after '|>'",
                 Map.get(Map.get(state, "current_tok"), "pos_start"),
                 Map.get(Map.get(state, "current_tok"), "pos_end")
             )
