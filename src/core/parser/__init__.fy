@@ -48,13 +48,9 @@ def parse(state):
             Map.merge(state, {"node": node})
 
 def statements(state):
-    statements(state, None)
+    statements(state, 0)
 
-def statements(state, only_ident_gte):
-    expected_ident = case only_ident_gte:
-        None -> Map.get(state, "current_tok") |> Map.get("ident")
-        _ -> only_ident_gte
-
+def statements(state, expected_ident):
     pos_start = Map.get(state, "current_tok") |> Map.get("pos_start")
 
     p_result = statement(state)
