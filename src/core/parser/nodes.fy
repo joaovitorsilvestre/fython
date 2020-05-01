@@ -22,6 +22,15 @@ def make_varaccess_node(var_name_tok):
         "pos_end": Map.get(var_name_tok, "pos_end")
     }
 
+def make_varassign_node(var_name_tok, value_node):
+    {
+        "NodeType": "VarAssignNode",
+        "var_name_tok": var_name_tok,
+        "value_node": value_node,
+        "pos_start": Map.get(var_name_tok, "pos_start"),
+        "pos_end": Map.get(value_node, "pos_end")
+    }
+
 def make_statements_node(statements, pos_start, pos_end):
     {
         "NodeType": "StatementsNode",

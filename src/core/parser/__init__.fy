@@ -130,9 +130,30 @@ def statement(state):
             [state, None]
 
 def expr(state):
-    _and = ["KEYWORD", "and"]
-    _or = ["KEYWORD", "or"]
-    bin_op(state, &comp_expr/1, [_and, _or], None)
+    ct = state |> Map.get('current_tok')
+    ct_type = ct |> Map.get('type')
+
+    next_tok_type = advance(state) |> Map.get('current_tok') |> Map.get('type')
+
+    case:
+        ct_type == 'IDENTIFIER' and next_tok_type == 'EQ' ->
+            var_name = ct
+            state = advance(state) |> advance()
+
+            p_result = expr(state)
+            state = Enum.at(p_result, 0)
+            _expr = Enum.at(p_result, 1)
+
+            case _expr:
+                None ->
+                    [state, None]
+                _ ->
+                    node = Core.Parser.Nodes.make_varassign_node(var_name, _expr)
+                    [state, node]
+        True ->
+            _and = ["KEYWORD", "and"]
+            _or = ["KEYWORD", "or"]
+            bin_op(state, &comp_expr/1, [_and, _or], None)
 
 def comp_expr(state):
     ct = Map.get(state, "current_tok")
