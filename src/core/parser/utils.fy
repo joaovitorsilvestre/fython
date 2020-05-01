@@ -38,7 +38,7 @@ def set_error(state, msg, pos_start, pos_end):
     case Map.get(state, 'error'):
         None ->
             state = Map.put(
-                state, "error", {"msg": msg, "pos_start": pos_start, pos_end: "pos_end"}
+                state, "error", {"msg": msg, "pos_start": pos_start, "pos_end": pos_end}
             )
             state
         _ -> state

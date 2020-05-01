@@ -7,13 +7,7 @@ def execute(text):
         "current_char": None,
         "tokens": []
     }
-    state = state |> advance() |> parse() |> Core.Lexer.Tokens.add_eof_token()
-
-    case Map.get(state, "error"):
-        None -> [:ok, state]
-        _ ->
-            [:error, Map.get(state, "error")]
-
+    state |> advance() |> parse() |> Core.Lexer.Tokens.add_eof_token()
 
 def position(idx, ln, col):
     {"idx": idx, "ln": ln, "col": col}
@@ -36,7 +30,15 @@ def advance(state):
     Map.merge(state, new_state)
 
 def set_error(state, error):
-    Map.put(state, "error", {"msg": error, "position": Map.get(state, 'position')})
+    Map.put(
+        state,
+        "error",
+        {
+            "msg": error,
+            "pos_start": Map.get(state, 'position'),
+            "pos_end": Map.get(state, 'position')
+        }
+    )
 
 def parse(state):
     case Map.get(state, "error"):
