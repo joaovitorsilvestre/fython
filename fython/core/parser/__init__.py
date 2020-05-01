@@ -798,7 +798,6 @@ class Parser:
             False
         ))
 
-
     def pipe_expr(self, left_node):
         res = ParseResult()
         pos_start = self.current_tok.pos_start.copy()
@@ -1196,7 +1195,7 @@ class Parser:
         if self.current_tok.type != TT_DIV:
             return res.failure(InvalidSyntaxError(
                 pos_start, self.current_tok.pos_start.copy(),
-                "Expected '/"
+                "Expected '/'"
             ))
 
         res.register_advancement()

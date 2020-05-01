@@ -245,6 +245,8 @@ def atom(state):
         ct_type == 'ATOM' ->
             node = Core.Parser.Nodes.make_atom_node(ct)
             [state |> advance(), node]
+        ct_type == 'ECOM' ->
+            func_as_var_expr(state)
         ct_type == 'LPAREN' ->
             state = advance(state)
 
@@ -504,4 +506,55 @@ def pipe_expr(state, left_node):
                 Map.get(Map.get(state, "current_tok"), "pos_end")
             )
 
+            [state, None]
+
+def func_as_var_expr(state):
+    pos_start = Map.get(state, 'current_tok') |> Map.get('pos_start')
+    state = advance(state)
+
+    sequence = [
+        state |> Map.get('current_tok') |> Map.get('type'),
+        state |> advance() |> Map.get('current_tok') |> Map.get('type'),
+        state |> advance() |> advance() |> Map.get('current_tok') |> Map.get('type')
+    ]
+
+    case sequence:
+        ["IDENTIFIER", "DIV", "INT"] ->
+            var_name_tok = Map.get(state, 'current_tok')
+
+            state = advance(state)
+            state = advance(state)
+
+            arity = Map.get(state, 'current_tok')
+            state = advance(state)
+
+            node = Core.Parser.Nodes.make_funcasvariable_node(
+                var_name_tok, arity, pos_start
+            )
+            [state, node]
+        ['IDENTIFIER', _, "INT"] ->
+            state = state |> advance()
+            state = Core.Parser.Utils.set_error(
+                state,
+                "Expected '/'",
+                Map.get(Map.get(state, "current_tok"), "pos_start"),
+                Map.get(Map.get(state, "current_tok"), "pos_end")
+            )
+            [state, None]
+        ['IDENTIFIER', "DIV", _] ->
+            state = state |> advance() |> advance()
+            state = Core.Parser.Utils.set_error(
+                state,
+                "Expected arity number as int",
+                Map.get(Map.get(state, "current_tok"), "pos_start"),
+                Map.get(Map.get(state, "current_tok"), "pos_end")
+            )
+            [state, None]
+        [_, _, _] ->
+            state = Core.Parser.Utils.set_error(
+                state,
+                "Expected the function name and arity. E.g: &sum/2",
+                Map.get(Map.get(state, "current_tok"), "pos_start"),
+                Map.get(Map.get(state, "current_tok"), "pos_end")
+            )
             [state, None]

@@ -32,6 +32,15 @@ def make_if_node(comp_expr, true_expr, false_expr):
         "pos_end": Map.get(false_expr, "pos_end")
     }
 
+def make_funcasvariable_node(var_name_tok, arity, pos_start):
+    {
+        "NodeType": "FuncAsVariableNode",
+        "var_name_tok": var_name_tok,
+        "arity": String.to_integer(Map.get(arity, 'value')),
+        "pos_start": pos_start,
+        "pos_end": Map.get(arity, "pos_end")
+    }
+
 def make_pipe_node(left_node, right_node):
     {
         "NodeType": "PipeNode",

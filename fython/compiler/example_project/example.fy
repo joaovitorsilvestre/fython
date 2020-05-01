@@ -1,1 +1,1 @@
-True |> Map.get
+&add/a
