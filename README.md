@@ -16,6 +16,8 @@ case b:
 def add(a)
     a + b
 ```
+- [ ] Lexer must save the value for KEYWORD arguments so we can show they in the expection.
+`Expeted ... Received: KEYWORD` should be `Expeted ... Received: lambda`
 
 #### MUST HAVE
 - [ ] Support to multiline if with elif and else
@@ -29,7 +31,7 @@ def add(a)
 - [ ] support for list 'explode'. Eg: [*[1, 2]] must be converted to [1, 2]. Need do find a way to make this works
 - [ ] support for dict 'explode'. Eg: {*{1: 2}} must be converted to {1: 2}. Need do find a way to make this works
 - [ ] use python style keyword params to make elixir optional arguments like // ops
-
+- [ ] list comprehentions
 - [ ] Support add variable to map without need to refer the string if is the same name. Just like JS ES6
 ex: 
 ```

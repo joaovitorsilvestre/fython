@@ -293,6 +293,8 @@ def atom(state):
             case_expr(state)
         Core.Parser.Utils.tok_matchs(ct, "KEYWORD", "def") ->
             func_def_expr(state)
+        Core.Parser.Utils.tok_matchs(ct, "KEYWORD", "lambda") ->
+            lambda_expr(state)
         True ->
             state = Core.Parser.Utils.set_error(
                 state,
@@ -642,7 +644,7 @@ def case_expr(state):
                             state = advance(state)
 
                             p_result = case (Map.get(state, 'current_tok') |> Map.get('ident')) == this_ident:
-                                True -> statement(state |> Map.delete('_cases'))
+                                True -> expr(state |> Map.delete('_cases'))
                                 _ -> statements(state |> Map.delete('_cases'))
 
                             state = Enum.at(p_result, 0)
@@ -731,6 +733,8 @@ def func_def_expr(state):
     state = Enum.at(p_result, 0)
     arg_name_toks = Enum.at(p_result, 1)
 
+    state = advance(state)
+
     state = case (Map.get(state, 'current_tok') |> Map.get('type')) == 'DO':
         True -> advance(state)
         False -> Core.Parser.Utils.set_error(
@@ -812,10 +816,7 @@ def resolve_params(state, end_tok):
 
     case (Map.get(state, 'current_tok') |> Map.get('type')) == end_tok:
         True ->
-            [
-                state |> advance() |> Map.delete('_arg_name_toks'),
-                arg_name_toks
-            ]
+            [state |> Map.delete('_arg_name_toks'), arg_name_toks]
         False ->
             state = Core.Parser.Utils.set_error(
                 state,
@@ -941,3 +942,43 @@ def call_func_expr(state, atom):
             [state, node]
         _ ->
             [state, None]
+
+def lambda_expr(state):
+    pos_start = Map.get(state, 'current_tok') |> Map.get('pos_start')
+    lambda_token_ln = pos_start |> Map.get('ln')
+    lambda_token_ident = Map.get(state, "current_tok") |> Map.get('ident')
+
+    state = advance(state)
+
+    p_result = resolve_params(state, 'DO')
+    state = Enum.at(p_result, 0)
+    arg_name_toks = Enum.at(p_result, 1)
+
+
+    state = case (Map.get(state, 'current_tok') |> Map.get('type')) == 'DO':
+        True -> advance(state)
+        False -> Core.Parser.Utils.set_error(
+            state,
+            "Expected ':'",
+            Map.get(Map.get(state, "current_tok"), "pos_start"),
+            Map.get(Map.get(state, "current_tok"), "pos_end")
+        )
+
+
+    p_result = case (Map.get(state, 'current_tok') |> Map.get('pos_start') |> Map.get('ln')) == lambda_token_ln:
+        True -> expr(state)
+        False -> statements(state, lambda_token_ident + 4)
+
+    state = Enum.at(p_result, 0)
+    body = Enum.at(p_result, 1)
+
+    case [arg_name_toks, body]:
+        [_, None] ->    [state, None]
+        [None, _] ->    [state, None]
+        [None, None] -> [state, None]
+        _ ->
+            node = Core.Parser.Nodes.make_lambda_node(
+                None, arg_name_toks, body, pos_start
+            )
+
+            [state, node]

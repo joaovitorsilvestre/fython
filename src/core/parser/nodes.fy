@@ -130,6 +130,12 @@ def make_funcdef_node(var_name_tok, arg_name_toks, body_node, pos_start):
         "pos_end": Map.get(body_node, 'pos_end')
     }
 
+def make_lambda_node(var_name_tok, arg_name_toks, body_node, pos_start):
+    Map.merge(
+        make_funcdef_node(var_name_tok, arg_name_toks, body_node, pos_start),
+        {"NodeType": "LambdaNode"}
+    )
+
 
 def make_call_node(node_to_call, arg_nodes, keywords, pos_end):
     {

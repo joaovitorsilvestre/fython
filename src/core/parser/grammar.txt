@@ -66,9 +66,9 @@ pipe-expr           : expr (PIPE expr)+
 
 func-def            : KEYWORD:def IDENTIFIER
                     LPAREN (IDENTIFIER (COMMA IDENTIFIER)*)? RPAREN DO
-                    (NEWLINE statements)*
+                    (NEWLINE statements)+
 
-lambda-def          : KEYWORD:lambda LPAREN? (IDENTIFIER (COMMA IDENTIFIER)*)? RPAREN?
-                    (DO expr)|(NEWLINE statements)*
+lambda-def          : KEYWORD:lambda (IDENTIFIER (COMMA IDENTIFIER)*)?
+                    (DO expr)|(NEWLINE statements)+
 
 func-as-var-expr    : ECOM DIV INT
