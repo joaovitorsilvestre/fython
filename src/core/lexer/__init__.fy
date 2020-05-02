@@ -2,18 +2,13 @@ def execute(text):
     state = {
         "text": text,
         "position": position(-1, 0, -1),
+        "prev_position": None,
         "current_ident_level": 0,
         "error": None,
         "current_char": None,
         "tokens": []
     }
-    state = state |> advance() |> parse() |> Core.Lexer.Tokens.add_eof_token()
-
-    case Map.get(state, "error"):
-        None -> [:ok, state]
-        _ ->
-            [:error, Map.get(state, "error")]
-
+    state |> advance() |> parse() |> Core.Lexer.Tokens.add_eof_token()
 
 def position(idx, ln, col):
     {"idx": idx, "ln": ln, "col": col}
@@ -24,6 +19,8 @@ def advance(state):
     col = state |> Map.get("position") |> Map.get("col")
     text = state |> Map.get("text")
 
+    prev_position = Map.get(state, 'position')
+
     idx = idx + 1
     current_char = text |> String.at(idx)
 
@@ -31,12 +28,24 @@ def advance(state):
         True -> position(idx, ln + 1, -1)
         False -> position(idx, ln, col + 1)
 
-    new_state = {"position": new_pos, "current_char": current_char}
+    new_state = {
+        "position": new_pos,
+        "prev_position": prev_position,
+        "current_char": current_char
+    }
 
     Map.merge(state, new_state)
 
 def set_error(state, error):
-    Map.put(state, "error", {"msg": error, "position": Map.get(state, 'position')})
+    Map.put(
+        state,
+        "error",
+        {
+            "msg": error,
+            "pos_start": Map.get(state, 'position'),
+            "pos_end": Map.get(state, 'position')
+        }
+    )
 
 def parse(state):
     case Map.get(state, "error"):
@@ -52,31 +61,31 @@ def parse(state):
                 cc == "\n" ->
                     state
                         |> Map.put("current_ident_level", 0)
-                        |> Core.Lexer.Tokens.add_token("TT_NEWLINE")
+                        |> Core.Lexer.Tokens.add_token("NEWLINE")
                         |> advance()
                         |> parse()
                 cc == ':' -> parse(make_do_or_token(state))
                 cc == "'" or cc == '"' -> parse(make_string(state))
                 String.contains?(Core.Lexer.Consts.identifier_chars(True), cc) ->
                     state |> make_identifier() |> parse()
-                cc == "&" -> simple_maker(state, "TT_ECOM")
+                cc == "&" -> simple_maker(state, "ECOM")
                 String.contains?(Core.Lexer.Consts.digists(), cc) -> parse(make_number(state))
-                cc == "," -> simple_maker(state, "TT_COMMA")
-                cc == "+" -> simple_maker(state, "TT_PLUS")
-                cc == '-' -> double_maker(state, "TT_MINUS", ">", "TT_ARROW")
-                cc == '*' -> double_maker(state, "TT_MUL", "*", "TT_POW")
-                cc == '>' -> double_maker(state, "TT_GT", "=", "TT_GTE")
-                cc == '<' -> double_maker(state, "TT_LT", "=", "TT_LTE")
-                cc == "+" -> simple_maker(state, "TT_DIV")
-                cc == '(' -> simple_maker(state, 'TT_LPAREN')
-                cc == ')' -> simple_maker(state, 'TT_RPAREN')
-                cc == '[' -> simple_maker(state, 'TT_LSQUARE')
-                cc == ']' -> simple_maker(state, 'TT_RSQUARE')
-                cc == '{' -> simple_maker(state, 'TT_LCURLY')
-                cc == '}' -> simple_maker(state, 'TT_RCURLY')
-                cc == '=' -> double_maker(state, "TT_EQ", "=", "TT_EE")
-                cc == '!' -> expected_double_maker(state, "!", "TT_NE", "=")
-                cc == '|' -> expected_double_maker(state, "|", "TT_PIPE", ">")
+                cc == "," -> simple_maker(state, "COMMA")
+                cc == "+" -> simple_maker(state, "PLUS")
+                cc == '-' -> double_maker(state, "MINUS", ">", "ARROW")
+                cc == '*' -> double_maker(state, "MUL", "*", "POW")
+                cc == "/" -> simple_maker(state, "DIV")
+                cc == '>' -> double_maker(state, "GT", "=", "GTE")
+                cc == '<' -> double_maker(state, "LT", "=", "LTE")
+                cc == '(' -> simple_maker(state, 'LPAREN')
+                cc == ')' -> simple_maker(state, 'RPAREN')
+                cc == '[' -> simple_maker(state, 'LSQUARE')
+                cc == ']' -> simple_maker(state, 'RSQUARE')
+                cc == '{' -> simple_maker(state, 'LCURLY')
+                cc == '}' -> simple_maker(state, 'RCURLY')
+                cc == '=' -> double_maker(state, "EQ", "=", "EE")
+                cc == '!' -> expected_double_maker(state, "!", "NE", "=")
+                cc == '|' -> expected_double_maker(state, "|", "PIPE", ">")
                 True -> set_error(state, Enum.join(["IllegalCharError: ", cc]))
         _ -> state
 
@@ -145,15 +154,15 @@ def make_do_or_token(state):
                 )
             state = state
                 |> Core.Lexer.Tokens.add_token(
-                    "TT_ATOM", Map.get(state, "result"), pos_start
+                    "ATOM", Map.get(state, "result"), pos_start
                 )
                 |> Map.delete("result")
 
             state
         False ->
             state
-                |> advance
-                |> Core.Lexer.Tokens.add_token("TT_DO")
+                |> advance()
+                |> Core.Lexer.Tokens.add_token("DO")
 
 
 def make_string(state):
@@ -169,7 +178,7 @@ def make_string(state):
 
     state = state
         |> Core.Lexer.Tokens.add_token(
-            "TT_STRING", Map.get(state, "result"), pos_start
+            "STRING", Map.get(state, "result"), pos_start
         )
         |> Map.delete("result")
 
@@ -196,12 +205,12 @@ def make_number(state):
         String.contains?(result, '.') ->
             state
                 |> Core.Lexer.Tokens.add_token(
-                    "TT_FLOAT", result, pos_start
+                    "FLOAT", result, pos_start
                 )
         True ->
             state
                 |> Core.Lexer.Tokens.add_token(
-                    "TT_INT", result, pos_start
+                    "INT", result, pos_start
                 )
 
     state |> Map.delete("result")
@@ -211,15 +220,14 @@ def make_identifier(state):
     first_char = Map.get(state, "current_char")
 
     state = loop_while(state, lambda cc:
-        IO.inspect(cc)
         cc != None and String.contains?(Core.Lexer.Consts.identifier_chars(False), cc)
     )
 
     result = Enum.join([first_char, Map.get(state, "result")])
 
     type = case Enum.member?(Core.Lexer.Tokens.keywords(), result):
-        True -> "TT_KEYWORD"
-        False -> "TT_IDENTIFIER"
+        True -> "KEYWORD"
+        False -> "IDENTIFIER"
 
     state
         |> Core.Lexer.Tokens.add_token(type, result, pos_start)

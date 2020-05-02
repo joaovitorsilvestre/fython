@@ -1,4 +1,4 @@
-def oi():
-    a = {"a": {"b": {"c": 1}}}
+def sub(vaifilhao, outroparam):
+    add(5, 4, a=2, b=2)
 
-    IO.puts(a |> Map.get("a") |> Map.get("b") |> Map.get("c"))
+    a = lambda a, b: 'oii'

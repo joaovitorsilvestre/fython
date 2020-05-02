@@ -87,10 +87,7 @@ class Parser:
             res.register_advancement()
             self.advance()
 
-        if self.current_tok.type == TT_RSQUARE:
-            res.register_advancement()
-            self.advance()
-        else:
+        if self.current_tok.type != TT_RSQUARE:
             element_nodes.append(res.register(self.expr()))
             if res.error:
                 return res.failure(InvalidSyntaxError(
@@ -169,115 +166,10 @@ class Parser:
         if res.error: return res
 
         if self.current_tok.type == TT_LPAREN:
-            res.register_advancement()
-            self.advance()
-            arg_nodes = []
-            keywords = {}
-
-            def handle_keywords():
-                res.register_advancement()
-                self.advance()
-
-                local_keywords = {}
-                while self.current_tok.type == TT_IDENTIFIER and \
-                        self.get_next_token().type == TT_EQ:
-
-                    keyword = self.current_tok.value
-
-                    res.register_advancement()
-                    self.advance()
-                    res.register_advancement()
-                    self.advance()
-
-                    value = res.register(self.expr())
-                    if res.error:
-                        return None, res
-
-                    if local_keywords.get(keyword):
-                        return res.failure(InvalidSyntaxError(
-                            self.current_tok.pos_start, self.current_tok.pos_end,
-                            f"Duplicated keyword argument"
-                        ))
-
-                    local_keywords = {**local_keywords, **{keyword: value}}
-
-                if not local_keywords:
-                    self.reverse()
-                    res.to_reverse_count -= 1
-
-                return local_keywords, None
-
-            if self.current_tok.type == TT_RPAREN:
-                res.register_advancement()
-                self.advance()
-            else:
-                while self.current_tok.type == TT_NEWLINE:
-                    res.register_advancement()
-                    self.advance()
-
-                keywords, error = handle_keywords()
-                if error:
-                    return res
-
-                if keywords and self.current_tok.type != TT_RPAREN:
-                    return res.failure(InvalidSyntaxError(
-                        self.current_tok.pos_start, self.current_tok.pos_end,
-                        f"Keywords must be placed after all regular arguments"
-                    ))
-                elif self.current_tok.type == TT_RPAREN:
-                    res.register_advancement()
-                    self.advance()
-
-                arg_nodes.append(res.register(self.expr()))
-                if res.error:
-                    return res.failure(InvalidSyntaxError(
-                        self.current_tok.pos_start, self.current_tok.pos_end,
-                        "Expected ')', 'VAR', 'IF', 'FOR', 'WHILE', 'FUN', int, float, "
-                        "identifier, '+', '-', '(' or 'NOT'"
-                    ))
-
-                while self.current_tok.type == TT_NEWLINE:
-                    res.register_advancement()
-                    self.advance()
-
-                while self.current_tok.type == TT_COMMA:
-                    keywords, error = handle_keywords()
-                    if error:
-                        return res
-
-                    while self.current_tok.type == TT_NEWLINE:
-                        res.register_advancement()
-                        self.advance()
-
-                    if keywords and self.current_tok.type != TT_RPAREN:
-                        return res.failure(InvalidSyntaxError(
-                            self.current_tok.pos_start, self.current_tok.pos_end,
-                            f"Keywords must be placed after all regular arguments"
-                        ))
-                    elif keywords:
-                        break
-
-                    res.register_advancement()
-                    self.advance()
-
-                    arg_nodes.append(res.register(self.expr()))
-                    if res.error:
-                        return res
-
-                while self.current_tok.type == TT_NEWLINE:
-                    res.register_advancement()
-                    self.advance()
-
-                if self.current_tok.type != TT_RPAREN:
-                    return res.failure(InvalidSyntaxError(
-                        self.current_tok.pos_start, self.current_tok.pos_end,
-                        f"Expected ',' or ')'"
-                    ))
-
-                res.register_advancement()
-                self.advance()
-
-            return res.success(CallNode(atom, arg_nodes, keywords))
+            node = res.register(self.call_expr(atom))
+            if res.error:
+                return res
+            return res.success(node)
 
         return res.success(atom)
 
@@ -793,7 +685,6 @@ class Parser:
             False
         ))
 
-
     def pipe_expr(self, left_node):
         res = ParseResult()
         pos_start = self.current_tok.pos_start.copy()
@@ -1191,7 +1082,7 @@ class Parser:
         if self.current_tok.type != TT_DIV:
             return res.failure(InvalidSyntaxError(
                 pos_start, self.current_tok.pos_start.copy(),
-                "Expected '/"
+                "Expected '/'"
             ))
 
         res.register_advancement()
@@ -1211,3 +1102,124 @@ class Parser:
         return res.success(FuncAsVariableNode(
             var_name_tok, arity, pos_start, self.current_tok.pos_start.copy()
         ))
+
+    def call_expr(self, atom):
+        res = ParseResult()
+
+        res.register_advancement()
+        self.advance()
+        arg_nodes = []
+        keywords = {}
+
+        def handle_keywords():
+            res.register_advancement()
+            self.advance()
+
+            local_keywords = {}
+            while self.current_tok.type == TT_IDENTIFIER and \
+                    self.get_next_token().type == TT_EQ:
+
+                keyword = self.current_tok.value
+
+                res.register_advancement()
+                self.advance()
+                res.register_advancement()
+                self.advance()
+
+                value = res.register(self.expr())
+                if res.error:
+                    return None, res
+
+                if local_keywords.get(keyword):
+                    return res.failure(InvalidSyntaxError(
+                        self.current_tok.pos_start, self.current_tok.pos_end,
+                        f"Duplicated keyword argument"
+                    ))
+
+                local_keywords = {**local_keywords, **{keyword: value}}
+
+            if not local_keywords:
+                self.reverse()
+                res.to_reverse_count -= 1
+
+            return local_keywords, None
+
+        if self.current_tok.type == TT_RPAREN:
+            res.register_advancement()
+            self.advance()
+        else:
+            while self.current_tok.type == TT_NEWLINE:
+                res.register_advancement()
+                self.advance()
+
+            keywords, error = handle_keywords()
+            if error:
+                return res
+
+            if keywords and self.current_tok.type != TT_RPAREN:
+                return res.failure(InvalidSyntaxError(
+                    self.current_tok.pos_start, self.current_tok.pos_end,
+                    f"Keywords must be placed after all regular arguments"
+                ))
+            elif self.current_tok.type == TT_RPAREN:
+                res.register_advancement()
+                self.advance()
+
+            arg_nodes.append(res.register(self.expr()))
+            if res.error:
+                return res.failure(InvalidSyntaxError(
+                    self.current_tok.pos_start, self.current_tok.pos_end,
+                    "Expected ')', 'VAR', 'IF', 'FOR', 'WHILE', 'FUN', int, float, "
+                    "identifier, '+', '-', '(' or 'NOT'"
+                ))
+
+            while self.current_tok.type == TT_NEWLINE:
+                res.register_advancement()
+                self.advance()
+
+            while self.current_tok.type == TT_COMMA:
+                while self.current_tok.type == TT_NEWLINE:
+                    res.register_advancement()
+                    self.advance()
+
+                keywords, error = handle_keywords()
+                if error:
+                    return res
+
+                while self.current_tok.type == TT_NEWLINE:
+                    res.register_advancement()
+                    self.advance()
+
+                if keywords and self.current_tok.type != TT_RPAREN:
+                    return res.failure(InvalidSyntaxError(
+                        self.current_tok.pos_start, self.current_tok.pos_end,
+                        f"Keywords must be placed after all regular arguments"
+                    ))
+                elif keywords:
+                    break
+
+                res.register_advancement()
+                self.advance()
+
+                while self.current_tok.type == TT_NEWLINE:
+                    res.register_advancement()
+                    self.advance()
+
+                arg_nodes.append(res.register(self.expr()))
+                if res.error:
+                    return res
+
+            while self.current_tok.type == TT_NEWLINE:
+                res.register_advancement()
+                self.advance()
+
+            if self.current_tok.type != TT_RPAREN:
+                return res.failure(InvalidSyntaxError(
+                    self.current_tok.pos_start, self.current_tok.pos_end,
+                    f"Expected ',' or ')'"
+                ))
+
+            res.register_advancement()
+            self.advance()
+
+        return res.success(CallNode(atom, arg_nodes, keywords))
