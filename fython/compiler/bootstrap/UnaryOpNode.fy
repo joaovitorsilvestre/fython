@@ -1,5 +1,3 @@
-import Utils
-
 def convert_unaryop_node(convert, node):
     value = convert(node |> Map.get("node"))
 

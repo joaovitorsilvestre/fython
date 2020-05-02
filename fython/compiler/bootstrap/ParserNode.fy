@@ -1,15 +1,3 @@
-import Utils
-
-import BinOpNode
-
-import UnaryOpNode
-
-import ImportNode
-
-import CallNode
-
-import PipeNode
-
 def convert(node):
     func = case Map.get(node, "NodeType"):
         "StatementsNode"    -> convert_statements_node(node)

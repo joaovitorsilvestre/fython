@@ -1,6 +1,3 @@
-import IO, System, File, ParserNode, Utils
-
-
 def compile_project(project_path):
     compiled_folder = [project_path, "compiled"] |> Enum.join('/')
 

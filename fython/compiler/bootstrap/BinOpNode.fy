@@ -1,5 +1,3 @@
-import Utils
-
 def convert_binop_node(convert, node):
     a = convert(Map.get(node, "left_node"))
     b = convert(Map.get(node, "right_node"))
