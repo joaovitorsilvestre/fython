@@ -1,1 +1,2 @@
-raise "fila da puta"
+def add(a)
+    a + b

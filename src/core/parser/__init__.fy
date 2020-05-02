@@ -50,7 +50,7 @@ def parse(state):
 def statements(state):
     statements(state, 0)
 
-def statements(state, expected_ident):
+def statements(state, expected_ident_gte):
     pos_start = Map.get(state, "current_tok") |> Map.get("pos_start")
 
     state = loop_while(
@@ -60,28 +60,43 @@ def statements(state, expected_ident):
         ,
         lambda state, ct:
             _statements = Map.get(state, "_statements", [])
+            state = Map.delete(state, '_statements')
+
             ct_type = Map.get(ct, "type")
 
-            more_statements = Map.get(ct, "ident") >= expected_ident
+            more_statements = Map.get(ct, "ident") >= expected_ident_gte
 
             more_statements = False if ct_type == "RPAREN" else more_statements
 
             case:
-                not more_statements or ct_type == "EOF" -> Map.put(state, "_break", True)
+                not more_statements or ct_type == "EOF" ->
+                    state
+                        |> Map.put("_break", True)
+                        |> Map.put("_statements", _statements)
                 True ->
                     p_result = statement(state)
                     state = Enum.at(p_result, 0)
                     _statement = Enum.at(p_result, 1)
 
                     case _statement:
-                        None -> Map.put(state, "_break", True)
-                        _ -> Map.put(state, "_statements", List.insert_at(_statements, 0, _statement))
+                        None ->
+                            state
+                                |> Map.put("_break", True)
+                                |> Map.put("_statements", _statements)
+                        _ ->
+                            Map.put(
+                                state,
+                                "_statements",
+                                List.insert_at(_statements, -1, _statement)
+                            )
     )
 
     _statements = Map.get(state, "_statements", [])
+    state = Map.delete(state, "_statements") |> Map.delete("_break")
 
     case:
-        Map.get(state, "error") != None -> [state, None]
+        Map.get(state, "error") != None ->
+            [state, None]
         _statements == [] ->
             ct = Map.get(state, "current_tok")
 
@@ -95,8 +110,6 @@ def statements(state, expected_ident):
         True ->
             pos_end = Map.get(state, "current_tok") |> Map.get("pos_end")
             node = Core.Parser.Nodes.make_statements_node(_statements, pos_start, pos_end)
-
-            state = state |> Map.delete("_statements") |> Map.delete("_break")
 
             [state, node]
 
@@ -270,7 +283,10 @@ def atom(state):
                     [state, None]
         ct_type == 'LSQUARE' -> list_expr(state)
         ct_type == 'LCURLY' -> map_expr(state)
-        Core.Parser.Utils.tok_matchs(ct, "KEYWORD", "case") == True -> case_expr(state)
+        Core.Parser.Utils.tok_matchs(ct, "KEYWORD", "case") ->
+            case_expr(state)
+        Core.Parser.Utils.tok_matchs(ct, "KEYWORD", "def") ->
+            func_def_expr(state)
         True ->
             state = Core.Parser.Utils.set_error(
                 state,
@@ -666,23 +682,141 @@ def case_expr(state):
             [state, node]
 
 
+def func_def_expr(state):
+    state = case (Map.get(state, "current_tok") |> Map.get('ident')) != 0:
+        True -> Core.Parser.Utils.set_error(
+            state,
+            "'def' is only allowed in modules scope. TO define functions inside functions use 'lambda' instead.",
+            Map.get(Map.get(state, "current_tok"), "pos_start"),
+            Map.get(Map.get(state, "current_tok"), "pos_end")
+        )
+        False -> state
+
+    pos_start = Map.get(state, 'current_tok') |> Map.get('pos_start')
+    def_token_ln = pos_start |> Map.get('ln')
+
+    state = advance(state)
+
+    state = case (Map.get(state, "current_tok") |> Map.get('type')) != 'IDENTIFIER':
+        True -> Core.Parser.Utils.set_error(
+            state,
+            "Expected a identifier after 'def'.",
+            Map.get(Map.get(state, "current_tok"), "pos_start"),
+            Map.get(Map.get(state, "current_tok"), "pos_end")
+        )
+        False -> state
+
+    var_name_tok = Map.get(state, 'current_tok')
+
+    state = advance(state)
+
+    state = case (Map.get(state, "current_tok") |> Map.get('type')) != 'LPAREN':
+        True -> Core.Parser.Utils.set_error(
+            state,
+            "Expected '('",
+            Map.get(Map.get(state, "current_tok"), "pos_start"),
+            Map.get(Map.get(state, "current_tok"), "pos_end")
+        )
+        False -> state
+
+    state = advance(state)
+
+    p_result = resolve_params(state, "RPAREN")
+    state = Enum.at(p_result, 0)
+    arg_name_toks = Enum.at(p_result, 1)
+
+    state = case (Map.get(state, 'current_tok') |> Map.get('type')) == 'DO':
+        True -> advance(state)
+        False -> Core.Parser.Utils.set_error(
+            state,
+            "Expected ':'",
+            Map.get(Map.get(state, "current_tok"), "pos_start"),
+            Map.get(Map.get(state, "current_tok"), "pos_end")
+        )
+
+    state = case (Map.get(state, 'current_tok') |> Map.get('pos_start') |> Map.get('ln')) > def_token_ln:
+        True -> state
+        False -> Core.Parser.Utils.set_error(
+            state,
+            "Expected a new line after ':'",
+            Map.get(Map.get(state, "current_tok"), "pos_start"),
+            Map.get(Map.get(state, "current_tok"), "pos_end")
+        )
+
+    p_result = statements(state, 4)
+    state = Enum.at(p_result, 0)
+    body = Enum.at(p_result, 1)
+
+    case [arg_name_toks, body]:
+        [_, None] ->    [state, None]
+        [None, _] ->    [state, None]
+        [None, None] -> [state, None]
+        _ ->
+            node = Core.Parser.Nodes.make_funcdef_node(
+                var_name_tok, arg_name_toks, body, pos_start
+            )
+
+            [state, node]
 
 
+def resolve_params(state, end_tok):
+    state = loop_while(
+        state,
+        lambda state, ct:
+            case:
+                Map.get(ct, "type") == "EOF" -> False
+                Map.get(ct, "type") == end_tok -> False
+                Map.get(state, "error") != None -> False
+                True -> True
+        ,
+        lambda state, ct:
+            arg_name_toks = Map.get(state, '_arg_name_toks', [])
 
+            case Map.get(ct, 'type') == 'IDENTIFIER':
+                True ->
+                    arg_name_toks = List.insert_at(arg_name_toks, -1, ct)
 
+                    state = advance(state)
 
+                    ct_type = Map.get(state, 'current_tok') |> Map.get('type')
 
+                    case:
+                        ct_type == 'COMMA' ->
+                            state = advance(state)
+                            Map.put(state, '_arg_name_toks', arg_name_toks)
+                        ct_type == end_tok ->
+                            Map.put(state, '_arg_name_toks', arg_name_toks)
+                        True ->
+                            Core.Parser.Utils.set_error(
+                                state,
+                                Enum.join(["Expected ',' or '", end_tok, "'"]),
+                                Map.get(Map.get(state, "current_tok"), "pos_start"),
+                                Map.get(Map.get(state, "current_tok"), "pos_end")
+                            )
 
+                False -> Core.Parser.Utils.set_error(
+                    state,
+                    "Expected identifier",
+                    Map.get(Map.get(state, "current_tok"), "pos_start"),
+                    Map.get(Map.get(state, "current_tok"), "pos_end")
+                )
+    )
 
+    arg_name_toks = Map.get(state, '_arg_name_toks', [])
 
+    case (Map.get(state, 'current_tok') |> Map.get('type')) == end_tok:
+        True ->
+            [
+                state |> advance() |> Map.delete('_arg_name_toks'),
+                arg_name_toks
+            ]
+        False ->
+            state = Core.Parser.Utils.set_error(
+                state,
+                Enum.join(["Expected ", "':'" if end_tok == 'DO' else "')'"]),
+                Map.get(Map.get(state, "current_tok"), "pos_start"),
+                Map.get(Map.get(state, "current_tok"), "pos_end")
+            )
 
-
-
-
-
-
-
-
-
-
-
+            state = state |> Map.delete('_arg_name_toks')
+            [state, None]

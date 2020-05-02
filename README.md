@@ -4,6 +4,18 @@
 - [ ] Support to `{"a": 2} |> Map.get("a") == 2`. Today we need to put pipe inside parenteses
 - [x] List inside lists are not working
 - [ ] Dont returning error if we have a file with a string missing end quote: `raise "this string is invalid`
+- [ ] Use a variable as the match of a case doest seems to work. Eg: 
+```
+a = 'RPAREN'
+b = 'RPAREN'
+case b:
+    a -> False   # this is not working
+```
+- [ ] Some times the error arrow is showing in wrong place. Eg:
+```
+def add(a)
+    a + b
+```
 
 #### MUST HAVE
 - [ ] Support to multiline if with elif and else
@@ -13,6 +25,7 @@
 #### GOD TO HAVE
 - [ ] support for list 'explode'. Eg: [*[1, 2]] must be converted to [1, 2]. Need do find a way to make this works
 - [ ] support for dict 'explode'. Eg: {*{1: 2}} must be converted to {1: 2}. Need do find a way to make this works
+- [ ] use python style keyword params to make elixir optional arguments like // ops
 
 - [ ] Support add variable to map without need to refer the string if is the same name. Just like JS ES6
 ex: 

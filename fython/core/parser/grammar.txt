@@ -46,7 +46,6 @@ atom                : INT|FLOAT|IDENTIFIER|STRING|ATOM
                     : func-def
                     : lambda-def
                     : case-def
-                    : case-no-expr-def
                     : func-as-var-expr
 
 list-expr           : LSQUARE (expr (COMMA expr)*)? RSQUARE

@@ -118,6 +118,18 @@ def make_raise_node(expr, pos_start):
         "pos_end": Map.get(expr, 'pos_end')
     }
 
+
+def make_funcdef_node(var_name_tok, arg_name_toks, body_node, pos_start):
+    {
+        "NodeType": "FuncDefNode",
+        "var_name_tok": var_name_tok,
+        "arg_name_toks": arg_name_toks,
+        "arity": Enum.count(arg_name_toks),
+        "body_node": body_node,
+        "pos_start": pos_start,
+        "pos_end": Map.get(body_node, 'pos_end')
+    }
+
 def make_unary_node(tok, node):
     case Core.Parser.Utils.valid_node?(node):
         [False, reason] -> raise reason
