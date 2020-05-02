@@ -102,23 +102,35 @@ def statements(state, expected_ident):
 
 
 def statement(state):
-    p_result = expr(state)
+    ct = Map.get(state, 'current_tok')
 
-    state = Enum.at(p_result, 0)
-    _expr = Enum.at(p_result, 1)
+    case:
+        Core.Parser.Utils.tok_matchs(ct, 'KEYWORD', 'raise') ->
+            pos_start = Map.get(ct, 'pos_start')
 
-    case Map.get(state, "error"):
-        None -> [state, _expr]
-        _ ->
-            ct = Map.get(state, "current_tok")
+            p_result = state |> advance() |> expr()
+            state = Enum.at(p_result, 0)
+            _expr = Enum.at(p_result, 1)
 
-            state = Core.Parser.Utils.set_error(
-                state,
-                "Expected int, float, variable, 'not', '+', '-', '(' or '['",
-                Map.get(ct, "pos_start"),
-                Map.get(ct, "pos_end")
-            )
-            [state, None]
+            node = Core.Parser.Nodes.make_raise_node(_expr, pos_start)
+            [state, node]
+        True ->
+            p_result = expr(state)
+            state = Enum.at(p_result, 0)
+            _expr = Enum.at(p_result, 1)
+
+            case Map.get(state, "error"):
+                None -> [state, _expr]
+                _ ->
+                    ct = Map.get(state, "current_tok")
+
+                    state = Core.Parser.Utils.set_error(
+                        state,
+                        "Expected int, float, variable, 'not', '+', '-', '(' or '['",
+                        Map.get(ct, "pos_start"),
+                        Map.get(ct, "pos_end")
+                    )
+                    [state, None]
 
 def expr(state):
     ct = state |> Map.get('current_tok')
@@ -652,3 +664,25 @@ def case_expr(state):
             )
 
             [state, node]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -110,6 +110,14 @@ def make_map_node(pairs_list, pos_start, pos_end):
         "pos_end": pos_end
     }
 
+def make_raise_node(expr, pos_start):
+    {
+        "NodeType": "RaiseNode",
+        "expr": expr,
+        "pos_start": pos_start,
+        "pos_end": Map.get(expr, 'pos_end')
+    }
+
 def make_unary_node(tok, node):
     case Core.Parser.Utils.valid_node?(node):
         [False, reason] -> raise reason
