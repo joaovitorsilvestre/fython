@@ -53,10 +53,6 @@ def statements(state):
 def statements(state, expected_ident):
     pos_start = Map.get(state, "current_tok") |> Map.get("pos_start")
 
-    p_result = statement(state)
-    state = Enum.at(p_result, 0)
-    first_statement = Enum.at(p_result, 1)
-
     state = loop_while(
         state,
         lambda state, ct:
@@ -79,11 +75,10 @@ def statements(state, expected_ident):
 
                     case _statement:
                         None -> Map.put(state, "_break", True)
-                        _ -> Map.put(state, "_statements", List.flatten([_statements, _statement]))
+                        _ -> Map.put(state, "_statements", List.insert_at(_statements, 0, _statement))
     )
 
     _statements = Map.get(state, "_statements", [])
-    _statements = List.flatten([first_statement, _statements])
 
     case:
         Map.get(state, "error") != None -> [state, None]

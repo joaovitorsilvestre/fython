@@ -181,5 +181,5 @@ def run(project_path):
 
 
 if __name__ == '__main__':
-    #run('/home/joao/fython/fython/compiler/bootstrap')
-    run('/home/joao/fython/src/core/parser')
+    run('/home/joao/fython/fython/compiler/bootstrap')
+    #run('/home/joao/fython/src/core/parser')
