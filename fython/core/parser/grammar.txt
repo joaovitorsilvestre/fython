@@ -32,7 +32,10 @@ factor              : (PLUS|MINUS) factor
 
 power               : call(POW factor)*
 
-call                : atom (
+call                : call-expr
+                    : atom
+
+call-expr           : atom (
                         LPAREN
                         (expr (COMMA expr)*)?
                         (IDENTIFIER DO expr (COMMA IDENTIFIER EQ expr)*)?
