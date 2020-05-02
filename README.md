@@ -19,8 +19,11 @@ def add(a)
 
 #### MUST HAVE
 - [ ] Support to multiline if with elif and else
+- [ ] Support to tuples
+- [ ] Support to pattern match
 - [ ] Create the pos_parser. This will be executed after parser to check logic like imports, undefined vars, etc.
 - [ ] Support to dict access with dots. Eg `a = {"oi": 2}`, `Map.get(a, "oi") == a.1`
+- [ ] `and` and `or` operators must work with multiline
 
 #### GOD TO HAVE
 - [ ] support for list 'explode'. Eg: [*[1, 2]] must be converted to [1, 2]. Need do find a way to make this works

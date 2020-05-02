@@ -222,7 +222,13 @@ def power(state):
     bin_op(state, &call/1, ["POW"], &call/1)
 
 def call(state):
-    state |> atom()
+    p_result = atom(state)
+    state = Enum.at(p_result, 0)
+    _atom = Enum.at(p_result, 1)
+
+    case (Map.get(state, 'current_tok') |> Map.get('type')) == 'LPAREN':
+        True -> call_func_expr(state, _atom)
+        False -> [state, _atom]
 
 def factor(state):
     ct = Map.get(state, "current_tok")
@@ -821,3 +827,117 @@ def resolve_params(state, end_tok):
             state = state |> Map.delete('_arg_name_toks')
             [state, None]
 
+def is_keyword(state):
+    (Map.get(state, 'current_tok') |> Map.get('type')) == 'IDENTIFIER' and (Map.get(advance(state), 'current_tok') |> Map.get('type')) == 'EQ'
+
+def call_func_expr(state, atom):
+    pos_start = Map.get(state, 'pos_start')
+
+    state = advance(state)
+
+    state = case (Map.get(state, 'current_tok') |> Map.get('type')) == 'RPAREN':
+        True ->
+            state |> Map.put('_arg_nodes', []) |> Map.put('_keywords', {})
+        False ->
+            loop_while(
+                state,
+                lambda state, ct:
+                    case:
+                        Map.get(ct, "type") == "EOF" -> False
+                        Map.get(ct, "type") == "RPAREN" -> False
+                        Map.get(state, "error") != None -> False
+                        True -> True
+                ,
+                lambda state, ct:
+                    arg_nodes = Map.get(state, '_arg_nodes', [])
+                    keywords = Map.get(state, '_keywords', {})
+
+                    state = Map.delete(state, '_arg_nodes') |> Map.delete('_keywords')
+
+                    case:
+                        not is_keyword(state) and keywords != {} ->
+                            Core.Parser.Utils.set_error(
+                                state,
+                                "Non keyword arguments must be placed before any keyword argument",
+                                Map.get(Map.get('current_tok'), "pos_start"),
+                                Map.get(Map.get('current_tok'), "pos_end")
+                            )
+                        True ->
+                            updated_fields = case is_keyword(state):
+                                True ->
+                                    _key = Map.get(state, 'current_tok')
+                                    key_value = _key |> Map.get('value')
+
+                                    state = state |> advance() |> advance()
+
+                                    state = case Map.has_key?(keywords, key_value):
+                                        True ->
+                                            Core.Parser.Utils.set_error(
+                                                state,
+                                                "Duplicated keyword",
+                                                Map.get(_key, "pos_start"),
+                                                Map.get(Map.get(state, 'current_tok'), "pos_start")
+                                            )
+                                        False -> state
+
+                                    p_result = expr(state)
+                                    state = Enum.at(p_result, 0)
+                                    value = Enum.at(p_result, 1)
+
+                                    [state, arg_nodes, Map.merge(keywords, {key_value: value})]
+                                False ->
+                                    p_result = expr(state)
+                                    state = Enum.at(p_result, 0)
+                                    _expr = Enum.at(p_result, 1)
+
+                                    [state, List.insert_at(arg_nodes, -1, _expr), keywords]
+
+                            state = Enum.at(updated_fields, 0)
+                            arg_nodes = Enum.at(updated_fields, 1)
+                            keywords = Enum.at(updated_fields, 2)
+
+                            case Map.get(state, 'current_tok') |> Map.get('type'):
+                                'COMMA' ->
+                                    state
+                                        |> advance()
+                                        |> Map.put('_arg_nodes', arg_nodes)
+                                        |> Map.put('_keywords', keywords)
+
+                                'RPAREN' ->
+                                    state
+                                        |> Map.put('_arg_nodes', arg_nodes)
+                                        |> Map.put('_keywords', keywords)
+                                _ ->
+                                    Core.Parser.Utils.set_error(
+                                        state,
+                                        "Expected ')', keyword or ','",
+                                        Map.get(Map.get(state, "current_tok"), "pos_start"),
+                                        Map.get(Map.get(state, "current_tok"), "pos_end")
+                                    )
+            )
+
+    arg_nodes = Map.get(state, '_arg_nodes')
+    keywords = Map.get(state, '_keywords')
+
+    state = state |> Map.delete('_arg_nodes') |> Map.delete('_keywords')
+
+    state = case (Map.get(state, 'current_tok') |> Map.get('type')) == 'RPAREN':
+        True -> state
+        False -> Core.Parser.Utils.set_error(
+            state,
+            "Expected ')'",
+            Map.get(Map.get(state, "current_tok"), "pos_start"),
+            Map.get(Map.get(state, "current_tok"), "pos_end")
+        )
+
+    case Map.get(state, 'error'):
+        None ->
+            pos_end = Map.get(state, 'current_tok') |> Map.get('pos_end')
+
+            state = advance(state)
+
+            node = Core.Parser.Nodes.make_call_node(atom, arg_nodes, keywords, pos_end)
+
+            [state, node]
+        _ ->
+            [state, None]

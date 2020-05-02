@@ -130,6 +130,19 @@ def make_funcdef_node(var_name_tok, arg_name_toks, body_node, pos_start):
         "pos_end": Map.get(body_node, 'pos_end')
     }
 
+
+def make_call_node(node_to_call, arg_nodes, keywords, pos_end):
+    {
+        "NodeType": "CallNode",
+        "node_to_call": node_to_call,
+        "arg_nodes": arg_nodes,
+        "keywords": keywords,
+        "arity": Enum.count(arg_nodes),
+        "pos_start": Map.get(node_to_call, 'pos_start'),
+        "pos_end": pos_end,
+        "local_call": False
+    }
+
 def make_unary_node(tok, node):
     case Core.Parser.Utils.valid_node?(node):
         [False, reason] -> raise reason
