@@ -16,3 +16,4 @@ def eval_string(text):
                 _ -> Core.Errors.Utils.print_error('<stdin>', ast, text)
         _ ->
             Core.Errors.Utils.print_error('<stdin>', lexed, text)
+
