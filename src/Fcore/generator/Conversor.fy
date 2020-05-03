@@ -32,8 +32,9 @@ def convert_string_node(node):
         |> Map.get("tok")
         |> Map.get("value")
 
-    # Maybe is good to remove this dependency, eventually
-    # Converto to json is te easiest way that we found for scape `"` and `/` (and probably others too)
+    # We need to remove this dependency, eventually
+    # Convert to json is te easiest way that we found for scape
+    # `"` and `/` (and probably another chars too)
     Jason.encode(value) |> elem(1)
 
 def convert_varaccess_node(node):

@@ -1,6 +1,7 @@
 ### ROADMAP
 
 #### BUGS
+- [ ] Not sure, but comments must break with error print info.
 - [ ] Support to `{"a": 2} |> Map.get("a") == 2`. Today we need to put pipe inside parenteses
 - [x] List inside lists are not working
 - [ ] Dont returning error if we have a file with a string missing end quote: `raise "this string is invalid`

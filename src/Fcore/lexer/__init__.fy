@@ -8,7 +8,7 @@ def execute(text):
         "current_char": None,
         "tokens": []
     }
-    state |> advance() |> parse() |> Core.Lexer.Tokens.add_eof_token()
+    state |> advance() |> parse() |> Fcore.Lexer.Tokens.add_eof_token()
 
 def position(idx, ln, col):
     {"idx": idx, "ln": ln, "col": col}
@@ -61,15 +61,15 @@ def parse(state):
                 cc == "\n" ->
                     state
                         |> Map.put("current_ident_level", 0)
-                        |> Core.Lexer.Tokens.add_token("NEWLINE")
+                        |> Fcore.Lexer.Tokens.add_token("NEWLINE")
                         |> advance()
                         |> parse()
                 cc == ':' -> parse(make_do_or_token(state))
                 cc == "'" or cc == '"' -> parse(make_string(state))
-                String.contains?(Core.Lexer.Consts.identifier_chars(True), cc) ->
+                String.contains?(Fcore.Lexer.Consts.identifier_chars(True), cc) ->
                     state |> make_identifier() |> parse()
                 cc == "&" -> simple_maker(state, "ECOM")
-                String.contains?(Core.Lexer.Consts.digists(), cc) -> parse(make_number(state))
+                String.contains?(Fcore.Lexer.Consts.digists(), cc) -> parse(make_number(state))
                 cc == "," -> simple_maker(state, "COMMA")
                 cc == "+" -> simple_maker(state, "PLUS")
                 cc == '-' -> double_maker(state, "MINUS", ">", "ARROW")
@@ -91,7 +91,7 @@ def parse(state):
 
 def simple_maker(st, type):
     st
-        |> Core.Lexer.Tokens.add_token(type)
+        |> Fcore.Lexer.Tokens.add_token(type)
         |> advance()
         |> parse()
 
@@ -100,8 +100,8 @@ def double_maker(st, type_1, second_char, type_2):
     cc = Map.get(st, "current_char")
 
     case:
-        cc == second_char -> st |> Core.Lexer.Tokens.add_token(type_2) |> advance() |> parse()
-        True -> st |> Core.Lexer.Tokens.add_token(type_1) |> parse()
+        cc == second_char -> st |> Fcore.Lexer.Tokens.add_token(type_2) |> advance() |> parse()
+        True -> st |> Fcore.Lexer.Tokens.add_token(type_1) |> parse()
 
 
 def expected_double_maker(st, first, type, expected):
@@ -109,7 +109,7 @@ def expected_double_maker(st, first, type, expected):
     cc = Map.get(st, "current_char")
 
     case:
-        cc == expected -> st |> Core.Lexer.Tokens.add_token(type) |> advance() |> parse()
+        cc == expected -> st |> Fcore.Lexer.Tokens.add_token(type) |> advance() |> parse()
         True -> st |> set_error(Enum.join(["Expected '", expected, "' after '", first, "'"]))
 
 def make_ident(state):
@@ -145,15 +145,15 @@ def make_do_or_token(state):
 
     first_char = Map.get(state, "current_char")
 
-    case first_char != None and String.contains?(Core.Lexer.Consts.letters(), first_char):
+    case first_char != None and String.contains?(Fcore.Lexer.Consts.letters(), first_char):
         True ->
             state = state
                 |> Map.put("result",  Map.get(state, "current_char"))
                 |> loop_while(lambda cc:
-                    cc != None and String.contains?(Core.Lexer.Consts.letters_digits(), cc)
+                    cc != None and String.contains?(Fcore.Lexer.Consts.letters_digits(), cc)
                 )
             state = state
-                |> Core.Lexer.Tokens.add_token(
+                |> Fcore.Lexer.Tokens.add_token(
                     "ATOM", Map.get(state, "result"), pos_start
                 )
                 |> Map.delete("result")
@@ -162,7 +162,7 @@ def make_do_or_token(state):
         False ->
             state
                 |> advance()
-                |> Core.Lexer.Tokens.add_token("DO")
+                |> Fcore.Lexer.Tokens.add_token("DO")
 
 
 def make_string(state):
@@ -177,8 +177,8 @@ def make_string(state):
     state = advance(state)
 
     state = state
-        |> Core.Lexer.Tokens.add_token(
-            "STRING", Map.get(state, "result"), pos_start
+        |> Fcore.Lexer.Tokens.add_token(
+            "STRING", Map.get(state, "result", ""), pos_start
         )
         |> Map.delete("result")
 
@@ -195,7 +195,7 @@ def make_number(state):
     first_number = Map.get(state, "current_char")
 
     state = loop_while(state, lambda cc:
-        cc != None and String.contains?(Enum.join([Core.Lexer.Consts.digists(), '._']), cc)
+        cc != None and String.contains?(Enum.join([Fcore.Lexer.Consts.digists(), '._']), cc)
     )
     result = Enum.join([first_number, Map.get(state, "result")])
 
@@ -204,12 +204,12 @@ def make_number(state):
             set_error(state, Enum.join(["IllegalCharError: ."]))
         String.contains?(result, '.') ->
             state
-                |> Core.Lexer.Tokens.add_token(
+                |> Fcore.Lexer.Tokens.add_token(
                     "FLOAT", result, pos_start
                 )
         True ->
             state
-                |> Core.Lexer.Tokens.add_token(
+                |> Fcore.Lexer.Tokens.add_token(
                     "INT", result, pos_start
                 )
 
@@ -220,15 +220,15 @@ def make_identifier(state):
     first_char = Map.get(state, "current_char")
 
     state = loop_while(state, lambda cc:
-        cc != None and String.contains?(Core.Lexer.Consts.identifier_chars(False), cc)
+        cc != None and String.contains?(Fcore.Lexer.Consts.identifier_chars(False), cc)
     )
 
     result = Enum.join([first_char, Map.get(state, "result")])
 
-    type = case Enum.member?(Core.Lexer.Tokens.keywords(), result):
+    type = case Enum.member?(Fcore.Lexer.Tokens.keywords(), result):
         True -> "KEYWORD"
         False -> "IDENTIFIER"
 
     state
-        |> Core.Lexer.Tokens.add_token(type, result, pos_start)
+        |> Fcore.Lexer.Tokens.add_token(type, result, pos_start)
         |> Map.delete("result")

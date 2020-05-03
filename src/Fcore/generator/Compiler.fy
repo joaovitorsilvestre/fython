@@ -89,35 +89,34 @@ def compile_project_to_binary(directory_path):
             case error:
                 None ->
                     IO.puts("* generating module")
-                    IO.inspect(module_name)
-                    module = Core.Generator.Conversor.convert_module_to_ast(
+                    module = Fcore.Generator.Conversor.convert_module_to_ast(
                         module_name, compiled
                     )
 
-                    IO.inspect('111111')
+                    IO.inspect('aqqqqqqqqq')
+                    IO.inspect(module |> Code.eval_string())
 
                     module = module
                         |> Code.eval_string()
                         |> Code.compile_quoted()
                         |> Enum.at(0)
 
-                    IO.inspect('2222222')
                     [module_name, module]
                 _ ->
                     IO.puts("Compilation error:")
                     text = File.read(full_path) |> elem(1)
-                    Core.Errors.Utils.print_error(module_name, compiled, text)
+                    Fcore.Errors.Utils.print_error(module_name, compiled, text)
         )
 
 def lexer_and_parse_file(module_name, file_full_path):
-    lexed_parser_state = Core.eval_file(module_name, file_full_path)
+    lexed_parser_state = Fcore.eval_file(module_name, file_full_path)
 
     ast = Map.get(lexed_parser_state, 'node')
     error = Map.get(lexed_parser_state, 'error')
 
     # 2º Convert each node from json to Fython format
     case error:
-        None -> [Core.Generator.Conversor.convert(ast), error]
+        None -> [Fcore.Generator.Conversor.convert(ast), error]
         _ -> [None, error]
 
 def get_module_name(project_full_path, module_full_path):
