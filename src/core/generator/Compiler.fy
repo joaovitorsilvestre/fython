@@ -1,5 +1,5 @@
 def compile_project(project_path):
-    compiled_folder = [project_path, "compiled"] |> Enum.join('/')
+    compiled_folder = [project_path, "_compiled"] |> Enum.join('/')
 
     # Ensure compiled folder is created
     File.mkdir_p!(compiled_folder)
@@ -10,7 +10,7 @@ def compile_project(project_path):
     copy_jason_beams(compiled_folder)
 
     # Copy elixir beams to folder
-    copy_elixir_beams(project_path)
+    copy_elixir_beams(compiled_folder)
 
     # Add elixir dependencies
     Code.append_path(compiled_folder)
@@ -24,14 +24,12 @@ def compile_project(project_path):
             compiled = modulename_n_coted |> elem(1)
 
             File.write(
-                Utils.join_str([project_path, "/compiled/", module_name, ".beam"]), compiled, mode=:binary
+                Enum.join([project_path, "/compiled/", module_name, ".beam"]), compiled, mode=:binary
             )
         )
 
 
-def copy_elixir_beams(project_path):
-    compiled_folder = Enum.join([project_path, 'compiled'], '/')
-
+def copy_elixir_beams(compiled_folder):
     elixir_path = '/usr/lib/elixir/lib/elixir/ebin'
 
     case File.exists?(elixir_path):
@@ -46,6 +44,21 @@ def copy_elixir_beams(project_path):
             )
         False -> :error
 
+def copy_jason_beams(compiled_folder):
+    jason_folder = Enum.join([
+        '/home/joao/fython/src/core/generator/jason_dep', 'Elixir.Jason.*.beam'
+    ], '/')
+
+    jason_folder
+        |> Path.wildcard()
+        |> Enum.each(lambda beam_file:
+            file_name = beam_file
+                |> String.split('/')
+                |> List.last()
+
+            File.cp!(beam_file, Enum.join([compiled_folder, file_name], '/'))
+        )
+
 
 def compile_project_to_binary(directory_path):
     # Return a list of each module compiled into elixir AST in binary
@@ -59,13 +72,14 @@ def compile_project_to_binary(directory_path):
     [directory_path, "**/*.fy"]
         |> Enum.join('/')
         |> Path.wildcard()
+        |> Enum.sort()
         |> Enum.map(lambda full_path:
             module_name = get_module_name(directory_path, full_path)
 
             IO.puts(Enum.join(["Compiling module: ", module_name]))
 
-            IO.puts("* lexing")
-            compiled_n_error = lexer_and_parse_file_content_in_python(
+            IO.puts("* lexing and parsing")
+            compiled_n_error = lexer_and_parse_file(
                 module_name, full_path
             )
 
@@ -73,69 +87,38 @@ def compile_project_to_binary(directory_path):
             error = compiled_n_error |> Enum.at(1)
 
             case error:
-                None -> None
+                None ->
+                    IO.puts("* generating module")
+                    IO.inspect(module_name)
+                    module = Core.Generator.Conversor.convert_module_to_ast(
+                        module_name, compiled
+                    )
+
+                    IO.inspect('111111')
+
+                    module = module
+                        |> Code.eval_string()
+                        |> Code.compile_quoted()
+                        |> Enum.at(0)
+
+                    IO.inspect('2222222')
+                    [module_name, module]
                 _ ->
                     IO.puts("Compilation error:")
-                    IO.puts(error)
-
-            [module_name, compiled]
-        )
-        |> Enum.map(lambda modulename_n_content:
-            IO.puts("* compiling")
-            module_name = modulename_n_content |> Enum.at(0)
-            compiled = modulename_n_content |> Enum.at(1)
-
-            module = ParserNode.convert_module_to_ast(module_name, compiled)
-
-            quoted = module
-                |> Code.eval_string()
-                |> Code.compile_quoted()
-                |> Enum.at(0)
+                    text = File.read(full_path) |> elem(1)
+                    Core.Errors.Utils.print_error(module_name, compiled, text)
         )
 
+def lexer_and_parse_file(module_name, file_full_path):
+    lexed_parser_state = Core.eval_file(module_name, file_full_path)
 
-def lexer_and_parse_file_content_in_python(module_name, file_full_path):
-    # this function will lexer and parser using python for now
-    # when the day to write the lexer and parser in python has come
-    # this function will be responsible to call all the necessary functions
-
-    # 1º Ask python for the json lexed and parsed
-    command = [
-        'import sys;',
-        "sys.path.insert(0, '/home/joao/fython');",
-        'from fython.core import get_lexed_and_jsonified;',
-        'a = ',
-        "'", file_full_path ,"';",
-        'print(get_lexed_and_jsonified(a))'
-    ] |> Enum.join('')
-
-    json = System.cmd("python3.6", ["-c", command])
-        |> elem(0)
-        |> Jason.decode()
-        |> elem(1)
-
-    ast = json |> Map.get("ast") |> Jason.decode() |> elem(1)
-    error = json |> Map.get("error")
+    ast = Map.get(lexed_parser_state, 'node')
+    error = Map.get(lexed_parser_state, 'error')
 
     # 2º Convert each node from json to Fython format
     case error:
-        None -> [ParserNode.convert(ast), error]
+        None -> [Core.Generator.Conversor.convert(ast), error]
         _ -> [None, error]
-
-def copy_jason_beams(compiled_folder):
-    jason_folder = Enum.join([
-        '/home/joao/fython/fython/compiler/bootstrap/compiled', 'Elixir.Jason*.beam'
-    ], '/')
-
-    jason_folder
-        |> Path.wildcard()
-        |> Enum.each(lambda beam_file:
-            file_name = beam_file
-                |> String.split('/')
-                |> List.last()
-
-            File.cp!(beam_file, Enum.join([compiled_folder, file_name], '/'))
-        )
 
 def get_module_name(project_full_path, module_full_path):
     # input > /home/joao/fythonproject/module/utils.fy

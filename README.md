@@ -20,6 +20,7 @@ def add(a)
 `Expeted ... Received: KEYWORD` should be `Expeted ... Received: lambda`
 
 #### MUST HAVE
+- [ ] Remove dependency of Jason lib
 - [ ] Support to multiline if with elif and else
 - [ ] Support to tuples
 - [ ] Support to pattern match

@@ -1,19 +1,15 @@
-def eval_file(file_path):
-    File.read(file_path)
-        |> elem(1)
-        |> eval_string()
+def eval_file(module_name, file_path):
+    text = File.read(file_path) |> elem(1)
 
-def eval_string(text):
+    eval_string(module_name, text)
+
+def eval_string(module_name, text):
     lexed = Core.Lexer.execute(text)
 
     case Map.get(lexed, "error"):
         None ->
             tokens = Map.get(lexed, "tokens")
-            ast = Core.Parser.execute(tokens)
-
-            case Map.get(ast, 'error'):
-                None -> ast
-                _ -> Core.Errors.Utils.print_error('<stdin>', ast, text)
+            Core.Parser.execute(tokens)
         _ ->
-            Core.Errors.Utils.print_error('<stdin>', lexed, text)
+            lexed
 

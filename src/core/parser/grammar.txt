@@ -60,7 +60,7 @@ if-expr             : expr KEYWORD:if expr DO expr
                     : (KEYWORD:else expr)?
 
 case-def            : KEYWORD:case expr? DO NEWLINE
-                    (expr ARROW expr NEWLINE)+
+                    (expr ARROW NEWLINE? statement NEWLINE)+
 
 pipe-expr           : expr (PIPE expr)+
 

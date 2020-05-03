@@ -3,6 +3,7 @@ def execute(tokens):
         "error": None,
         "current_tok": None,
         "next_tok": None,
+        "node": None,
         "_current_tok_idx": -1,
         "_tokens": tokens |> Enum.filter(lambda i: Map.get(i, "type") != 'NEWLINE')
     }
@@ -411,7 +412,7 @@ def list_expr(state):
 def map_expr(state):
     pos_start = Map.get(state, "current_tok") |> Map.get("pos_start")
 
-    map_get_pairs = lambda (state):
+    map_get_pairs = lambda state:
         p_result = expr(state)
         state = p_result |> Enum.at(0)
         key = p_result |> Enum.at(1)
@@ -644,7 +645,7 @@ def case_expr(state):
                             state = advance(state)
 
                             p_result = case (Map.get(state, 'current_tok') |> Map.get('ident')) == this_ident:
-                                True -> expr(state |> Map.delete('_cases'))
+                                True -> statement(state |> Map.delete('_cases'))
                                 False -> statements(state |> Map.delete('_cases'), this_ident + 4)
 
                             state = Enum.at(p_result, 0)
