@@ -18,13 +18,19 @@ def compile_project(project_path):
     # Compile project and save files into subfolder 'compiled'
     all_modules_compiled = compile_project_to_binary(project_path)
 
+    IO.inspect('all_modules_compiled')
+    IO.inspect(all_modules_compiled)
+
     all_modules_compiled
         |> Enum.map(lambda modulename_n_coted:
-            module_name = modulename_n_coted |> elem(0)
+            module_name = modulename_n_coted |> elem(0) |> to_string()
             compiled = modulename_n_coted |> elem(1)
 
+            IO.inspect('saving file')
+            IO.inspect(Enum.join([project_path, "/compiled/", module_name, ".beam"]))
+
             File.write(
-                Enum.join([project_path, "/compiled/", module_name, ".beam"]), compiled, mode=:binary
+                Enum.join([compiled_folder, "/", module_name, ".beam"]), compiled, mode=:binary
             )
         )
 
@@ -92,16 +98,13 @@ def compile_project_to_binary(directory_path):
                     module = Fcore.Generator.Conversor.convert_module_to_ast(
                         module_name, compiled
                     )
-
-                    IO.inspect('aqqqqqqqqq')
-                    IO.inspect(module |> Code.eval_string())
+                    IO.inspect('koroi')
+                    IO.inspect(module |> Code.eval_string() |> Code.compile_quoted() |> Enum.at(0))
 
                     module = module
                         |> Code.eval_string()
                         |> Code.compile_quoted()
                         |> Enum.at(0)
-
-                    [module_name, module]
                 _ ->
                     IO.puts("Compilation error:")
                     text = File.read(full_path) |> elem(1)
