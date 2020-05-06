@@ -1,8 +1,12 @@
 def compile_project(project_path):
-    compiled_folder = [project_path, "_compiled"] |> Enum.join('/')
+    compile_project(project_path, "_compiled")
+
+def compile_project(project_path, destine):
+    compiled_folder = [project_path, destine] |> Enum.join('/')
 
     # Ensure compiled folder is created
     File.mkdir_p!(compiled_folder)
+    File.mkdir_p!(Enum.join([compiled_folder, '/', 'exs']))
 
     # Copy Jason dependency and add to path
     # We still use it in string conversor to handle scape char
@@ -16,23 +20,26 @@ def compile_project(project_path):
     Code.append_path(compiled_folder)
 
     # Compile project and save files into subfolder 'compiled'
-    all_modules_compiled = compile_project_to_binary(project_path)
+    all_files_path = compile_project_to_binary(project_path, compiled_folder)
 
     IO.inspect('all_modules_compiled')
-    IO.inspect(all_modules_compiled)
+    IO.inspect('all files path')
+    IO.inspect(all_files_path)
 
-    all_modules_compiled
-        |> Enum.map(lambda modulename_n_coted:
-            module_name = modulename_n_coted |> elem(0) |> to_string()
-            compiled = modulename_n_coted |> elem(1)
+    Kernel.ParallelCompiler.compile_to_path(all_files_path, compiled_folder)
 
-            IO.inspect('saving file')
-            IO.inspect(Enum.join([project_path, "/compiled/", module_name, ".beam"]))
-
-            File.write(
-                Enum.join([compiled_folder, "/", module_name, ".beam"]), compiled, mode=:binary
-            )
-        )
+    #all_modules_compiled
+    #    |> Enum.map(lambda modulename_n_coted:
+    #        module_name = modulename_n_coted |> elem(0) |> to_string()
+    #        compiled = modulename_n_coted |> elem(1)
+    #
+    #        IO.inspect('saving file')
+    #        IO.inspect(Enum.join([project_path, "/compiled/", module_name, ".beam"]))
+    #
+    #        File.write(
+    #            Enum.join([compiled_folder, "/", module_name, ".beam"]), compiled, mode=:binary
+    #        )
+    #    )
 
 
 def copy_elixir_beams(compiled_folder):
@@ -66,7 +73,7 @@ def copy_jason_beams(compiled_folder):
         )
 
 
-def compile_project_to_binary(directory_path):
+def compile_project_to_binary(directory_path, compiled_folder):
     # Return a list of each module compiled into elixir AST in binary
     # read to be evaluated in Elixir
     # Ex:
@@ -94,17 +101,17 @@ def compile_project_to_binary(directory_path):
 
             case error:
                 None ->
-                    IO.puts("* generating module")
                     module = Fcore.Generator.Conversor.convert_module_to_ast(
                         module_name, compiled
                     )
-                    IO.inspect('koroi')
-                    IO.inspect(module |> Code.eval_string() |> Code.compile_quoted() |> Enum.at(0))
 
-                    module = module
-                        |> Code.eval_string()
-                        |> Code.compile_quoted()
-                        |> Enum.at(0)
+                    # after eval_string it still being a string
+                    elixir_str = Macro.to_string(module) |> Code.eval_string() |> elem(0)
+
+                    ex_path = Enum.join([compiled_folder, "/exs/", module_name, ".ex"])
+
+                    File.write(ex_path, elixir_str)
+                    ex_path
                 _ ->
                     IO.puts("Compilation error:")
                     text = File.read(full_path) |> elem(1)
