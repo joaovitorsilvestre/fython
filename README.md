@@ -1,6 +1,7 @@
 ### ROADMAP
 
 #### BUGS
+- [ ] In the pos parser we need to convert any variable that is a elixir keyword to something else
 - [ ] Not sure, but comments must break with error print info.
 - [ ] Support to `{"a": 2} |> Map.get("a") == 2`. Today we need to put pipe inside parenteses
 - [x] List inside lists are not working

@@ -17,12 +17,21 @@ def convert_local_function_calls(node, var_names_avaliable):
     # can have a function being received by param.
     # Except for the name, both are equal so we can use the same function
 
-    case Map.get(node, 'NodeType'):
+    case Map.get(node, 'NodeType') if is_map(node) else None:
         'StatementsNode' -> resolve_statements(node, var_names_avaliable)
-        'FuncDefNode' -> resolve_func_def(node, var_names_avaliable)
-        'LambdaNode' -> resolve_func_def(node, var_names_avaliable)
+        'FuncDefNode' -> resolve_func_or_lambda(node, var_names_avaliable)
+        'LambdaNode' -> resolve_func_or_lambda(node, var_names_avaliable)
         'CallNode' -> resolve_call_node(node, var_names_avaliable)
         'CaseNode' -> resolve_case_node(node, var_names_avaliable)
+        'IfNode' -> resolve_if_node(node, var_names_avaliable)
+        'PipeNode' -> resolve_pipe_node(node, var_names_avaliable)
+        'InNode' -> resolve_in_node(node, var_names_avaliable)
+        'VarAssignNode' -> resolve_varassign_node(node, var_names_avaliable)
+        'ListNode' -> resolve_list_node(node, var_names_avaliable)
+        'MapNode' -> resolve_map_node(node, var_names_avaliable)
+        'RaiseNode' -> resolve_raise_node(node, var_names_avaliable)
+        'UnaryOpNode' -> resolve_unary_node(node, var_names_avaliable)
+        'BinOpNode' -> resolve_unary_node(node, var_names_avaliable)
         _ -> node
 
 
@@ -45,7 +54,7 @@ def resolve_statements(node, var_names_avaliable):
     node |> Map.put('statement_nodes', statement_nodes)
 
 
-def resolve_func_def(func_def_node, var_names_avaliable):
+def resolve_func_or_lambda(func_def_node, var_names_avaliable):
     func_arguments = func_def_node
         |> Map.get('arg_name_toks')
         |> Enum.map(lambda i:
@@ -65,7 +74,23 @@ def resolve_call_node(node, var_names_avaliable):
         |> Map.get('var_name_tok')
         |> Map.get('value')
 
-    Map.put(node, 'local_call', func_name in var_names_avaliable)
+    node
+        |> Map.put('local_call', func_name in var_names_avaliable)
+        |> Map.merge(
+            {
+                "arg_nodes": Enum.map(
+                    Map.get(node, "arg_nodes"),
+                    lambda i: convert_local_function_calls(i, var_names_avaliable)
+                ),
+                "keywords": Map.new(
+                    Map.get(node, "keywords"),
+                    lambda i:
+                        key = elem(i, 0)
+                        value = elem(i, 1) |> convert_local_function_calls(var_names_avaliable)
+                        Map.to_list({key: value}) |> Enum.at(0)
+                )
+            }
+        )
 
 
 def resolve_case_node(node, var_names_avaliable):
@@ -78,3 +103,111 @@ def resolve_case_node(node, var_names_avaliable):
         )
 
     Map.put(node, 'cases', cases)
+
+def resolve_if_node(node, var_names_avaliable):
+    Map.merge(
+        node,
+        {
+            "comp_expr": convert_local_function_calls(
+                Map.get(node, "comp_expr"), var_names_avaliable
+            ),
+            "true_case": convert_local_function_calls(
+                Map.get(node, "true_case"), var_names_avaliable
+            ),
+            "false_case": convert_local_function_calls(
+                Map.get(node, "false_case"), var_names_avaliable
+            )
+        }
+    )
+
+def resolve_pipe_node(node, var_names_avaliable):
+    Map.merge(
+        node,
+        {
+            "left_node": convert_local_function_calls(
+                Map.get(node, "left_node"), var_names_avaliable
+            ),
+            "right_node": convert_local_function_calls(
+                Map.get(node, "right_node"), var_names_avaliable
+            )
+        }
+    )
+
+def resolve_in_node(node, var_names_avaliable):
+    Map.merge(
+        node,
+        {
+            "left_expr": convert_local_function_calls(
+                Map.get(node, "left_expr"), var_names_avaliable
+            ),
+            "right_expr": convert_local_function_calls(
+                Map.get(node, "right_expr"), var_names_avaliable
+            )
+        }
+    )
+
+def resolve_varassign_node(node, var_names_avaliable):
+    Map.merge(
+        node,
+        {
+            "value_node": convert_local_function_calls(
+                Map.get(node, "value_node"), var_names_avaliable
+            )
+        }
+    )
+
+def resolve_list_node(node, var_names_avaliable):
+    Map.merge(
+        node,
+        {
+            "element_nodes": Map.get(node, "element_nodes")
+                |> Enum.map(lambda i: convert_local_function_calls(i, var_names_avaliable))
+        }
+    )
+
+def resolve_map_node(node, var_names_avaliable):
+    Map.merge(
+        node,
+        {
+            "pairs_list": Map.get(node, "pairs_list")
+                |> Enum.map(lambda i:
+                    [
+                        convert_local_function_calls(Enum.at(i, 0), var_names_avaliable),
+                        convert_local_function_calls(Enum.at(i, 1), var_names_avaliable)
+                    ]
+                )
+        }
+    )
+
+def resolve_raise_node(node, var_names_avaliable):
+    Map.merge(
+        node,
+        {
+            "expr": convert_local_function_calls(
+                Map.get(node, "expr"), var_names_avaliable
+            )
+        }
+    )
+
+def resolve_unary_node(node, var_names_avaliable):
+    Map.merge(
+        node,
+        {
+            "node": convert_local_function_calls(
+                Map.get(node, "node"), var_names_avaliable
+            )
+        }
+    )
+
+def resolve_unary_node(node, var_names_avaliable):
+    Map.merge(
+        node,
+        {
+            "left_node": convert_local_function_calls(
+                Map.get(node, "left_node"), var_names_avaliable
+            ),
+            "right_node": convert_local_function_calls(
+                Map.get(node, "right_node"), var_names_avaliable
+            )
+        }
+    )

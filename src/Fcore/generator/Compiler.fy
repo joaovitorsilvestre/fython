@@ -22,10 +22,6 @@ def compile_project(project_path, destine):
     # Compile project and save files into subfolder 'compiled'
     all_files_path = compile_project_to_binary(project_path, compiled_folder)
 
-    IO.inspect('all_modules_compiled')
-    IO.inspect('all files path')
-    IO.inspect(all_files_path)
-
     Kernel.ParallelCompiler.compile_to_path(all_files_path, compiled_folder)
 
     #all_modules_compiled
@@ -105,8 +101,13 @@ def compile_project_to_binary(directory_path, compiled_folder):
                         module_name, compiled
                     )
 
-                    # after eval_string it still being a string
-                    elixir_str = Macro.to_string(module) |> Code.eval_string() |> elem(0)
+                    # TODO save in a file to need to compile is pretty ugly
+                    # TODO we need to fix this
+                    elixir_str = Macro.to_string(module)
+                        |> Code.eval_string()
+                        |> elem(0)
+                        |> Code.eval_string()
+                        |> Macro.to_string()
 
                     ex_path = Enum.join([compiled_folder, "/exs/", module_name, ".ex"])
 

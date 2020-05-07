@@ -64,9 +64,9 @@ def string_with_arrows(state, text):
 
                     start = String.slice(empty, Range.new(0, col_start))
                     middle = String.slice(arrows, Range.new(col_start, col_end))
-                    end = String.slice(empty, Range.new(col_end, String.length(text)))
+                    _end = String.slice(empty, Range.new(col_end, String.length(text)))
 
-                    Enum.join([start, middle, end])
+                    Enum.join([start, middle, _end])
                 False -> ''
 
             [item, index, arrows]
