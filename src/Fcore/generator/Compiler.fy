@@ -88,17 +88,17 @@ def compile_project_to_binary(directory_path, compiled_folder):
             IO.puts(Enum.join(["Compiling module: ", module_name]))
 
             IO.puts("* lexing and parsing")
-            compiled_n_error = lexer_and_parse_file(
+            state_n_converted = lexer_parse_convert_file(
                 module_name, full_path
             )
 
-            compiled = compiled_n_error |> Enum.at(0)
-            error = compiled_n_error |> Enum.at(1)
+            state = Enum.at(state_n_converted, 0)
+            converted = Enum.at(state_n_converted, 1)
 
-            case error:
+            case Map.get(state, "error"):
                 None ->
                     module = Fcore.Generator.Conversor.convert_module_to_ast(
-                        module_name, compiled
+                        module_name, converted
                     )
 
                     # TODO save in a file to need to compile is pretty ugly
@@ -115,20 +115,24 @@ def compile_project_to_binary(directory_path, compiled_folder):
                     ex_path
                 _ ->
                     IO.puts("Compilation error:")
+                    IO.puts("file path:")
+                    IO.puts(full_path)
                     text = File.read(full_path) |> elem(1)
-                    Fcore.Errors.Utils.print_error(module_name, compiled, text)
+                    Fcore.Errors.Utils.print_error(module_name, state, text)
+                    raise "end"
         )
 
-def lexer_and_parse_file(module_name, file_full_path):
-    lexed_parser_state = Fcore.eval_file(module_name, file_full_path)
 
-    ast = Map.get(lexed_parser_state, 'node')
-    error = Map.get(lexed_parser_state, 'error')
+def lexer_parse_convert_file(module_name, file_full_path):
+    state = Fcore.eval_file(module_name, file_full_path)
+
+    ast = Map.get(state, 'node')
 
     # 2º Convert each node from json to Fython format
-    case error:
-        None -> [Fcore.Generator.Conversor.convert(ast), error]
-        _ -> [None, error]
+    case Map.get(state, 'error'):
+        None -> [state, Fcore.Generator.Conversor.convert(ast)]
+        _ -> [state, None]
+
 
 def get_module_name(project_full_path, module_full_path):
     # input > /home/joao/fythonproject/module/utils.fy
