@@ -35,7 +35,7 @@ def convert_string_node(node):
     # We need to remove this dependency, eventually
     # Convert to json is te easiest way that we found for scape
     # `"` and `/` (and probably another chars too)
-    Jason.encode(value) |> elem(1)
+    Enum.join(['"', value ,'"'])
 
 def convert_varaccess_node(node):
     tok_value = node |> Map.get("var_name_tok") |> Map.get("value")
@@ -109,7 +109,7 @@ def convert_map_node(node):
         )
         |> Enum.join(', ')
 
-    Enum.join(["{:%{}, [], [", pairs, "]}"])
+    r = Enum.join(["{:%{}, [], [", pairs, "]}"])
 
 def convert_statements_node(node):
     content = node

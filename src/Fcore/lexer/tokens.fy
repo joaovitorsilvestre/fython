@@ -74,7 +74,7 @@ def add_token(state, type, value, pos_start):
         "value": value,
         "ident": ident,
         "pos_start": pos_start,
-        "pos_end": pos_end,
+        "pos_end": pos_end
     }
 
     Map.put(state, "tokens", [Map.get(state, "tokens"), token] |> List.flatten())

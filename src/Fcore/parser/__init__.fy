@@ -24,7 +24,7 @@ def advance(state):
                 "current_tok": current_tok,
                 "prev_tok": Enum.at(tokens, idx - 1, None) if idx > 0 else None,
                 "next_tok": Enum.at(tokens, idx + 1, None),
-                "_current_tok_idx": idx,
+                "_current_tok_idx": idx
             }
 
             Map.merge(state, new_state)

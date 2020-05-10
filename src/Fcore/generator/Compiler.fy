@@ -101,6 +101,9 @@ def compile_project_to_binary(directory_path, compiled_folder):
                         module_name, converted
                     )
 
+                    #IO.inspect('elixir str:')
+                    #IO.inspect(module)
+
                     # TODO save in a file to need to compile is pretty ugly
                     # TODO we need to fix this
                     elixir_str = Macro.to_string(module)

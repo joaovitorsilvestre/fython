@@ -8,7 +8,10 @@ def execute(text):
         "current_char": None,
         "tokens": []
     }
-    state |> advance() |> parse() |> Fcore.Lexer.Tokens.add_eof_token()
+
+    result = state |> advance() |> parse() |> Fcore.Lexer.Tokens.add_eof_token()
+
+    result
 
 def position(idx, ln, col):
     {"idx": idx, "ln": ln, "col": col}
@@ -176,9 +179,17 @@ def make_string(state):
     # to advance the end string char
     state = advance(state)
 
-    state = state
+    string = state
+        |> Map.get("result", "")
+        |> String.graphemes()
+        |> Enum.map(lambda i:
+            Enum.join(['\\', '"']) if i == '"' else i
+        )
+        |> Enum.join()
+
+    state
         |> Fcore.Lexer.Tokens.add_token(
-            "STRING", Map.get(state, "result", ""), pos_start
+            "STRING", string, pos_start
         )
         |> Map.delete("result")
 
