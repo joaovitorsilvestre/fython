@@ -38,5 +38,8 @@ def start(count, state):
             start(count + 1, state)
 
 def execute(text):
-    Core.eval_string(text)
+    result = Fcore.eval_string('<stdin>', text)
 
+    case result:
+        None -> None
+        _ -> IO.inspect(result)

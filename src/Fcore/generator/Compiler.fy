@@ -8,11 +8,6 @@ def compile_project(project_path, destine):
     File.mkdir_p!(compiled_folder)
     File.mkdir_p!(Enum.join([compiled_folder, '/', 'exs']))
 
-    # Copy Jason dependency and add to path
-    # We still use it in string conversor to handle scape char
-    # and double cote inside double quote string
-    copy_jason_beams(compiled_folder)
-
     # Copy elixir beams to folder
     copy_elixir_beams(compiled_folder)
 
@@ -23,19 +18,6 @@ def compile_project(project_path, destine):
     all_files_path = compile_project_to_binary(project_path, compiled_folder)
 
     Kernel.ParallelCompiler.compile_to_path(all_files_path, compiled_folder)
-
-    #all_modules_compiled
-    #    |> Enum.map(lambda modulename_n_coted:
-    #        module_name = modulename_n_coted |> elem(0) |> to_string()
-    #        compiled = modulename_n_coted |> elem(1)
-    #
-    #        IO.inspect('saving file')
-    #        IO.inspect(Enum.join([project_path, "/compiled/", module_name, ".beam"]))
-    #
-    #        File.write(
-    #            Enum.join([compiled_folder, "/", module_name, ".beam"]), compiled, mode=:binary
-    #        )
-    #    )
 
 
 def copy_elixir_beams(compiled_folder):
@@ -89,7 +71,7 @@ def compile_project_to_binary(directory_path, compiled_folder):
 
             IO.puts("* lexing and parsing")
             state_n_converted = lexer_parse_convert_file(
-                module_name, full_path
+                module_name, File.read(full_path) |> elem(1)
             )
 
             state = Enum.at(state_n_converted, 0)
@@ -126,8 +108,16 @@ def compile_project_to_binary(directory_path, compiled_folder):
         )
 
 
-def lexer_parse_convert_file(module_name, file_full_path):
-    state = Fcore.eval_file(module_name, file_full_path)
+def lexer_parse_convert_file(module_name, text):
+    lexed = Fcore.Lexer.execute(text)
+
+    state = case Map.get(lexed, "error"):
+        None ->
+            tokens = Map.get(lexed, "tokens")
+            Fcore.Parser.execute(tokens)
+        _ ->
+            lexed
+
 
     ast = Map.get(state, 'node')
 

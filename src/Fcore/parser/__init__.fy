@@ -448,12 +448,12 @@ def map_expr(state):
         lambda state, ct:
             pairs = Map.get(state, "_pairs", {})
 
-            state = advance(state |> Map.delete("_pairs"))
+            state = advance(state)
 
             case Map.get(state, "current_tok") |> Map.get("type"):
                 "RCURLY" -> state
                 _ ->
-                    p_result = map_get_pairs(state)
+                    p_result = map_get_pairs(state |> Map.delete("_pairs"))
                     state = Enum.at(p_result, 0)
                     map = Enum.at(p_result, 1)
 
@@ -485,6 +485,7 @@ def map_expr(state):
                 Map.get(ct, "pos_end")
             )
             [state, None]
+
 
 def if_expr(state, expr_for_true):
     state = advance(state)
