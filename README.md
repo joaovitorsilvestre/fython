@@ -23,11 +23,13 @@ def add(a)
 `Expeted ... Received: KEYWORD` should be `Expeted ... Received: lambda`
 
 #### MUST HAVE
-- [ ] Remove dependency of Jason lib
+- [x] Remove dependency of Jason lib
 - [ ] Support to multiline if with elif and else
 - [ ] Support to tuples
 - [ ] Support to pattern match
-- [ ] Create the pos_parser. This will be executed after parser to check logic like imports, undefined vars, etc.
+- [x] Create the pos_parser. 
+- [x] PosParser -> convert the locall function calls to support call function without dot
+- [ ] PosParser -> Add logic to check imports, undefined vars, etc.
 - [ ] Support to dict access with dots. Eg `a = {"oi": 2}`, `Map.get(a, "oi") == a.1`
 - [ ] `and` and `or` operators must work with multiline
 
