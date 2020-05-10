@@ -4,6 +4,11 @@ def compile_project(project_path):
     # Ensure compiled folder is created
     File.mkdir_p!(compiled_folder)
 
+    # Copy Jason dependency and add to path
+    # We still use it in string conversor to handle scape char
+    # and double cote inside double quote string
+    copy_jason_beams(compiled_folder)
+
     # Copy elixir beams to folder
     copy_elixir_beams(project_path)
 
@@ -116,6 +121,21 @@ def lexer_and_parse_file_content_in_python(module_name, file_full_path):
     case error:
         None -> [ParserNode.convert(ast), error]
         _ -> [None, error]
+
+def copy_jason_beams(compiled_folder):
+    jason_folder = Enum.join([
+        '/home/joao/fython/fython/compiler/bootstrap/compiled', 'Elixir.Jason*.beam'
+    ], '/')
+
+    jason_folder
+        |> Path.wildcard()
+        |> Enum.each(lambda beam_file:
+            file_name = beam_file
+                |> String.split('/')
+                |> List.last()
+
+            File.cp!(beam_file, Enum.join([compiled_folder, file_name], '/'))
+        )
 
 def get_module_name(project_full_path, module_full_path):
     # input > /home/joao/fythonproject/module/utils.fy

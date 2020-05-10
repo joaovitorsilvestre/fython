@@ -3,11 +3,12 @@ def execute(tokens):
         "error": None,
         "current_tok": None,
         "next_tok": None,
+        "node": None,
         "_current_tok_idx": -1,
         "_tokens": tokens |> Enum.filter(lambda i: Map.get(i, "type") != 'NEWLINE')
     }
 
-    state |> advance() |> parse()
+    state |> advance() |> parse() |> Fcore.Parser.Pos.execute()
 
 def advance(state):
     idx = state |> Map.get("_current_tok_idx")
@@ -23,7 +24,7 @@ def advance(state):
                 "current_tok": current_tok,
                 "prev_tok": Enum.at(tokens, idx - 1, None) if idx > 0 else None,
                 "next_tok": Enum.at(tokens, idx + 1, None),
-                "_current_tok_idx": idx,
+                "_current_tok_idx": idx
             }
 
             Map.merge(state, new_state)
@@ -38,7 +39,7 @@ def parse(state):
 
     case Map.get(state, "error") == None and Map.get(ct, "type") != "EOF":
         True ->
-            Core.Parser.Utils.set_error(
+            Fcore.Parser.Utils.set_error(
                 state,
                 "Expected '+' or '-' or '*' or '/'",
                 Map.get(ct, "pos_start"),
@@ -100,7 +101,7 @@ def statements(state, expected_ident_gte):
         _statements == [] ->
             ct = Map.get(state, "current_tok")
 
-            state = Core.Parser.Utils.set_error(
+            state = Fcore.Parser.Utils.set_error(
                 state,
                 "Empty staments are not allowed",
                 Map.get(ct, "pos_start"),
@@ -109,7 +110,7 @@ def statements(state, expected_ident_gte):
             [state, None]
         True ->
             pos_end = Map.get(state, "current_tok") |> Map.get("pos_end")
-            node = Core.Parser.Nodes.make_statements_node(_statements, pos_start, pos_end)
+            node = Fcore.Parser.Nodes.make_statements_node(_statements, pos_start, pos_end)
 
             [state, node]
 
@@ -118,14 +119,14 @@ def statement(state):
     ct = Map.get(state, 'current_tok')
 
     case:
-        Core.Parser.Utils.tok_matchs(ct, 'KEYWORD', 'raise') ->
+        Fcore.Parser.Utils.tok_matchs(ct, 'KEYWORD', 'raise') ->
             pos_start = Map.get(ct, 'pos_start')
 
             p_result = state |> advance() |> expr()
             state = Enum.at(p_result, 0)
             _expr = Enum.at(p_result, 1)
 
-            node = Core.Parser.Nodes.make_raise_node(_expr, pos_start)
+            node = Fcore.Parser.Nodes.make_raise_node(_expr, pos_start)
             [state, node]
         True ->
             p_result = expr(state)
@@ -137,7 +138,7 @@ def statement(state):
                 _ ->
                     ct = Map.get(state, "current_tok")
 
-                    state = Core.Parser.Utils.set_error(
+                    state = Fcore.Parser.Utils.set_error(
                         state,
                         "Expected int, float, variable, 'not', '+', '-', '(' or '['",
                         Map.get(ct, "pos_start"),
@@ -164,7 +165,7 @@ def expr(state):
                 None ->
                     [state, None]
                 _ ->
-                    node = Core.Parser.Nodes.make_varassign_node(var_name, _expr)
+                    node = Fcore.Parser.Nodes.make_varassign_node(var_name, _expr)
                     [state, node]
         True ->
             _and = ["KEYWORD", "and"]
@@ -177,18 +178,18 @@ def expr(state):
             ct = Map.get(state, "current_tok")
 
             case:
-                Core.Parser.Utils.tok_matchs(ct, 'KEYWORD', 'if') ->
+                Fcore.Parser.Utils.tok_matchs(ct, 'KEYWORD', 'if') ->
                     if_expr(state, node)
                 Map.get(ct, 'type') == 'PIPE' ->
                     pipe_expr(state, node)
-                Core.Parser.Utils.tok_matchs(ct, 'KEYWORD', 'in') ->
+                Fcore.Parser.Utils.tok_matchs(ct, 'KEYWORD', 'in') ->
                     state = advance(state)
 
                     p_result = expr(state)
                     state = Enum.at(p_result, 0)
                     right_node = Enum.at(p_result, 1)
 
-                    node = Core.Parser.Nodes.make_in_node(
+                    node = Fcore.Parser.Nodes.make_in_node(
                         node, right_node
                     )
                     [state, node]
@@ -198,7 +199,7 @@ def expr(state):
 def comp_expr(state):
     ct = Map.get(state, "current_tok")
 
-    case Core.Parser.Utils.tok_matchs(ct, "KEYWORD", 'not'):
+    case Fcore.Parser.Utils.tok_matchs(ct, "KEYWORD", 'not'):
         True ->
             state = advance(state)
 
@@ -206,7 +207,7 @@ def comp_expr(state):
             state = Enum.at(p_result, 0)
             c_node = Enum.at(p_result, 1)
 
-            node = Core.Parser.Nodes.make_unary_node(ct, c_node)
+            node = Fcore.Parser.Nodes.make_unary_node(ct, c_node)
 
             [state, node]
         False ->
@@ -244,7 +245,7 @@ def factor(state):
 
             case Map.get(state, "error"):
                 None ->
-                    node = Core.Parser.Nodes.make_unary_node(ct, _factor)
+                    node = Fcore.Parser.Nodes.make_unary_node(ct, _factor)
                     [state, node]
                 _ -> [state, None]
 
@@ -256,16 +257,16 @@ def atom(state):
 
     case:
         ct_type in ['INT', 'FLOAT'] ->
-            node = Core.Parser.Nodes.make_number_node(ct)
+            node = Fcore.Parser.Nodes.make_number_node(ct)
             [state |> advance(), node]
         ct_type == 'STRING' ->
-            node = Core.Parser.Nodes.make_string_node(ct)
+            node = Fcore.Parser.Nodes.make_string_node(ct)
             [state |> advance(), node]
         ct_type == 'IDENTIFIER' ->
-            node = Core.Parser.Nodes.make_varaccess_node(ct)
+            node = Fcore.Parser.Nodes.make_varaccess_node(ct)
             [state |> advance(), node]
         ct_type == 'ATOM' ->
-            node = Core.Parser.Nodes.make_atom_node(ct)
+            node = Fcore.Parser.Nodes.make_atom_node(ct)
             [state |> advance(), node]
         ct_type == 'ECOM' ->
             func_as_var_expr(state)
@@ -283,20 +284,20 @@ def atom(state):
                 True ->
                     ct = Map.get(state, 'current_tok')
 
-                    state = Core.Parser.Utils.set_error(
+                    state = Fcore.Parser.Utils.set_error(
                         state, "Expected ')'", Map.get(ct, "pos_start"), Map.get(ct, "pos_end")
                     )
                     [state, None]
         ct_type == 'LSQUARE' -> list_expr(state)
         ct_type == 'LCURLY' -> map_expr(state)
-        Core.Parser.Utils.tok_matchs(ct, "KEYWORD", "case") ->
+        Fcore.Parser.Utils.tok_matchs(ct, "KEYWORD", "case") ->
             case_expr(state)
-        Core.Parser.Utils.tok_matchs(ct, "KEYWORD", "def") ->
+        Fcore.Parser.Utils.tok_matchs(ct, "KEYWORD", "def") ->
             func_def_expr(state)
-        Core.Parser.Utils.tok_matchs(ct, "KEYWORD", "lambda") ->
+        Fcore.Parser.Utils.tok_matchs(ct, "KEYWORD", "lambda") ->
             lambda_expr(state)
         True ->
-            state = Core.Parser.Utils.set_error(
+            state = Fcore.Parser.Utils.set_error(
                 state,
                 Enum.join([
                     "Expected int, float, identifier, '+', '-', '(', '[', if, def, lambda or case. ",
@@ -344,7 +345,7 @@ def bin_op(state, func_a, ops, func_b):
 
             case Map.get(state, "error"):
                 None ->
-                    left = Core.Parser.Nodes.make_bin_op_node(left, op_tok, right)
+                    left = Fcore.Parser.Nodes.make_bin_op_node(left, op_tok, right)
                     Map.put(state, "_node", left)
                 _ -> state
     )
@@ -393,13 +394,13 @@ def list_expr(state):
 
             pos_end = Map.get(state, "current_tok") |> Map.get("pos_end")
 
-            node = Core.Parser.Nodes.make_list_node(element_nodes, pos_start, pos_end)
+            node = Fcore.Parser.Nodes.make_list_node(element_nodes, pos_start, pos_end)
 
             state = advance(state) |> Map.delete("_element_nodes")
 
             [state, node]
         _ ->
-            state = Core.Parser.Utils.set_error(
+            state = Fcore.Parser.Utils.set_error(
                 state,
                 "Expected ']'",
                 Map.get(ct, "pos_start"),
@@ -411,7 +412,7 @@ def list_expr(state):
 def map_expr(state):
     pos_start = Map.get(state, "current_tok") |> Map.get("pos_start")
 
-    map_get_pairs = lambda (state):
+    map_get_pairs = lambda state:
         p_result = expr(state)
         state = p_result |> Enum.at(0)
         key = p_result |> Enum.at(1)
@@ -427,7 +428,7 @@ def map_expr(state):
                 [state, {key: value}]
             True ->
                 ct = Map.get(state, "current_tok")
-                Core.Parser.Utils.set_error(
+                Fcore.Parser.Utils.set_error(
                     state,
                     "Empty staments are not allowed",
                     Map.get(ct, "pos_start"),
@@ -471,13 +472,13 @@ def map_expr(state):
 
             pos_end = Map.get(state, "current_tok") |> Map.get("pos_end")
 
-            node = Core.Parser.Nodes.make_map_node(pairs, pos_start, pos_end)
+            node = Fcore.Parser.Nodes.make_map_node(pairs, pos_start, pos_end)
 
             state = advance(state) |> Map.delete("_pairs") |> Map.delete("_break")
 
             [state, node]
         _ ->
-            state = Core.Parser.Utils.set_error(
+            state = Fcore.Parser.Utils.set_error(
                 state,
                 "Expected '}'",
                 Map.get(ct, "pos_start"),
@@ -492,7 +493,7 @@ def if_expr(state, expr_for_true):
     state = Enum.at(p_result, 0)
     condition = Enum.at(p_result, 1)
 
-    case Core.Parser.Utils.tok_matchs(Map.get(state, "current_tok"), "KEYWORD", "else"):
+    case Fcore.Parser.Utils.tok_matchs(Map.get(state, "current_tok"), "KEYWORD", "else"):
         True ->
             state = advance(state)
 
@@ -500,12 +501,12 @@ def if_expr(state, expr_for_true):
             state = Enum.at(p_result, 0)
             expr_for_false = Enum.at(p_result, 1)
 
-            node = Core.Parser.Nodes.make_if_node(
+            node = Fcore.Parser.Nodes.make_if_node(
                 condition, expr_for_true, expr_for_false
             )
             [state, node]
         False ->
-            state = Core.Parser.Utils.set_error(
+            state = Fcore.Parser.Utils.set_error(
                 state,
                 "Expected 'else'",
                 Map.get(Map.get(state, "current_tok"), "pos_start"),
@@ -524,10 +525,10 @@ def pipe_expr(state, left_node):
 
     case Map.get(state, 'error'):
         None ->
-            node = Core.Parser.Nodes.make_pipe_node(left_node, right_node)
+            node = Fcore.Parser.Nodes.make_pipe_node(left_node, right_node)
             [state, node]
         _ ->
-            state = Core.Parser.Utils.set_error(
+            state = Fcore.Parser.Utils.set_error(
                 state,
                 "Expected and expression after '|>'",
                 Map.get(Map.get(state, "current_tok"), "pos_start"),
@@ -556,13 +557,13 @@ def func_as_var_expr(state):
             arity = Map.get(state, 'current_tok')
             state = advance(state)
 
-            node = Core.Parser.Nodes.make_funcasvariable_node(
+            node = Fcore.Parser.Nodes.make_funcasvariable_node(
                 var_name_tok, arity, pos_start
             )
             [state, node]
         ['IDENTIFIER', _, "INT"] ->
             state = state |> advance()
-            state = Core.Parser.Utils.set_error(
+            state = Fcore.Parser.Utils.set_error(
                 state,
                 "Expected '/'",
                 Map.get(Map.get(state, "current_tok"), "pos_start"),
@@ -571,7 +572,7 @@ def func_as_var_expr(state):
             [state, None]
         ['IDENTIFIER', "DIV", _] ->
             state = state |> advance() |> advance()
-            state = Core.Parser.Utils.set_error(
+            state = Fcore.Parser.Utils.set_error(
                 state,
                 "Expected arity number as int",
                 Map.get(Map.get(state, "current_tok"), "pos_start"),
@@ -579,7 +580,7 @@ def func_as_var_expr(state):
             )
             [state, None]
         [_, _, _] ->
-            state = Core.Parser.Utils.set_error(
+            state = Fcore.Parser.Utils.set_error(
                 state,
                 "Expected the function name and arity. E.g: &sum/2",
                 Map.get(Map.get(state, "current_tok"), "pos_start"),
@@ -609,7 +610,7 @@ def case_expr(state):
     check_ident = lambda state:
         case (Map.get(state, "current_tok") |> Map.get('ident')) <= initial_ident:
             True ->
-                Core.Parser.Utils.set_error(
+                Fcore.Parser.Utils.set_error(
                     state,
                     "The expresions of case must be idented 4 spaces forward in reference to 'case' keyword",
                     Map.get(Map.get(state, "current_tok"), "pos_start"),
@@ -644,7 +645,7 @@ def case_expr(state):
                             state = advance(state)
 
                             p_result = case (Map.get(state, 'current_tok') |> Map.get('ident')) == this_ident:
-                                True -> expr(state |> Map.delete('_cases'))
+                                True -> statement(state |> Map.delete('_cases'))
                                 False -> statements(state |> Map.delete('_cases'), this_ident + 4)
 
                             state = Enum.at(p_result, 0)
@@ -654,7 +655,7 @@ def case_expr(state):
 
                             state |> Map.put('_cases', cases)
                         False ->
-                            Core.Parser.Utils.set_error(
+                            Fcore.Parser.Utils.set_error(
                                 state,
                                 "Expected '->'",
                                 Map.get(Map.get(state, "current_tok"), "pos_start"),
@@ -662,7 +663,7 @@ def case_expr(state):
                             )
             )
         False ->
-            Core.Parser.Utils.set_error(
+            Fcore.Parser.Utils.set_error(
                 state,
                 "Expected new line after ':'",
                 Map.get(Map.get(state, "current_tok"), "pos_start"),
@@ -673,7 +674,7 @@ def case_expr(state):
 
     case cases:
         [] ->
-            state = Core.Parser.Utils.set_error(
+            state = Fcore.Parser.Utils.set_error(
                 state,
                 "Case must have at least one case",
                 Map.get(Map.get(state, "current_tok"), "pos_start"),
@@ -683,7 +684,7 @@ def case_expr(state):
         _ ->
             state = Map.delete(state, '_cases')
 
-            node = Core.Parser.Nodes.make_case_node(
+            node = Fcore.Parser.Nodes.make_case_node(
                 _expr, cases, pos_start, Map.get(state, 'current_tok') |> Map.get('pos_start')
             )
 
@@ -692,7 +693,7 @@ def case_expr(state):
 
 def func_def_expr(state):
     state = case (Map.get(state, "current_tok") |> Map.get('ident')) != 0:
-        True -> Core.Parser.Utils.set_error(
+        True -> Fcore.Parser.Utils.set_error(
             state,
             "'def' is only allowed in modules scope. TO define functions inside functions use 'lambda' instead.",
             Map.get(Map.get(state, "current_tok"), "pos_start"),
@@ -706,7 +707,7 @@ def func_def_expr(state):
     state = advance(state)
 
     state = case (Map.get(state, "current_tok") |> Map.get('type')) != 'IDENTIFIER':
-        True -> Core.Parser.Utils.set_error(
+        True -> Fcore.Parser.Utils.set_error(
             state,
             "Expected a identifier after 'def'.",
             Map.get(Map.get(state, "current_tok"), "pos_start"),
@@ -719,7 +720,7 @@ def func_def_expr(state):
     state = advance(state)
 
     state = case (Map.get(state, "current_tok") |> Map.get('type')) != 'LPAREN':
-        True -> Core.Parser.Utils.set_error(
+        True -> Fcore.Parser.Utils.set_error(
             state,
             "Expected '('",
             Map.get(Map.get(state, "current_tok"), "pos_start"),
@@ -737,7 +738,7 @@ def func_def_expr(state):
 
     state = case (Map.get(state, 'current_tok') |> Map.get('type')) == 'DO':
         True -> advance(state)
-        False -> Core.Parser.Utils.set_error(
+        False -> Fcore.Parser.Utils.set_error(
             state,
             "Expected ':'",
             Map.get(Map.get(state, "current_tok"), "pos_start"),
@@ -746,7 +747,7 @@ def func_def_expr(state):
 
     state = case (Map.get(state, 'current_tok') |> Map.get('pos_start') |> Map.get('ln')) > def_token_ln:
         True -> state
-        False -> Core.Parser.Utils.set_error(
+        False -> Fcore.Parser.Utils.set_error(
             state,
             "Expected a new line after ':'",
             Map.get(Map.get(state, "current_tok"), "pos_start"),
@@ -762,7 +763,7 @@ def func_def_expr(state):
         [None, _] ->    [state, None]
         [None, None] -> [state, None]
         _ ->
-            node = Core.Parser.Nodes.make_funcdef_node(
+            node = Fcore.Parser.Nodes.make_funcdef_node(
                 var_name_tok, arg_name_toks, body, pos_start
             )
 
@@ -797,14 +798,14 @@ def resolve_params(state, end_tok):
                         ct_type == end_tok ->
                             Map.put(state, '_arg_name_toks', arg_name_toks)
                         True ->
-                            Core.Parser.Utils.set_error(
+                            Fcore.Parser.Utils.set_error(
                                 state,
                                 Enum.join(["Expected ',' or '", end_tok, "'"]),
                                 Map.get(Map.get(state, "current_tok"), "pos_start"),
                                 Map.get(Map.get(state, "current_tok"), "pos_end")
                             )
 
-                False -> Core.Parser.Utils.set_error(
+                False -> Fcore.Parser.Utils.set_error(
                     state,
                     "Expected identifier",
                     Map.get(Map.get(state, "current_tok"), "pos_start"),
@@ -818,7 +819,7 @@ def resolve_params(state, end_tok):
         True ->
             [state |> Map.delete('_arg_name_toks'), arg_name_toks]
         False ->
-            state = Core.Parser.Utils.set_error(
+            state = Fcore.Parser.Utils.set_error(
                 state,
                 Enum.join(["Expected ", "':'" if end_tok == 'DO' else "')'"]),
                 Map.get(Map.get(state, "current_tok"), "pos_start"),
@@ -857,7 +858,7 @@ def call_func_expr(state, atom):
 
                     case:
                         not is_keyword(state) and keywords != {} ->
-                            Core.Parser.Utils.set_error(
+                            Fcore.Parser.Utils.set_error(
                                 state,
                                 "Non keyword arguments must be placed before any keyword argument",
                                 Map.get(Map.get('current_tok'), "pos_start"),
@@ -873,7 +874,7 @@ def call_func_expr(state, atom):
 
                                     state = case Map.has_key?(keywords, key_value):
                                         True ->
-                                            Core.Parser.Utils.set_error(
+                                            Fcore.Parser.Utils.set_error(
                                                 state,
                                                 "Duplicated keyword",
                                                 Map.get(_key, "pos_start"),
@@ -909,7 +910,7 @@ def call_func_expr(state, atom):
                                         |> Map.put('_arg_nodes', arg_nodes)
                                         |> Map.put('_keywords', keywords)
                                 _ ->
-                                    Core.Parser.Utils.set_error(
+                                    Fcore.Parser.Utils.set_error(
                                         state,
                                         "Expected ')', keyword or ','",
                                         Map.get(Map.get(state, "current_tok"), "pos_start"),
@@ -924,7 +925,7 @@ def call_func_expr(state, atom):
 
     state = case (Map.get(state, 'current_tok') |> Map.get('type')) == 'RPAREN':
         True -> state
-        False -> Core.Parser.Utils.set_error(
+        False -> Fcore.Parser.Utils.set_error(
             state,
             "Expected ')'",
             Map.get(Map.get(state, "current_tok"), "pos_start"),
@@ -937,7 +938,7 @@ def call_func_expr(state, atom):
 
             state = advance(state)
 
-            node = Core.Parser.Nodes.make_call_node(atom, arg_nodes, keywords, pos_end)
+            node = Fcore.Parser.Nodes.make_call_node(atom, arg_nodes, keywords, pos_end)
 
             [state, node]
         _ ->
@@ -957,7 +958,7 @@ def lambda_expr(state):
 
     state = case (Map.get(state, 'current_tok') |> Map.get('type')) == 'DO':
         True -> advance(state)
-        False -> Core.Parser.Utils.set_error(
+        False -> Fcore.Parser.Utils.set_error(
             state,
             "Expected ':'",
             Map.get(Map.get(state, "current_tok"), "pos_start"),
@@ -977,7 +978,7 @@ def lambda_expr(state):
         [None, _] ->    [state, None]
         [None, None] -> [state, None]
         _ ->
-            node = Core.Parser.Nodes.make_lambda_node(
+            node = Fcore.Parser.Nodes.make_lambda_node(
                 None, arg_name_toks, body, pos_start
             )
 

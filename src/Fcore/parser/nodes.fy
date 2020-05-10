@@ -26,8 +26,8 @@ def make_if_node(comp_expr, true_expr, false_expr):
     {
         "NodeType": "IfNode",
         "comp_expr": comp_expr,
-        "true_expr": true_expr,
-        "false_expr": false_expr,
+        "true_case": true_expr,
+        "false_case": false_expr,
         "pos_start": Map.get(comp_expr, "pos_start"),
         "pos_end": Map.get(false_expr, "pos_end")
     }
@@ -88,7 +88,7 @@ def make_statements_node(statements, pos_start, pos_end):
 
 def make_atom_node(tok):
     {
-        "NodeType": "VarAccessNode",
+        "NodeType": "AtomNode",
         "tok": tok,
         "pos_start": Map.get(tok, "pos_start"),
         "pos_end": Map.get(tok, "pos_end")
@@ -150,28 +150,28 @@ def make_call_node(node_to_call, arg_nodes, keywords, pos_end):
     }
 
 def make_unary_node(tok, node):
-    case Core.Parser.Utils.valid_node?(node):
+    case Fcore.Parser.Utils.valid_node?(node):
         [False, reason] -> raise reason
         [True, _] -> {
             "NodeType": "UnaryOpNode",
-            "tok": tok,
+            "op_tok": tok,
             "node": node,
             "pos_start": Map.get(tok, "pos_start"),
             "pos_end": Map.get(tok, "pos_end")
         }
 
 def make_bin_op_node(left, op_tok, right):
-    case Core.Parser.Utils.valid_node?(left):
+    case Fcore.Parser.Utils.valid_node?(left):
         [False, reason] -> raise reason
         [True, _] ->
 
-            case Core.Parser.Utils.valid_node?(right):
+            case Fcore.Parser.Utils.valid_node?(right):
                 [False, reason] -> raise reason
                 [True, _] -> {
                     "NodeType": "BinOpNode",
-                    "left": left,
+                    "left_node": left,
                     "op_tok": op_tok,
-                    "right": right,
+                    "right_node": right,
                     "pos_start": Map.get(left, "pos_start"),
                     "pos_end": Map.get(right, "pos_end")
                 }
