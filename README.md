@@ -47,3 +47,11 @@ a = 5
 - [ ] Support to `not in` 
 
 - [x] Create the error visualizer.
+
+
+#### Run in the erlang shell
+> cd /usr/lib/elixir/lib/elixir/ebin
+> erl -pa /home/joao/fython/src/_compiled/
+1> application:start(compiler).
+2> application:start(elixir). 
+3> 'Elixir.Fshell':start().

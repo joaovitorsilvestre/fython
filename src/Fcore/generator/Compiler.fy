@@ -24,7 +24,7 @@ def copy_elixir_beams(compiled_folder):
     elixir_path = '/usr/lib/elixir/lib/elixir/ebin'
 
     case File.exists?(elixir_path):
-        True -> Enum.join([elixir_path, '*.beam'], '/')
+        True -> Enum.join([elixir_path, '*'], '/')
             |> Path.wildcard()
             |> Enum.each(lambda beam_file:
                 file_name = beam_file
@@ -34,22 +34,6 @@ def copy_elixir_beams(compiled_folder):
                 File.cp!(beam_file, Enum.join([compiled_folder, file_name], '/'))
             )
         False -> :error
-
-def copy_jason_beams(compiled_folder):
-    jason_folder = Enum.join([
-        '/home/joao/fython/src/core/generator/jason_dep', 'Elixir.Jason.*.beam'
-    ], '/')
-
-    jason_folder
-        |> Path.wildcard()
-        |> Enum.each(lambda beam_file:
-            file_name = beam_file
-                |> String.split('/')
-                |> List.last()
-
-            File.cp!(beam_file, Enum.join([compiled_folder, file_name], '/'))
-        )
-
 
 def compile_project_to_binary(directory_path, compiled_folder):
     # Return a list of each module compiled into elixir AST in binary
