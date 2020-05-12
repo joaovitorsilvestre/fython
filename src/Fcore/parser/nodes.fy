@@ -110,6 +110,15 @@ def make_map_node(pairs_list, pos_start, pos_end):
         "pos_end": pos_end
     }
 
+def make_tuple_node(element_nodes, pos_start, pos_end):
+    {
+        "NodeType": "TupleNode",
+        "element_nodes": element_nodes,
+        "pos_start": pos_start,
+        "pos_end": pos_end
+    }
+
+
 def make_raise_node(expr, pos_start):
     {
         "NodeType": "RaiseNode",

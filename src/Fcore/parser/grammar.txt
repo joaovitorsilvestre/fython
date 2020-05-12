@@ -45,6 +45,7 @@ call-expr           : atom (
 
 atom                : INT|FLOAT|IDENTIFIER|STRING|ATOM
                     : LPAREN expr RPAREN
+                    : tuple-expr
                     : list-expr
                     : map-expr
                     : func-def
@@ -55,6 +56,8 @@ atom                : INT|FLOAT|IDENTIFIER|STRING|ATOM
 list-expr           : LSQUARE (expr (COMMA expr)*)? RSQUARE
 
 map-expr            : LCURLY ((expr DO expr) (COMMA (expr DO expr))*)? RCURLY
+
+tuple-expr          : LPAREN expr? COMMA (expr COMMA)* RPAREN
 
 if-expr             : expr KEYWORD:if expr DO expr
                     : (KEYWORD:else expr)?

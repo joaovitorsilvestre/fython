@@ -18,6 +18,7 @@ def convert(node):
         "ImportNode"        -> convert_import_node(node)
         "CaseNode"          -> convert_case_node(node)
         "InNode"            -> convert_in_node(node)
+        "TupleNode"         -> convert_tuple_node(node)
         "RaiseNode"         -> convert_raise_node(node)
         "FuncAsVariableNode" -> convert_funcasvariable_node(node)
 
@@ -433,3 +434,12 @@ def convert_unaryop_node(node):
         [True, _, _] -> not_case(value)
         [_, True, _] -> plus_case(value)
         [_, _, True] -> minus_case(value)
+
+
+def convert_tuple_node(node):
+    items = node
+        |> Map.get("element_nodes")
+        |> Enum.map(&convert/1)
+        |> Enum.join(", ")
+
+    Enum.join(["{:{}, [], [", items, "]}"])
