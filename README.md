@@ -4,13 +4,15 @@
 #### Basic elements
 | element | syntax   | obs |
 |---------|----------|-----|
-| map     | {"a": 2} | Differently from elixir, in fython you must put quotes to have a string key, otherwise the compiler will search for a variable with the given name. If the variable is not found, an error will be raised.    |
-| list    | [1, 2, 3] |     |
-| tuple   | (1, 2, 3) | For a single element tuple, you need to put a comma before the closing parenteses: ```(1,)```    |
-| atom   | :myatom |     |
 | string | "mystring" or 'mystring' | Differently from elixir, single quote also creates an string |
 | int | 1 | |
 | float | 5.0 |
+| atom   | :myatom |     |
+| list    | [1, 2, 3] |     |
+| tuple   | (1, 2, 3) | For a single element tuple, you need to put a comma before the closing parenteses: ```(1,)```    |
+| map     | {"a": 2} | Differently from elixir, in fython you must put quotes to have a string key, otherwise the compiler will search for a variable with the given name. If the variable is not found, an error will be raised.    |
+| labmda definition | lambda a, b: a + b | Unlike python, you can use multiline lambdas. The only thing required to do it, is to put all statements in a new line after the ':' token and ident the lines correctly. |
+| function call | sum(1, 2) | Lambda functions are called in the same way. Unlike elixir, that you need to put a dot in the call: `sum.(1, 2)` |
 
 #### Basic operations
 | operation | syntax   | result |
@@ -26,7 +28,7 @@
 #### Function definition
 The function definitio just like in python:
 ```
-def sum(a, b):
+def sum (a, b):
     a + b
 ```
 
