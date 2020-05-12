@@ -255,6 +255,8 @@ def atom(state):
     ct = Map.get(state, "current_tok")
     ct_type = ct |> Map.get('type')
 
+    pos_start = Map.get(ct, 'pos_start')
+
     case:
         ct_type in ['INT', 'FLOAT'] ->
             node = Fcore.Parser.Nodes.make_number_node(ct)
@@ -278,6 +280,8 @@ def atom(state):
             _expr = Enum.at(p_result, 1)
 
             case:
+                (Map.get(state, 'current_tok') |> Map.get('type')) == 'COMMA' ->
+                    tuple_expr(state, pos_start, _expr)
                 (Map.get(state, 'current_tok') |> Map.get('type')) == 'RPAREN' ->
                     state = advance(state)
                     [state, _expr]
@@ -956,7 +960,6 @@ def lambda_expr(state):
     state = Enum.at(p_result, 0)
     arg_name_toks = Enum.at(p_result, 1)
 
-
     state = case (Map.get(state, 'current_tok') |> Map.get('type')) == 'DO':
         True -> advance(state)
         False -> Fcore.Parser.Utils.set_error(
@@ -984,3 +987,70 @@ def lambda_expr(state):
             )
 
             [state, node]
+
+
+def tuple_expr(state, pos_start, first_expr):
+    state = advance(state)
+
+    state = loop_while(
+        state,
+        lambda state, ct:
+            case:
+                Map.get(ct, "type") == "EOF" -> False
+                Map.get(ct, "type") == "RPAREN" -> False
+                Map.get(state, "error") != None -> False
+                True -> True
+        ,
+        lambda state, ct:
+            exprs = Map.get(state, '_element_nodes', [])
+
+            p_result = expr(state |> Map.delete('_element_nodes'))
+            state = Enum.at(p_result, 0)
+            _expr = Enum.at(p_result, 1)
+
+            exprs = List.insert_at(exprs, -1, _expr)
+
+            case Map.get(state, 'current_tok') |> Map.get('type'):
+                'COMMA' ->
+                    state
+                        |> advance()
+                        |> Map.put('_element_nodes', exprs)
+
+                'RPAREN' ->
+                    state
+                        |> Map.put('_element_nodes', exprs)
+                _ ->
+                    Fcore.Parser.Utils.set_error(
+                        state,
+                        "Expected ',' or ')'",
+                        Map.get(Map.get(state, "current_tok"), "pos_start"),
+                        Map.get(Map.get(state, "current_tok"), "pos_end")
+                    )
+    )
+
+    element_nodes = state
+        |> Map.get('_element_nodes', [])
+        |> List.insert_at(0, first_expr)
+
+    state = state |> Map.delete('_element_nodes')
+
+    state = case (Map.get(state, 'current_tok') |> Map.get('type')) == 'RPAREN':
+        True -> state
+        False -> Fcore.Parser.Utils.set_error(
+            state,
+            "Expected ')'",
+            Map.get(Map.get(state, "current_tok"), "pos_start"),
+            Map.get(Map.get(state, "current_tok"), "pos_end")
+        )
+
+    case Map.get(state, 'error'):
+        None ->
+            pos_end = Map.get(state, 'current_tok') |> Map.get('pos_end')
+
+            state = advance(state)
+
+            node = Fcore.Parser.Nodes.make_tuple_node(element_nodes, pos_start, pos_end)
+
+            [state, node]
+        _ ->
+            [state, None]

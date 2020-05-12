@@ -49,7 +49,7 @@ a = 5
 - [x] Create the error visualizer.
 
 
-#### Run in the erlang shell
+#### Run in the erlang shell (have some problems :/ )
 > cd /usr/lib/elixir/lib/elixir/ebin
 > erl -pa /home/joao/fython/src/_compiled/
 1> application:start(compiler).
