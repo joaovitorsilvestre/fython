@@ -1,9 +1,134 @@
-### ROADMAP
+### Fython Syntax
+<br>
 
-#### BUGS
+#### Basic elements
+| element | syntax   | obs |
+|---------|----------|-----|
+| map     | {"a": 2} | Differently from elixir, in fython you must put quotes to have a string key, otherwise the compiler will search for a variable with the given name. If the variable is not found, an error will be raised.    |
+| list    | [1, 2, 3] |     |
+| tuple   | (1, 2, 3) | For a single element tuple, you need to put a comma before the closing parenteses: ```(1,)```    |
+| atom   | :myatom |     |
+| string | "mystring" or 'mystring' | Differently from elixir, single quote also creates an string |
+| int | 1 | |
+| float | 5.0 |
+
+#### Basic operations
+| operation | syntax   | result |
+|-----|-----|-----|
+| sum | 2 + 2 | 4 |
+| subtract | 2 - 2 | 0 |
+| multiply | 2 * 2 | 4 |
+| multiply no precedence | (1 + 2) * 2 | 6 |
+| division | 2 / 2 | 1 |
+| division no precedence | (1 + 2) / 2 | 1.5 |
+| power | 2 ** 2 | 4 |
+
+#### Function definition
+The function definitio just like in python:
+```
+def sum(a, b):
+    a + b
+```
+
+#### Modules
+The module name is not defined in the file itself. It will be the file name.
+Given this project structure:
+```
+└── MyProject
+    ├── Calcs
+        ├── __init__.fy
+        ├── utils.fy
+```
+This will be the modules created: `Calcs` and `Calcs.Utils`
+
+### Grammar rules of the language
+```
+legend:
+    *       0 or more
+    +       1 or more
+    ()?     optional
+    |       or
+
+statements          : NEWLINE* IDENT* statement (NEWLINE+ statement) NEWLINE*
+
+statement           #: import-expr
+                    #: KEYWORD:return expr?
+                    : KEYWORD:raise expr
+                    : expr
+
+# not implemented yet
+import-expr         : import IDENTIFIER (COMMA IDENTIFIER (as IDENTIFIER)?)*
+                    | from IDENTIFIER import IDENTIFIER (as IDENTIFIER)? 
+                      (COMMA IDENTIFIER (as IDENTIFIER)?)*
+
+expr                : IDENTIFIER EQ expr
+                    : comp-expr ((KEYWORD:and|KEYWORD:or) comp-expr)*
+                    : expr IN expr
+                    : if-expr
+                    : pipe-expr
+
+comp-expr           : KEYWORD:not comp-expr
+                    : arith-expr ((EE|LT|GT|LTE|GTE) arith-expr)*
+
+arith-expr          : term ((PLUS|MINUS) term)*
+
+term                : factor ((MUL|DIV) factor)*
+
+factor              : (PLUS|MINUS) factor
+                    : power
+
+power               : call(POW factor)*
+
+call                : call-expr
+                    : atom
+
+call-expr           : atom (
+                        LPAREN
+                        (expr (COMMA expr)*)?
+                        (IDENTIFIER DO expr (COMMA IDENTIFIER EQ expr)*)?
+                        RPAREN
+                    )?
+
+atom                : INT|FLOAT|IDENTIFIER|STRING|ATOM
+                    : LPAREN expr RPAREN
+                    : tuple-expr
+                    : list-expr
+                    : map-expr
+                    : func-def
+                    : lambda-def
+                    : case-def
+                    : func-as-var-expr
+
+list-expr           : LSQUARE (expr (COMMA expr)*)? RSQUARE
+
+map-expr            : LCURLY ((expr DO expr) (COMMA (expr DO expr))*)? RCURLY
+
+tuple-expr          : LPAREN expr? COMMA (expr COMMA)* RPAREN
+
+if-expr             : expr KEYWORD:if expr DO expr
+                    : (KEYWORD:else expr)?
+
+case-def            : KEYWORD:case expr? DO NEWLINE
+                    (expr ARROW NEWLINE? statement NEWLINE)+
+
+pipe-expr           : expr (PIPE expr)+
+
+func-def            : KEYWORD:def IDENTIFIER
+                    LPAREN (IDENTIFIER (COMMA IDENTIFIER)*)? RPAREN DO
+                    (NEWLINE statements)+
+
+lambda-def          : KEYWORD:lambda (IDENTIFIER (COMMA IDENTIFIER)*)?
+                    (DO expr)|(NEWLINE statements)+
+
+func-as-var-expr    : ECOM DIV INT
+```
+
+### Readmap
+
+#### bugs
 - [x] Map are being compiled empty if theres a comma at end of it. E.g: `{"a": 1,}`
 - [ ] In the pos parser we need to convert any variable that is a elixir keyword to something else
-- [x] Not sure, but comments must break with error print info.
+- [x] Pretty error print is not working when have a comment in a nearby line.
 - [ ] Support to `{"a": 2} |> Map.get("a") == 2`. Today we need to put pipe inside parenteses
 - [x] List inside lists are not working
 - [ ] Dont returning error if we have a file with a string missing end quote: `raise "this string is invalid`
@@ -27,25 +152,23 @@ def add(a)
 - [ ] Support to multiline if with elif and else
 - [x] Support to tuples
 - [ ] Support to pattern match
-- [x] Create the pos_parser. 
+- [x] Create the pos_parser
 - [x] PosParser -> convert the locall function calls to support call function without dot
 - [ ] PosParser -> Add logic to check imports, undefined vars, etc.
-- [ ] Support to dict access with dots. Eg `a = {"oi": 2}`, `Map.get(a, "oi") == a.1`
+- [ ] Support to dict access with dots. Considering `a = {"oi": 2}`, `a.1` must have same effect as `Map.fetch(a, "oi") |> elem(1)`. We must use fetch insted of get to prevent returning None.
 - [ ] `and` and `or` operators must work with multiline
 
 #### GOD TO HAVE
 - [ ] support for list 'explode'. Eg: [*[1, 2]] must be converted to [1, 2]. Need do find a way to make this works
-- [ ] support for dict 'explode'. Eg: {*{1: 2}} must be converted to {1: 2}. Need do find a way to make this works
+- [ ] support for dict 'explode'. Eg: {\**{"a": 2}} must be converted to {"a": 2}. Need do find a way to make this works
 - [ ] use python style keyword params to make elixir optional arguments like // ops
 - [ ] list comprehentions
-- [ ] Support add variable to map without need to refer the string if is the same name. Just like JS ES6
-ex: 
+- [ ] support to put a variable as a key in a map and, if theres no key, the key is the variable name and the value is te variable. It must work just like JS ES6. Eg: 
 ```
 a = 5
 {"a": a} == {a}
 ```
 - [ ] Support to `not in` 
-
 - [x] Create the error visualizer.
 
 
