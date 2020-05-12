@@ -3,7 +3,7 @@
 #### BUGS
 - [x] Map are being compiled empty if theres a comma at end of it. E.g: `{"a": 1,}`
 - [ ] In the pos parser we need to convert any variable that is a elixir keyword to something else
-- [ ] Not sure, but comments must break with error print info.
+- [x] Not sure, but comments must break with error print info.
 - [ ] Support to `{"a": 2} |> Map.get("a") == 2`. Today we need to put pipe inside parenteses
 - [x] List inside lists are not working
 - [ ] Dont returning error if we have a file with a string missing end quote: `raise "this string is invalid`
@@ -25,7 +25,7 @@ def add(a)
 #### MUST HAVE
 - [x] Remove dependency of Jason lib
 - [ ] Support to multiline if with elif and else
-- [ ] Support to tuples
+- [x] Support to tuples
 - [ ] Support to pattern match
 - [x] Create the pos_parser. 
 - [x] PosParser -> convert the locall function calls to support call function without dot
