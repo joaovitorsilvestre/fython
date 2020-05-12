@@ -11,7 +11,6 @@
 | list    | [1, 2, 3] |     |
 | tuple   | (1, 2, 3) | For a single element tuple, you need to put a comma before the closing parenteses: ```(1,)```    |
 | map     | {"a": 2} | Differently from elixir, in fython you must put quotes to have a string key, otherwise the compiler will search for a variable with the given name. If the variable is not found, an error will be raised.    |
-| labmda definition | lambda a, b: a + b | Unlike python, you can use multiline lambdas. The only thing required to do it, is to put all statements in a new line after the ':' token and ident the lines correctly. |
 | function call | sum(1, 2) | Lambda functions are called in the same way. Unlike elixir, that you need to put a dot in the call: `sum.(1, 2)` |
 
 #### Basic operations
@@ -25,12 +24,34 @@
 | division no precedence | (1 + 2) / 2 | 1.5 |
 | power | 2 ** 2 | 4 |
 
-#### Function definition
-The function definitio just like in python:
+#### Function and lambda definition
+To define a function the required syntax is just like in python:
 ```
 def sum (a, b):
     a + b
 ```
+
+#### lambda
+Defining a lambda and assign it to the variable sum:
+
+```sum = lambda a, b: a + b```
+
+Unlike python, you can use multiline lambdas. The only thing required to do it is to put all statements in a new line after the `:` token and ident the lines correctly. 
+You can also pass the multiline lambda as argument to some function:
+```
+> list = [1, 2, 3]
+
+> Enum.map(
+    list, 
+    lambda item:
+        power_num = 2
+        item ** power_num
+)
+output: [1, 4, 9]
+```
+
+As you have already notice, you dont need to put a `return` keyword at the end of lambdas or functions.
+The last statement will automaticly be the return value.
 
 #### Modules
 The module name is not defined in the file itself. It will be the file name.
