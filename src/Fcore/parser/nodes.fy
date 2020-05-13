@@ -70,6 +70,7 @@ def make_in_node(left_expr, right_expr):
 
 
 def make_varassign_node(var_name_tok, value_node):
+    # deprecated
     {
         "NodeType": "VarAssignNode",
         "var_name_tok": var_name_tok,
@@ -114,6 +115,16 @@ def make_tuple_node(element_nodes, pos_start, pos_end):
     {
         "NodeType": "TupleNode",
         "element_nodes": element_nodes,
+        "pos_start": pos_start,
+        "pos_end": pos_end
+    }
+
+
+def make_patternmatch_node(left_node, right_node, pos_start, pos_end):
+    {
+        "NodeType": "PatternMatchNode",
+        "left_node": left_node,
+        "right_node": right_node,
         "pos_start": pos_start,
         "pos_end": pos_end
     }

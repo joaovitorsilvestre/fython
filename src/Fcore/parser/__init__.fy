@@ -117,8 +117,9 @@ def statements(state, expected_ident_gte):
 
 def statement(state):
     ct = Map.get(state, 'current_tok')
+    pos_start = Map.get(ct, 'pos_start')
 
-    case:
+    p_result = case:
         Fcore.Parser.Utils.tok_matchs(ct, 'KEYWORD', 'raise') ->
             pos_start = Map.get(ct, 'pos_start')
 
@@ -146,54 +147,43 @@ def statement(state):
                     )
                     [state, None]
 
+    state = Enum.at(p_result, 0)
+    node = Enum.at(p_result, 1)
+
+    case (Map.get(state, 'current_tok') |> Map.get('type')) == 'EQ':
+        True -> pattern_match(state, node, pos_start)
+        False -> [state, node]
+
 def expr(state):
     ct = state |> Map.get('current_tok')
     ct_type = ct |> Map.get('type')
 
-    next_tok_type = advance(state) |> Map.get('current_tok') |> Map.get('type')
+    _and = ["KEYWORD", "and"]
+    _or = ["KEYWORD", "or"]
+
+    p_result = bin_op(state, &comp_expr/1, [_and, _or], None)
+    state = Enum.at(p_result, 0)
+    node = Enum.at(p_result, 1)
+
+    ct = Map.get(state, "current_tok")
 
     case:
-        ct_type == 'IDENTIFIER' and next_tok_type == 'EQ' ->
-            var_name = ct
-            state = advance(state) |> advance()
+        Fcore.Parser.Utils.tok_matchs(ct, 'KEYWORD', 'if') ->
+            if_expr(state, node)
+        Map.get(ct, 'type') == 'PIPE' ->
+            pipe_expr(state, node)
+        Fcore.Parser.Utils.tok_matchs(ct, 'KEYWORD', 'in') ->
+            state = advance(state)
 
             p_result = expr(state)
             state = Enum.at(p_result, 0)
-            _expr = Enum.at(p_result, 1)
+            right_node = Enum.at(p_result, 1)
 
-            case _expr:
-                None ->
-                    [state, None]
-                _ ->
-                    node = Fcore.Parser.Nodes.make_varassign_node(var_name, _expr)
-                    [state, node]
-        True ->
-            _and = ["KEYWORD", "and"]
-            _or = ["KEYWORD", "or"]
-
-            p_result = bin_op(state, &comp_expr/1, [_and, _or], None)
-            state = Enum.at(p_result, 0)
-            node = Enum.at(p_result, 1)
-
-            ct = Map.get(state, "current_tok")
-
-            case:
-                Fcore.Parser.Utils.tok_matchs(ct, 'KEYWORD', 'if') ->
-                    if_expr(state, node)
-                Map.get(ct, 'type') == 'PIPE' ->
-                    pipe_expr(state, node)
-                Fcore.Parser.Utils.tok_matchs(ct, 'KEYWORD', 'in') ->
-                    state = advance(state)
-
-                    p_result = expr(state)
-                    state = Enum.at(p_result, 0)
-                    right_node = Enum.at(p_result, 1)
-
-                    node = Fcore.Parser.Nodes.make_in_node(
-                        node, right_node
-                    )
-                    [state, node]
-                True -> [state, node]
+            node = Fcore.Parser.Nodes.make_in_node(
+                node, right_node
+            )
+            [state, node]
+        True -> [state, node]
 
 
 def comp_expr(state):
@@ -866,8 +856,8 @@ def call_func_expr(state, atom):
                             Fcore.Parser.Utils.set_error(
                                 state,
                                 "Non keyword arguments must be placed before any keyword argument",
-                                Map.get(Map.get('current_tok'), "pos_start"),
-                                Map.get(Map.get('current_tok'), "pos_end")
+                                Map.get(state, Map.get('current_tok'), "pos_start"),
+                                Map.get(state, Map.get('current_tok'), "pos_end")
                             )
                         True ->
                             updated_fields = case is_keyword(state):
@@ -1054,3 +1044,18 @@ def tuple_expr(state, pos_start, first_expr):
             [state, node]
         _ ->
             [state, None]
+
+def pattern_match(state, left_node, pos_start):
+    state = advance(state)
+
+    p_result = expr(state)
+    state = Enum.at(p_result, 0)
+    right_node = Enum.at(p_result, 1)
+
+    pos_end = Map.get(state, 'current_tok') |> Map.get('pos_start')
+
+    node = Fcore.Parser.Nodes.make_patternmatch_node(
+        left_node, right_node, pos_start, pos_end
+    )
+
+    [state, node]

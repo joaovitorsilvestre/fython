@@ -10,6 +10,7 @@ statement           #: import-expr
                     #: KEYWORD:return expr?
                     : KEYWORD:raise expr
                     : expr
+                    : pattern-match
 
 # not implemented yet
 import-expr         : import IDENTIFIER (COMMA IDENTIFIER (as IDENTIFIER)?)*
@@ -20,6 +21,8 @@ expr                : IDENTIFIER EQ expr
                     : expr IN expr
                     : if-expr
                     : pipe-expr
+
+pattern-match       : expr EQ expr
 
 comp-expr           : KEYWORD:not comp-expr
                     : arith-expr ((EE|LT|GT|LTE|GTE) arith-expr)*
