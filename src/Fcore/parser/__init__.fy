@@ -1079,14 +1079,27 @@ def tuple_expr(state, pos_start, first_expr):
 def pattern_match(state, left_node, pos_start):
     state = advance(state)
 
-    p_result = expr(state)
-    state = Enum.at(p_result, 0)
-    right_node = Enum.at(p_result, 1)
+    valid_left_node = is_map(left_node) and Map.get(left_node, "NodeType") in Fcore.Parser.Nodes.node_types_accept_pattern()
 
-    pos_end = Map.get(state, 'current_tok') |> Map.get('pos_start')
+    case:
+        Map.get(state, 'error') -> [state, None]
+        valid_left_node == False ->
+            state = Fcore.Parser.Utils.set_error(
+                state,
+                "Invalid pattern",
+                pos_start,
+                Map.get(Map.get(state, "current_tok"), "pos_end")
+            )
+            [state, None]
+        valid_left_node == True ->
+            p_result = expr(state)
+            state = Enum.at(p_result, 0)
+            right_node = Enum.at(p_result, 1)
 
-    node = Fcore.Parser.Nodes.make_patternmatch_node(
-        left_node, right_node, pos_start, pos_end
-    )
+            pos_end = Map.get(state, 'current_tok') |> Map.get('pos_start')
 
-    [state, node]
+            node = Fcore.Parser.Nodes.make_patternmatch_node(
+                left_node, right_node, pos_start, pos_end
+            )
+
+            [state, node]

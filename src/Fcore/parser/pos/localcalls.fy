@@ -33,13 +33,19 @@ def convert_local_function_calls(node, var_names_avaliable):
 def get_variables_bound_in_pattern(node):
     node_type = Map.get(node, 'NodeType')
 
+    filter_types = lambda i: Map.get(i, 'NodeType') in Fcore.Parser.Nodes.node_types_accept_pattern()
+
     case:
         node_type == 'MapNode' ->
-            IO.inspect(node)
-            raise "not implemented"
+            node
+                |> Map.get("pairs_list")
+                |> List.flatten()
+                |> Enum.filter(filter_types)
+                |> Enum.map(&get_variables_bound_in_pattern/1)
         node_type in ['TupleNode', 'ListNode'] ->
             node
                 |> Map.get('element_nodes')
+                |> Enum.filter(filter_types)
                 |> Enum.map(&get_variables_bound_in_pattern/1)
         "VarAccessNode" ->
             Map.get(node, "var_name_tok") |> Map.get("value")

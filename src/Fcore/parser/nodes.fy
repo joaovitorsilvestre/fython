@@ -1,3 +1,6 @@
+def node_types_accept_pattern():
+    ['ListNode', 'MapNode', 'TupleNode', 'VarAccessNode']
+
 def make_number_node(tok):
     {
         "NodeType": "NumberNode",
@@ -66,17 +69,6 @@ def make_in_node(left_expr, right_expr):
         "right_expr": right_expr,
         "pos_start": Map.get(left_expr, "pos_start"),
         "pos_end": Map.get(right_expr, "pos_end")
-    }
-
-
-def make_varassign_node(var_name_tok, value_node):
-    # deprecated
-    {
-        "NodeType": "VarAssignNode",
-        "var_name_tok": var_name_tok,
-        "value_node": value_node,
-        "pos_start": Map.get(var_name_tok, "pos_start"),
-        "pos_end": Map.get(value_node, "pos_end")
     }
 
 def make_statements_node(statements, pos_start, pos_end):
