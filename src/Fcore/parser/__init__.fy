@@ -1,6 +1,7 @@
 def execute(tokens):
     state = {
         "error": None,
+        "prev_tok": None,
         "current_tok": None,
         "next_tok": None,
         "node": None,
@@ -11,6 +12,25 @@ def execute(tokens):
     state |> advance() |> parse() |> Fcore.Parser.Pos.execute()
 
 def advance(state):
+    # before anything, lets check that the states only contains expected keys
+    # other wise they are invalid and can have terrible effects in recusive functions
+    valid_keys = [
+        "error", "current_tok", "next_tok",
+        "node", "_current_tok_idx", "_tokens", "prev_tok"
+    ]
+
+    state_filtered = state
+        |> Map.to_list()
+        |> Enum.filter(lambda key_n_value: elem(key_n_value, 0) in valid_keys)
+        |> Map.new()
+
+    case state_filtered != state:
+        True ->
+            # If you get this error. Almost sure that some key
+            # wasnt deleted in some loop_while lambdas
+            raise "trying to advance state with invalid keys"
+        False -> None
+
     idx = state |> Map.get("_current_tok_idx")
     tokens = state |> Map.get("_tokens")
 
@@ -318,17 +338,22 @@ def bin_op(state, func_a, ops, func_b):
 
     p_result = func_a(state)
     state = p_result |> Enum.at(0)
-    left = p_result |> Enum.at(1)
+    first_left = p_result |> Enum.at(1)
 
     ct = Map.get(state, "current_tok")
 
     state = loop_while(
         state,
         lambda state, ct:
-            Enum.member?(ops, Map.get(ct, "type")) or Enum.member?(ops, [Map.get(ct, "type"), Map.get(ct, "value")])
+            case:
+                Map.get(ct, "type") == "EOF" -> False
+                Map.get(state, "error") != None -> False
+                Enum.member?(ops, Map.get(ct, "type")) or Enum.member?(ops, [Map.get(ct, "type"), Map.get(ct, "value")]) -> True
+                True -> False
         ,
         lambda state, ct:
-            left = Map.get(state, "_node", left)
+            left = Map.get(state, "_node", first_left)
+            state = Map.delete(state, "_node")
 
             op_tok = Map.get(state, 'current_tok')
             state = advance(state)
@@ -344,7 +369,7 @@ def bin_op(state, func_a, ops, func_b):
                 _ -> state
     )
 
-    left = Map.get(state, '_node', left)
+    left = Map.get(state, '_node', first_left)
     state = Map.delete(state, '_node')
 
     [state, left]
@@ -363,13 +388,14 @@ def list_expr(state):
         ,
         lambda state, ct:
             element_nodes = Map.get(state, "_element_nodes", [])
+            state = Map.delete(state, "_element_nodes")
 
             state = state if Map.get(ct, "type") == "COMMA" and element_nodes == [] else advance(state)
 
             case Map.get(state, "current_tok") |> Map.get("type"):
                 "RSQUARE" -> state
                 _ ->
-                    p_result = expr(state |> Map.delete("_element_nodes"))
+                    p_result = expr(state)
                     state = p_result |> Enum.at(0) |> Map.put("_element_nodes", element_nodes)
                     _expr = p_result |> Enum.at(1)
 
@@ -385,12 +411,13 @@ def list_expr(state):
     case Map.get(ct, 'type'):
         'RSQUARE' ->
             element_nodes = Map.get(state, "_element_nodes", [])
+            state = Map.delete(state, "_element_nodes")
 
             pos_end = Map.get(state, "current_tok") |> Map.get("pos_end")
 
             node = Fcore.Parser.Nodes.make_list_node(element_nodes, pos_start, pos_end)
 
-            state = advance(state) |> Map.delete("_element_nodes")
+            state = advance(state)
 
             [state, node]
         _ ->
@@ -441,13 +468,14 @@ def map_expr(state):
         ,
         lambda state, ct:
             pairs = Map.get(state, "_pairs", {})
+            state = Map.delete(state, "_pairs")
 
             state = advance(state)
 
             case Map.get(state, "current_tok") |> Map.get("type"):
                 "RCURLY" -> state
                 _ ->
-                    p_result = map_get_pairs(state |> Map.delete("_pairs"))
+                    p_result = map_get_pairs(state)
                     state = Enum.at(p_result, 0)
                     map = Enum.at(p_result, 1)
 
@@ -468,7 +496,7 @@ def map_expr(state):
 
             node = Fcore.Parser.Nodes.make_map_node(pairs, pos_start, pos_end)
 
-            state = advance(state) |> Map.delete("_pairs") |> Map.delete("_break")
+            state = state |> Map.delete("_pairs") |> Map.delete("_break") |> advance()
 
             [state, node]
         _ ->
@@ -628,6 +656,7 @@ def case_expr(state):
                     state = check_ident(state)
 
                     cases = Map.get(state, "_cases", [])
+                    state = Map.delete(state, "_cases")
 
                     this_ident = Map.get(state, 'current_tok') |> Map.get('ident')
 
@@ -640,8 +669,8 @@ def case_expr(state):
                             state = advance(state)
 
                             p_result = case (Map.get(state, 'current_tok') |> Map.get('ident')) == this_ident:
-                                True -> statement(state |> Map.delete('_cases'))
-                                False -> statements(state |> Map.delete('_cases'), this_ident + 4)
+                                True -> statement(state)
+                                False -> statements(state, this_ident + 4)
 
                             state = Enum.at(p_result, 0)
                             right_expr = Enum.at(p_result, 1)
@@ -777,6 +806,7 @@ def resolve_params(state, end_tok):
         ,
         lambda state, ct:
             arg_name_toks = Map.get(state, '_arg_name_toks', [])
+            state = Map.delete(state, "_arg_name_toks")
 
             case Map.get(ct, 'type') == 'IDENTIFIER':
                 True ->
@@ -993,8 +1023,9 @@ def tuple_expr(state, pos_start, first_expr):
         ,
         lambda state, ct:
             exprs = Map.get(state, '_element_nodes', [])
+            state = Map.delete(state, '_element_nodes')
 
-            p_result = expr(state |> Map.delete('_element_nodes'))
+            p_result = expr(state)
             state = Enum.at(p_result, 0)
             _expr = Enum.at(p_result, 1)
 
