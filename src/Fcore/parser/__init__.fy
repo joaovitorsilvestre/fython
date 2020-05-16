@@ -237,7 +237,19 @@ def call(state):
     state = Enum.at(p_result, 0)
     _atom = Enum.at(p_result, 1)
 
-    case (Map.get(state, 'current_tok') |> Map.get('type')) == 'LPAREN':
+    prev_tok_ln = state
+        |> Map.get('_tokens')
+        |> Enum.at(Map.get(state, '_current_tok_idx') - 1)
+        |> Map.get('pos_end')
+        |> Map.get('ln')
+
+    ct = Map.get(state, 'current_tok')
+    ct_type = Map.get(ct, 'type')
+
+    # we must only consider as a call node if the previous node is
+    # in the same line that the left parent
+
+    case ct_type == 'LPAREN' and (Map.get(ct, 'pos_start') |> Map.get('ln')) == prev_tok_ln:
         True -> call_func_expr(state, _atom)
         False -> [state, _atom]
 
@@ -285,14 +297,21 @@ def atom(state):
         ct_type == 'LPAREN' ->
             state = advance(state)
 
-            p_result = expr(state)
+            p_result = case (Map.get(state, 'current_tok') |> Map.get('type')) == 'RPAREN':
+                True -> [state, None]
+                False -> expr(state)
+
             state = Enum.at(p_result, 0)
             _expr = Enum.at(p_result, 1)
 
+            ct_type = Map.get(state, 'current_tok') |> Map.get('type')
+
             case:
-                (Map.get(state, 'current_tok') |> Map.get('type')) == 'COMMA' ->
+                # if the _expr is None it means that we are defining
+                # a tuple without elements. Eg: ()
+                ct_type == 'COMMA' or _expr == None ->
                     tuple_expr(state, pos_start, _expr)
-                (Map.get(state, 'current_tok') |> Map.get('type')) == 'RPAREN' ->
+                ct_type == 'RPAREN' ->
                     state = advance(state)
                     [state, _expr]
                 True ->
@@ -1010,7 +1029,11 @@ def lambda_expr(state):
 
 
 def tuple_expr(state, pos_start, first_expr):
-    state = advance(state)
+    # if the first_expr is None it means
+    # that its a a empty tuple being defined
+    # using the two parenteces without anything in between: ()
+
+    state = advance(state) if first_expr != None else state
 
     state = loop_while(
         state,
@@ -1049,9 +1072,12 @@ def tuple_expr(state, pos_start, first_expr):
                     )
     )
 
-    element_nodes = state
-        |> Map.get('_element_nodes', [])
-        |> List.insert_at(0, first_expr)
+    element_nodes = case first_expr:
+        None -> []
+        _ ->
+            state
+                |> Map.get('_element_nodes', [])
+                |> List.insert_at(0, first_expr)
 
     state = state |> Map.delete('_element_nodes')
 
