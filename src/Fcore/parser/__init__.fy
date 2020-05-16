@@ -50,10 +50,7 @@ def advance(state):
             Map.merge(state, new_state)
 
 def parse(state):
-    p_result = statements(state)
-
-    state = p_result |> Enum.at(0)
-    node = p_result |> Enum.at(1)
+    [state, node] = statements(state)
 
     ct = Map.get(state, "current_tok")
 
@@ -95,9 +92,7 @@ def statements(state, expected_ident_gte):
                         |> Map.put("_break", True)
                         |> Map.put("_statements", _statements)
                 True ->
-                    p_result = statement(state)
-                    state = Enum.at(p_result, 0)
-                    _statement = Enum.at(p_result, 1)
+                    [state, _statement] = statement(state)
 
                     case _statement:
                         None ->
@@ -139,20 +134,16 @@ def statement(state):
     ct = Map.get(state, 'current_tok')
     pos_start = Map.get(ct, 'pos_start')
 
-    p_result = case:
+    [state, node] = case:
         Fcore.Parser.Utils.tok_matchs(ct, 'KEYWORD', 'raise') ->
             pos_start = Map.get(ct, 'pos_start')
 
-            p_result = state |> advance() |> expr()
-            state = Enum.at(p_result, 0)
-            _expr = Enum.at(p_result, 1)
+            [state, _expr] = state |> advance() |> expr()
 
             node = Fcore.Parser.Nodes.make_raise_node(_expr, pos_start)
             [state, node]
         True ->
-            p_result = expr(state)
-            state = Enum.at(p_result, 0)
-            _expr = Enum.at(p_result, 1)
+            [state, _expr] = expr(state)
 
             case Map.get(state, "error"):
                 None -> [state, _expr]
@@ -167,9 +158,6 @@ def statement(state):
                     )
                     [state, None]
 
-    state = Enum.at(p_result, 0)
-    node = Enum.at(p_result, 1)
-
     case (Map.get(state, 'current_tok') |> Map.get('type')) == 'EQ':
         True -> pattern_match(state, node, pos_start)
         False -> [state, node]
@@ -181,9 +169,7 @@ def expr(state):
     _and = ["KEYWORD", "and"]
     _or = ["KEYWORD", "or"]
 
-    p_result = bin_op(state, &comp_expr/1, [_and, _or], None)
-    state = Enum.at(p_result, 0)
-    node = Enum.at(p_result, 1)
+    [state, node] = bin_op(state, &comp_expr/1, [_and, _or], None)
 
     ct = Map.get(state, "current_tok")
 
@@ -195,9 +181,7 @@ def expr(state):
         Fcore.Parser.Utils.tok_matchs(ct, 'KEYWORD', 'in') ->
             state = advance(state)
 
-            p_result = expr(state)
-            state = Enum.at(p_result, 0)
-            right_node = Enum.at(p_result, 1)
+            [state, right_node] = expr(state)
 
             node = Fcore.Parser.Nodes.make_in_node(
                 node, right_node
@@ -213,9 +197,7 @@ def comp_expr(state):
         True ->
             state = advance(state)
 
-            p_result = comp_expr(state)
-            state = Enum.at(p_result, 0)
-            c_node = Enum.at(p_result, 1)
+            [state, c_node] = comp_expr(state)
 
             node = Fcore.Parser.Nodes.make_unary_node(ct, c_node)
 
@@ -233,9 +215,7 @@ def power(state):
     bin_op(state, &call/1, ["POW"], &call/1)
 
 def call(state):
-    p_result = atom(state)
-    state = Enum.at(p_result, 0)
-    _atom = Enum.at(p_result, 1)
+    [state, _atom] = atom(state)
 
     prev_tok_ln = state
         |> Map.get('_tokens')
@@ -261,9 +241,7 @@ def factor(state):
         True ->
             state = state |> advance()
 
-            p_result = factor(state)
-            state = p_result |> Enum.at(0)
-            _factor = p_result |> Enum.at(1)
+            [state, _factor] = factor(state)
 
             case Map.get(state, "error"):
                 None ->
@@ -297,12 +275,9 @@ def atom(state):
         ct_type == 'LPAREN' ->
             state = advance(state)
 
-            p_result = case (Map.get(state, 'current_tok') |> Map.get('type')) == 'RPAREN':
+            [state, _expr] = case (Map.get(state, 'current_tok') |> Map.get('type')) == 'RPAREN':
                 True -> [state, None]
                 False -> expr(state)
-
-            state = Enum.at(p_result, 0)
-            _expr = Enum.at(p_result, 1)
 
             ct_type = Map.get(state, 'current_tok') |> Map.get('type')
 
@@ -355,9 +330,7 @@ def loop_while(st, while_func, do_func):
 def bin_op(state, func_a, ops, func_b):
     func_b = func_b if func_b != None else func_a
 
-    p_result = func_a(state)
-    state = p_result |> Enum.at(0)
-    first_left = p_result |> Enum.at(1)
+    [state, first_left] = func_a(state)
 
     ct = Map.get(state, "current_tok")
 
@@ -376,10 +349,8 @@ def bin_op(state, func_a, ops, func_b):
 
             op_tok = Map.get(state, 'current_tok')
             state = advance(state)
-            p_result = func_b(state)
 
-            state = p_result |> Enum.at(0)
-            right = p_result |> Enum.at(1)
+            [state, right] = func_b(state)
 
             case Map.get(state, "error"):
                 None ->
@@ -414,12 +385,10 @@ def list_expr(state):
             case Map.get(state, "current_tok") |> Map.get("type"):
                 "RSQUARE" -> state
                 _ ->
-                    p_result = expr(state)
-                    state = p_result |> Enum.at(0) |> Map.put("_element_nodes", element_nodes)
-                    _expr = p_result |> Enum.at(1)
+                    [state, _expr] = expr(state)
 
                     Map.put(
-                        state,
+                        state |> Map.put("_element_nodes", element_nodes),
                         "_element_nodes",
                         List.flatten([element_nodes, _expr])
                     )
@@ -453,17 +422,13 @@ def map_expr(state):
     pos_start = Map.get(state, "current_tok") |> Map.get("pos_start")
 
     map_get_pairs = lambda state:
-        p_result = expr(state)
-        state = p_result |> Enum.at(0)
-        key = p_result |> Enum.at(1)
+        [state, key] = expr(state)
 
         case:
             (Map.get(state, "current_tok") |> Map.get("type")) == "DO" ->
                 state = advance(state)
 
-                p_result = expr(state)
-                state = p_result |> Enum.at(0)
-                value = p_result |> Enum.at(1)
+                [state, value] = expr(state)
 
                 [state, {key: value}]
             True ->
@@ -494,9 +459,7 @@ def map_expr(state):
             case Map.get(state, "current_tok") |> Map.get("type"):
                 "RCURLY" -> state
                 _ ->
-                    p_result = map_get_pairs(state)
-                    state = Enum.at(p_result, 0)
-                    map = Enum.at(p_result, 1)
+                    [state, map] = map_get_pairs(state)
 
                     case map:
                         None -> state
@@ -531,17 +494,13 @@ def map_expr(state):
 def if_expr(state, expr_for_true):
     state = advance(state)
 
-    p_result = expr(state)
-    state = Enum.at(p_result, 0)
-    condition = Enum.at(p_result, 1)
+    [state, condition] = expr(state)
 
     case Fcore.Parser.Utils.tok_matchs(Map.get(state, "current_tok"), "KEYWORD", "else"):
         True ->
             state = advance(state)
 
-            p_result = expr(state)
-            state = Enum.at(p_result, 0)
-            expr_for_false = Enum.at(p_result, 1)
+            [state, expr_for_false] = expr(state)
 
             node = Fcore.Parser.Nodes.make_if_node(
                 condition, expr_for_true, expr_for_false
@@ -561,9 +520,7 @@ def if_expr(state, expr_for_true):
 def pipe_expr(state, left_node):
     state = advance(state)
 
-    p_result = expr(state)
-    state = Enum.at(p_result, 0)
-    right_node = Enum.at(p_result, 1)
+    [state, right_node] = expr(state)
 
     case Map.get(state, 'error'):
         None ->
@@ -639,12 +596,9 @@ def case_expr(state):
 
     is_cond = (Map.get(state, "current_tok") |> Map.get("type")) == "DO"
 
-    p_result = case is_cond:
+    [state, _expr] = case is_cond:
         True -> [state, None]
         False -> expr(state)
-
-    state = Enum.at(p_result, 0)
-    _expr = Enum.at(p_result, 1)
 
     do_line = pos_start |> Map.get('ln')
     state = advance(state)
@@ -679,20 +633,15 @@ def case_expr(state):
 
                     this_ident = Map.get(state, 'current_tok') |> Map.get('ident')
 
-                    p_result = expr(state)
-                    state = p_result |> Enum.at(0)
-                    left_expr = p_result |> Enum.at(1)
+                    [state, left_expr] = expr(state)
 
                     case (Map.get(state, 'current_tok') |> Map.get('type')) == 'ARROW':
                         True ->
                             state = advance(state)
 
-                            p_result = case (Map.get(state, 'current_tok') |> Map.get('ident')) == this_ident:
+                            [state, right_expr] = case (Map.get(state, 'current_tok') |> Map.get('ident')) == this_ident:
                                 True -> statement(state)
                                 False -> statements(state, this_ident + 4)
-
-                            state = Enum.at(p_result, 0)
-                            right_expr = Enum.at(p_result, 1)
 
                             cases = List.insert_at(cases, -1, [left_expr, right_expr])
 
@@ -773,9 +722,7 @@ def func_def_expr(state):
 
     state = advance(state)
 
-    p_result = resolve_params(state, "RPAREN")
-    state = Enum.at(p_result, 0)
-    arg_name_toks = Enum.at(p_result, 1)
+    [state, arg_name_toks] = resolve_params(state, "RPAREN")
 
     state = advance(state)
 
@@ -797,9 +744,7 @@ def func_def_expr(state):
             Map.get(Map.get(state, "current_tok"), "pos_end")
         )
 
-    p_result = statements(state, 4)
-    state = Enum.at(p_result, 0)
-    body = Enum.at(p_result, 1)
+    [state, body] = statements(state, 4)
 
     case [arg_name_toks, body]:
         [_, None] ->    [state, None]
@@ -926,15 +871,11 @@ def call_func_expr(state, atom):
                                             )
                                         False -> state
 
-                                    p_result = expr(state)
-                                    state = Enum.at(p_result, 0)
-                                    value = Enum.at(p_result, 1)
+                                    [state, value] = expr(state)
 
                                     [state, arg_nodes, Map.merge(keywords, {key_value: value})]
                                 False ->
-                                    p_result = expr(state)
-                                    state = Enum.at(p_result, 0)
-                                    _expr = Enum.at(p_result, 1)
+                                    [state, _expr] = expr(state)
 
                                     [state, List.insert_at(arg_nodes, -1, _expr), keywords]
 
@@ -995,9 +936,7 @@ def lambda_expr(state):
 
     state = advance(state)
 
-    p_result = resolve_params(state, 'DO')
-    state = Enum.at(p_result, 0)
-    arg_name_toks = Enum.at(p_result, 1)
+    [state, arg_name_toks] = resolve_params(state, 'DO')
 
     state = case (Map.get(state, 'current_tok') |> Map.get('type')) == 'DO':
         True -> advance(state)
@@ -1009,12 +948,9 @@ def lambda_expr(state):
         )
 
 
-    p_result = case (Map.get(state, 'current_tok') |> Map.get('pos_start') |> Map.get('ln')) == lambda_token_ln:
+    [state, body] = case (Map.get(state, 'current_tok') |> Map.get('pos_start') |> Map.get('ln')) == lambda_token_ln:
         True -> expr(state)
         False -> statements(state, lambda_token_ident + 4)
-
-    state = Enum.at(p_result, 0)
-    body = Enum.at(p_result, 1)
 
     case [arg_name_toks, body]:
         [_, None] ->    [state, None]
@@ -1048,9 +984,7 @@ def tuple_expr(state, pos_start, first_expr):
             exprs = Map.get(state, '_element_nodes', [])
             state = Map.delete(state, '_element_nodes')
 
-            p_result = expr(state)
-            state = Enum.at(p_result, 0)
-            _expr = Enum.at(p_result, 1)
+            [state, _expr] = expr(state)
 
             exprs = List.insert_at(exprs, -1, _expr)
 
@@ -1118,9 +1052,7 @@ def pattern_match(state, left_node, pos_start):
             )
             [state, None]
         valid_left_node == True ->
-            p_result = expr(state)
-            state = Enum.at(p_result, 0)
-            right_node = Enum.at(p_result, 1)
+            [state, right_node] = expr(state)
 
             pos_end = Map.get(state, 'current_tok') |> Map.get('pos_start')
 
