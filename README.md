@@ -174,7 +174,8 @@ def add(a)
 - [x] Remove dependency of Jason lib
 - [ ] Support to multiline if with elif and else
 - [x] Support to tuples
-- [ ] Support to pattern match
+- [x] Support to pattern match in variable assign
+- [ ] Support to pattern match in function arguments
 - [x] Create the pos_parser
 - [x] PosParser -> convert the locall function calls to support call function without dot
 - [ ] PosParser -> Add logic to check imports, undefined vars, etc.
