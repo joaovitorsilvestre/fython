@@ -41,11 +41,37 @@ def convert_string_node(node):
 def convert_varaccess_node(node):
     tok_value = node |> Map.get("var_name_tok") |> Map.get("value")
 
-    case tok_value:
-        "True" -> "true"
-        "False" -> "false"
-        "None" -> "nil"
-        _ -> Enum.join(["{:", tok_value, ", [], Elixir}"])
+    case:
+        tok_value == "True" -> "true"
+        tok_value == "False" -> "false"
+        tok_value == "None" -> "nil"
+        String.contains?(tok_value, ".") ->
+            # this makes possible to access map with dot notation
+            # eg: a = {"b": {"c": 1}}
+            # a.b.c == 1
+
+            values = tok_value
+                |> String.split(".")
+                |> Enum.reverse()
+
+            (values, [last]) = Enum.split(values, -1)
+
+            r = Enum.reduce(
+                values,
+                Enum.join(['"', last, '"']),
+                lambda i, acc:
+                    current = Enum.join([
+                        "[{:", i, ", [], Elixir}, ", acc, "]"
+                    ])
+
+                    Enum.join(["{{:., [], ", current, "}, [], []}"])
+                ,
+            )
+            IO.inspect('rrrrrrrr')
+            IO.inspect(r)
+            r
+
+        True -> Enum.join(["{:", tok_value, ", [], Elixir}"])
 
 def convert_patternmatch_node(node):
     left = Map.get(node, 'left_node') |> convert()

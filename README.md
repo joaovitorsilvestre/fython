@@ -169,9 +169,13 @@ def add(a)
 ```
 - [ ] Lexer must save the value for KEYWORD arguments so we can show they in the expection.
 `Expeted ... Received: KEYWORD` should be `Expeted ... Received: lambda`
+- [ ] `{values, [last]} = ...` the left part of this pattern is being evaluated as a empty map. It should be an error.
 
 #### MUST HAVE
 - [x] Remove dependency of Jason lib
+- [ ] Use real tuples in conversor instead of strings
+- [ ] Support to range syntax
+- [ ] Support to try catch. Finally too?
 - [ ] Support to multiline if with elif and else
 - [x] Support to tuples
 - [x] Support to pattern match in variable assign
