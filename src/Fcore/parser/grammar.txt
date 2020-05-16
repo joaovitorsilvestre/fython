@@ -22,7 +22,10 @@ expr                : IDENTIFIER EQ expr
                     : if-expr
                     : pipe-expr
 
-pattern-match       : expr EQ expr
+pattern-match       : INT|FLOAT|IDENTIFIER|STRING|ATOM EQ expr
+                    | map-expr EQ expr
+                    | list-expr EQ expr
+                    | tuple-expr EQ expr
 
 comp-expr           : KEYWORD:not comp-expr
                     : arith-expr ((EE|LT|GT|LTE|GTE) arith-expr)*
