@@ -1,3 +1,6 @@
+def node_types_accept_pattern():
+    ['ListNode', 'MapNode', 'TupleNode', 'VarAccessNode']
+
 def make_number_node(tok):
     {
         "NodeType": "NumberNode",
@@ -68,16 +71,6 @@ def make_in_node(left_expr, right_expr):
         "pos_end": Map.get(right_expr, "pos_end")
     }
 
-
-def make_varassign_node(var_name_tok, value_node):
-    {
-        "NodeType": "VarAssignNode",
-        "var_name_tok": var_name_tok,
-        "value_node": value_node,
-        "pos_start": Map.get(var_name_tok, "pos_start"),
-        "pos_end": Map.get(value_node, "pos_end")
-    }
-
 def make_statements_node(statements, pos_start, pos_end):
     {
         "NodeType": "StatementsNode",
@@ -114,6 +107,16 @@ def make_tuple_node(element_nodes, pos_start, pos_end):
     {
         "NodeType": "TupleNode",
         "element_nodes": element_nodes,
+        "pos_start": pos_start,
+        "pos_end": pos_end
+    }
+
+
+def make_patternmatch_node(left_node, right_node, pos_start, pos_end):
+    {
+        "NodeType": "PatternMatchNode",
+        "left_node": left_node,
+        "right_node": right_node,
         "pos_start": pos_start,
         "pos_end": pos_end
     }

@@ -4,7 +4,7 @@ def convert(node):
         "NumberNode"        -> convert_number_node(node)
         "AtomNode"          -> convert_atom_node(node)
         "ListNode"          -> convert_list_node(node)
-        "VarAssignNode"     -> convert_varassign_node(node)
+        "PatternMatchNode"  -> convert_patternmatch_node(node)
         "IfNode"            -> convert_if_node(node)
         "VarAccessNode"     -> convert_varaccess_node(node)
         "UnaryOpNode"       -> convert_unaryop_node(node)
@@ -47,13 +47,15 @@ def convert_varaccess_node(node):
         "None" -> "nil"
         _ -> Enum.join(["{:", tok_value, ", [], Elixir}"])
 
-def convert_varassign_node(node):
+def convert_patternmatch_node(node):
+    left = Map.get(node, 'left_node') |> convert()
+    right = Map.get(node, 'right_node') |> convert()
+
     Enum.join([
-        "{:=, [], [{:",
-        node |> Map.get("var_name_tok") |> Map.get("value"),
-        ", [], Elixir}, ",
-        convert(node |> Map.get("value_node")),
-        "]}"
+        "{:=, ",
+        "[], ",
+        "[", left , ", ", right , "]",
+        "}"
     ])
 
 def convert_if_node(node):

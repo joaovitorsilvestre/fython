@@ -10,12 +10,8 @@ def convert_local_function_calls(node, var_names_avaliable):
     # some variable defined previously or if the variable was received as argument
     # for the current function
 
-    # Only the StatementsNode can have a VarAssignNode
+    # Only the StatementsNode can have a PatternMatchNode
     # and only the matched nodes bellow have a StatementsNode inside
-
-    # The func_def and lambda are special cases because it
-    # can have a function being received by param.
-    # Except for the name, both are equal so we can use the same function
 
     case Map.get(node, 'NodeType') if is_map(node) else None:
         'StatementsNode' -> resolve_statements(node, var_names_avaliable)
@@ -26,8 +22,7 @@ def convert_local_function_calls(node, var_names_avaliable):
         'IfNode' -> resolve_if_node(node, var_names_avaliable)
         'PipeNode' -> resolve_pipe_node(node, var_names_avaliable)
         'InNode' -> resolve_in_node(node, var_names_avaliable)
-        'VarAssignNode' -> resolve_varassign_node(node, var_names_avaliable)
-        'ListNode' -> resolve_list_node(node, var_names_avaliable)
+        'ListNode' -> resolve_list_or_tuple_node(node, var_names_avaliable)
         'MapNode' -> resolve_map_node(node, var_names_avaliable)
         'RaiseNode' -> resolve_raise_node(node, var_names_avaliable)
         'UnaryOpNode' -> resolve_unary_node(node, var_names_avaliable)
@@ -35,14 +30,41 @@ def convert_local_function_calls(node, var_names_avaliable):
         _ -> node
 
 
+def get_variables_bound_in_pattern(node):
+    node_type = Map.get(node, 'NodeType')
+
+    filter_types = lambda i: Map.get(i, 'NodeType') in Fcore.Parser.Nodes.node_types_accept_pattern()
+
+    case:
+        node_type == 'MapNode' ->
+            node
+                |> Map.get("pairs_list")
+                |> List.flatten()
+                |> Enum.filter(filter_types)
+                |> Enum.map(&get_variables_bound_in_pattern/1)
+        node_type in ['TupleNode', 'ListNode'] ->
+            node
+                |> Map.get('element_nodes')
+                |> Enum.filter(filter_types)
+                |> Enum.map(&get_variables_bound_in_pattern/1)
+        "VarAccessNode" ->
+            Map.get(node, "var_name_tok") |> Map.get("value")
+        True ->
+            raise Enum.join([
+                "The node type '", node_type, "' doesnt work as a pattern match"
+            ])
+
+
 def resolve_statements(node, var_names_avaliable):
     defined_vars_this_level = Map.get(node, 'statement_nodes')
         |> Enum.filter(lambda i:
-            Map.get(i, 'NodeType') == 'VarAssignNode'
+            Map.get(i, 'NodeType') == 'PatternMatchNode'
         )
         |> Enum.map(lambda i:
-            Map.get(i, 'var_name_tok') |> Map.get('value')
+            # only the left node can assign any variable
+            get_variables_bound_in_pattern(Map.get(i, 'left_node'))
         )
+        |> List.flatten()
 
     var_names_avaliable = List.flatten([var_names_avaliable, defined_vars_this_level])
 
@@ -156,7 +178,7 @@ def resolve_varassign_node(node, var_names_avaliable):
         }
     )
 
-def resolve_list_node(node, var_names_avaliable):
+def resolve_list_or_tuple_node(node, var_names_avaliable):
     Map.merge(
         node,
         {
