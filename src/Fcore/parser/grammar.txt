@@ -22,8 +22,7 @@ expr                : IDENTIFIER EQ expr
                     : if-expr
                     : pipe-expr
 
-pattern-match       : INT|FLOAT|IDENTIFIER|STRING|ATOM EQ expr
-                    | map-expr EQ expr
+pattern-match       : map-expr EQ expr
                     | list-expr EQ expr
                     | tuple-expr EQ expr
 
