@@ -48,7 +48,7 @@ call-expr           : atom (
                         RPAREN
                     )?
 
-atom                : INT|FLOAT|IDENTIFIER|STRING|ATOM
+atom                : INT|FLOAT|IDENTIFIER|STRING|ATOM|PIN IDENTIFIER
                     : LPAREN expr RPAREN
                     : tuple-expr
                     : list-expr

@@ -30,6 +30,7 @@ def valid_token_type?(type):
         "RCURLY",
         "NEWLINE",
         "PIPE",
+        "PIN",
         "EOF"
     ]
     Enum.member?(tokens, type)

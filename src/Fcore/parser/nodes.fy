@@ -17,10 +17,11 @@ def make_string_node(tok):
         "pos_end": Map.get(tok, "pos_end")
     }
 
-def make_varaccess_node(var_name_tok):
+def make_varaccess_node(var_name_tok, pinned):
     {
         "NodeType": "VarAccessNode",
         "var_name_tok": var_name_tok,
+        "pinned": pinned,
         "pos_start": Map.get(var_name_tok, "pos_start"),
         "pos_end": Map.get(var_name_tok, "pos_end")
     }

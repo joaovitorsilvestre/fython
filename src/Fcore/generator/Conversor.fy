@@ -41,6 +41,10 @@ def convert_string_node(node):
 def convert_varaccess_node(node):
     tok_value = node |> Map.get("var_name_tok") |> Map.get("value")
 
+    pinned = Map.get(node, "pinned")
+
+    pin_node = lambda i: Enum.join(["{:^, [], [", i, "]}"]) if pinned else i
+
     case:
         tok_value == "True" -> "true"
         tok_value == "False" -> "false"
@@ -56,22 +60,20 @@ def convert_varaccess_node(node):
 
             (values, [last]) = Enum.split(values, -1)
 
-            r = Enum.reduce(
-                values,
-                Enum.join(['"', last, '"']),
-                lambda i, acc:
-                    current = Enum.join([
-                        "[{:", i, ", [], Elixir}, ", acc, "]"
-                    ])
+            values
+                |> Enum.reduce(
+                    Enum.join(['"', last, '"']),
+                    lambda i, acc:
+                        current = Enum.join([
+                            "[{:", i, ", [], Elixir}, ", acc, "]"
+                        ])
 
-                    Enum.join(["{{:., [], ", current, "}, [], []}"])
-                ,
-            )
-            IO.inspect('rrrrrrrr')
-            IO.inspect(r)
-            r
+                        Enum.join(["{{:., [], ", current, "}, [], []}"])
+                    ,
+                )
+                |> pin_node()
 
-        True -> Enum.join(["{:", tok_value, ", [], Elixir}"])
+        True -> Enum.join(["{:", tok_value, ", [], Elixir}"]) |> pin_node()
 
 def convert_patternmatch_node(node):
     left = Map.get(node, 'left_node') |> convert()
@@ -132,9 +134,20 @@ def convert_map_node(node):
     pairs = node
         |> Map.get("pairs_list")
         |> Enum.map(lambda pair:
-            key = pair |> Enum.at(0)
-            value = pair |> Enum.at(1)
-            Enum.join(["{", convert(key), ", ", convert(value), "}"])
+            [key, value] = pair
+
+            key = case Map.get(key, "NodeType") == 'VarAccessNode':
+                True ->
+                    key_name = Map.get(key, "var_name_tok") |> Map.get("value")
+                    pinned = Map.get(key, 'pinned')
+
+                    case pinned:
+                        True -> Enum.join(["{:", key_name, ", [], Elixir}"])
+                        False -> Enum.join([":", key_name])
+
+                False -> convert(key)
+
+            Enum.join(["{", key, ", ", convert(value), "}"])
         )
         |> Enum.join(', ')
 
