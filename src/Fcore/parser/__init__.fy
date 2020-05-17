@@ -178,6 +178,8 @@ def expr(state):
             if_expr(state, node)
         Map.get(ct, 'type') == 'PIPE' ->
             pipe_expr(state, node)
+        Map.get(ct, 'type') == 'LSQUARE' ->
+            static_access_expr(state, node)
         Fcore.Parser.Utils.tok_matchs(ct, 'KEYWORD', 'in') ->
             state = advance(state)
 
@@ -1065,3 +1067,28 @@ def pattern_match(state, left_node, pos_start):
             )
 
             [state, node]
+
+def static_access_expr(state, left_node):
+    state = advance(state)
+
+    [state, node_value] = expr(state)
+
+    state = case Map.get(state, 'current_tok') |> Map.get('type'):
+        'RSQUARE' -> state
+        _ ->
+            Fcore.Parser.Utils.set_error(
+                state,
+                "Expected ]",
+                Map.get(Map.get(state, "current_tok"), "pos_start"),
+                Map.get(Map.get(state, "current_tok"), "pos_end")
+            )
+
+    case Map.get(state, 'error'):
+        None ->
+            pos_end = Map.get(state, 'current_tok') |> Map.get('pos_end')
+            node = Fcore.Parser.Nodes.make_staticaccess_node(left_node, node_value, pos_end)
+
+            state = advance(state)
+
+            [state, node]
+        _ -> [state, None]

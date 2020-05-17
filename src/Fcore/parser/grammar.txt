@@ -21,10 +21,13 @@ expr                : IDENTIFIER EQ expr
                     : expr IN expr
                     : if-expr
                     : pipe-expr
+                    : static-access-expr
 
 pattern-match       : map-expr EQ expr
                     | list-expr EQ expr
                     | tuple-expr EQ expr
+
+static-access-expr  : expr LSQUARE expr RSQUARE
 
 comp-expr           : KEYWORD:not comp-expr
                     : arith-expr ((EE|LT|GT|LTE|GTE) arith-expr)*

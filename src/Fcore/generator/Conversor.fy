@@ -20,6 +20,7 @@ def convert(node):
         "InNode"            -> convert_in_node(node)
         "TupleNode"         -> convert_tuple_node(node)
         "RaiseNode"         -> convert_raise_node(node)
+        "StaticAccessNode"  -> convert_staticaccess_node(node)
         "FuncAsVariableNode" -> convert_funcasvariable_node(node)
 
 def convert_number_node(node):
@@ -49,26 +50,6 @@ def convert_varaccess_node(node):
         tok_value == "True" -> "true"
         tok_value == "False" -> "false"
         tok_value == "None" -> "nil"
-        String.contains?(tok_value, ".") ->
-            # this makes possible to access map with dot notation
-            # eg: a = {"b": {"c": 1}}
-            # a.b.c == 1
-
-            ([first], values) = tok_value
-                |> String.split(".")
-                |> Enum.split(1)
-
-            calls = values
-                |> Enum.reduce(
-                    Enum.join(["{:", first, ", [], Elixir}"]),
-                    lambda i, acc:
-                        Enum.join([
-                            "{{:., [], [", acc, ", :", i, "]}, [], []}"
-                        ])
-                    ,
-                )
-                |> pin_node()
-
         True -> Enum.join(["{:", tok_value, ", [], Elixir}"]) |> pin_node()
 
 def convert_patternmatch_node(node):
@@ -328,41 +309,15 @@ def convert_call_node(node):
         modules = name |> String.split(".") |> List.pop_at(-1) |> elem(1)
         function = name |> String.split(".") |> Enum.at(-1)
 
-        first_letter = Enum.at(modules, 0) |> String.at(0)
+        modules = modules
+            |> Enum.map(lambda i: Enum.join([':', i], ''))
+            |> Enum.join(', ')
 
-        case first_letter == String.upcase(first_letter):
-            True ->
-                modules = modules
-                    |> Enum.map(lambda i: Enum.join([':', i], ''))
-                    |> Enum.join(', ')
-
-                r = Enum.join([
-                    '{{:., [], [{:__aliases__, [alias: false], [',
-                    modules,
-                    ']}, :', function,']}, [], ', arguments, '}'
-                ])
-            False ->
-                # this makes possible to access map with dot notation AND call the result
-                # eg:
-                # > a = {"b": lambda i, g: i + g}
-                # > a.b(1, 2)
-                # 3
-
-                ([first], values) = name
-                    |> String.split(".")
-                    |> Enum.split(1)
-
-                calls = values
-                    |> Enum.reduce(
-                        Enum.join(["{:", first, ", [], Elixir}"]),
-                        lambda i, acc:
-                            Enum.join([
-                                "{{:., [], [", acc, ", :", i, "]}, [], []}"
-                            ])
-                        ,
-                    )
-
-                Enum.join(["{{:., [], [", calls,"]}, [], ", arguments, "}"])
+        r = Enum.join([
+            '{{:., [], [{:__aliases__, [alias: false], [',
+            modules,
+            ']}, :', function,']}, [], ', arguments, '}'
+        ])
 
     case cases:
         [True, _] -> module_function_call_case(func_name, arguments)
@@ -506,3 +461,14 @@ def convert_tuple_node(node):
         |> Enum.join(", ")
 
     Enum.join(["{:{}, [], [", items, "]}"])
+
+def convert_staticaccess_node(node):
+    to_be_accesed = convert(Map.get(node, "node"))
+    value_to_find = convert(Map.get(node, "node_value"))
+
+    Enum.join([
+        "{{:., [], [{:__aliases__, [alias: false], [:Map]}, :fetch!]}, [], [",
+        to_be_accesed, ", ", value_to_find, "]}"
+    ])
+
+
