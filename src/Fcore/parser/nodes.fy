@@ -160,6 +160,13 @@ def make_lambda_node(var_name_tok, arg_name_toks, body_node, pos_start):
 
 
 def make_call_node(node_to_call, arg_nodes, keywords, pos_end):
+    # todo all calls must be local except for the ones
+    # todo that node_to_call is a varaccess node that starts with a capital letter
+
+    local_call = case Map.get(node_to_call, "NodeType"):
+        "CallNode" -> True
+        _ -> False
+
     {
         "NodeType": "CallNode",
         "node_to_call": node_to_call,
@@ -168,7 +175,7 @@ def make_call_node(node_to_call, arg_nodes, keywords, pos_end):
         "arity": Enum.count(arg_nodes),
         "pos_start": Map.get(node_to_call, 'pos_start'),
         "pos_end": pos_end,
-        "local_call": False
+        "local_call": local_call
     }
 
 def make_unary_node(tok, node):

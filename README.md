@@ -173,6 +173,8 @@ def add(a)
 
 #### MUST HAVE
 - [x] Remove dependency of Jason lib
+- [ ] Stop using PosParser to guess if a call is a local call. It can be a lot easier to just consider
+all call local calls, but call of modules like Map.get(...)
 - [ ] Use real tuples in conversor instead of strings
 - [ ] Support to range syntax
 - [ ] Support to try catch. Finally too?
