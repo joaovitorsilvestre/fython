@@ -238,10 +238,10 @@ def call(state, _atom):
 
     [state, _atom] = case:
         ct_type == 'LPAREN' and ct_line == prev_tok_ln -> call_func_expr(state, _atom)
-        ct_type == 'RSQUARE' and ct_line == prev_tok_ln -> static_access_expr(state, _atom)
+        ct_type == 'LSQUARE' and ct_line == prev_tok_ln -> static_access_expr(state, _atom)
         True -> [state, _atom]
 
-    case (Map.get(state, 'current_tok') |> Map.get('type')) in ['LPAREN', 'RSQUARE']:
+    case (Map.get(state, 'current_tok') |> Map.get('type')) in ['LPAREN', 'LSQUARE']:
         True -> call(state, _atom)
         False -> [state, _atom]
 
