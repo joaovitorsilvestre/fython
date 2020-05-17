@@ -38,29 +38,6 @@ def convert_string_node(node):
     # `"` and `/` (and probably another chars too)
     Enum.join(['"', value ,'"'])
 
-def value_to_call(tok_value, arguments_of_last_call):
-    ([first], values) = tok_value
-        |> String.split(".")
-        |> Enum.split(1)
-
-    calls = values
-        |> Enum.split(-1)
-        |> elem(0)
-        |> Enum.reduce(
-            Enum.join(["{:", first, ", [], Elixir}"]),
-            lambda i, acc:
-                Enum.join([
-                    "{{:., [], [", acc, ", :", i, "]}, [], []}"
-                ])
-            ,
-        )
-
-    r = Enum.join([
-        "{{:., [], [", calls, ", :", Enum.split(values, -1) |> elem(1) |> Enum.at(0), "]}, [], ", arguments_of_last_call, "}"
-    ])
-    IO.inspect(r)
-    r
-
 def convert_varaccess_node(node):
     tok_value = node |> Map.get("var_name_tok") |> Map.get("value")
 
@@ -77,7 +54,20 @@ def convert_varaccess_node(node):
             # eg: a = {"b": {"c": 1}}
             # a.b.c == 1
 
-            value_to_call(tok_value, []) |> pin_node()
+            ([first], values) = tok_value
+                |> String.split(".")
+                |> Enum.split(1)
+
+            calls = values
+                |> Enum.reduce(
+                    Enum.join(["{:", first, ", [], Elixir}"]),
+                    lambda i, acc:
+                        Enum.join([
+                            "{{:., [], [", acc, ", :", i, "]}, [], []}"
+                        ])
+                    ,
+                )
+                |> pin_node()
 
         True -> Enum.join(["{:", tok_value, ", [], Elixir}"]) |> pin_node()
 
@@ -352,7 +342,27 @@ def convert_call_node(node):
                     ']}, :', function,']}, [], ', arguments, '}'
                 ])
             False ->
-                value_to_call(name, arguments)
+                # this makes possible to access map with dot notation AND call the result
+                # eg:
+                # > a = {"b": lambda i, g: i + g}
+                # > a.b(1, 2)
+                # 3
+
+                ([first], values) = name
+                    |> String.split(".")
+                    |> Enum.split(1)
+
+                calls = values
+                    |> Enum.reduce(
+                        Enum.join(["{:", first, ", [], Elixir}"]),
+                        lambda i, acc:
+                            Enum.join([
+                                "{{:., [], [", acc, ", :", i, "]}, [], []}"
+                            ])
+                        ,
+                    )
+
+                Enum.join(["{{:., [], [", calls,"]}, [], ", arguments, "}"])
 
     case cases:
         [True, _] -> module_function_call_case(func_name, arguments)
