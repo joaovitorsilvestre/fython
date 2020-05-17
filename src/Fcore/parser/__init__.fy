@@ -223,25 +223,32 @@ def call(state, _atom):
         None -> atom(state)
         _ -> [state, _atom]
 
-    prev_tok_ln = state
-        |> Map.get('_tokens')
-        |> Enum.at(Map.get(state, '_current_tok_idx') - 1)
-        |> Map.get('pos_end')
-        |> Map.get('ln')
+    get_info = lambda state:
+        ct = Map.get(state, 'current_tok')
+        ct_type = Map.get(ct, 'type')
+        ct_line = Map.get(ct, 'pos_start') |> Map.get('ln')
 
-    ct = Map.get(state, 'current_tok')
-    ct_type = Map.get(ct, 'type')
-    ct_line = Map.get(ct, 'pos_start') |> Map.get('ln')
+        prev_tok_ln = state
+            |> Map.get('_tokens')
+            |> Enum.at(Map.get(state, '_current_tok_idx') - 1)
+            |> Map.get('pos_end')
+            |> Map.get('ln')
+
+        (ct, ct_type, ct_line, prev_tok_ln)
 
     # we must only consider as a call node if the previous node is
     # in the same line that the left parent
+
+    (ct, ct_type, ct_line, prev_tok_ln) = get_info(state)
 
     [state, _atom] = case:
         ct_type == 'LPAREN' and ct_line == prev_tok_ln -> call_func_expr(state, _atom)
         ct_type == 'LSQUARE' and ct_line == prev_tok_ln -> static_access_expr(state, _atom)
         True -> [state, _atom]
 
-    case (Map.get(state, 'current_tok') |> Map.get('type')) in ['LPAREN', 'LSQUARE']:
+    (ct, ct_type, ct_line, prev_tok_ln) = get_info(state)
+
+    case ct_line == prev_tok_ln and ct_type in ['LPAREN', 'LSQUARE']:
         True -> call(state, _atom)
         False -> [state, _atom]
 
