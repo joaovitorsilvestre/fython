@@ -9,7 +9,7 @@ def execute(tokens):
         "_tokens": tokens |> Enum.filter(lambda i: Map.get(i, "type") != 'NEWLINE')
     }
 
-    state |> advance() |> parse()
+    state |> advance() |> parse() |> Fcore.Parser.Pos.execute()
 
 def advance(state):
     # before anything, lets check that the states only contains expected keys

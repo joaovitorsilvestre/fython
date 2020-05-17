@@ -301,18 +301,24 @@ def convert_call_node(node):
                 |> Map.get("var_name_tok")
                 |> Map.get("value")
 
-            modules = func_name |> String.split(".") |> List.pop_at(-1) |> elem(1)
-            function = func_name |> String.split(".") |> Enum.at(-1)
+            case String.contains?(func_name, '.'):
+                True ->
+                    modules = func_name |> String.split(".") |> List.pop_at(-1) |> elem(1)
+                    function = func_name |> String.split(".") |> Enum.at(-1)
 
-            modules = modules
-                |> Enum.map(lambda i: Enum.join([':', i], ''))
-                |> Enum.join(', ')
+                    modules = modules
+                        |> Enum.map(lambda i: Enum.join([':', i], ''))
+                        |> Enum.join(', ')
 
-            r = Enum.join([
-                '{{:., [], [{:__aliases__, [alias: false], [',
-                modules,
-                ']}, :', function,']}, [], ', arguments, '}'
-            ])
+                    r = Enum.join([
+                        '{{:., [], [{:__aliases__, [alias: false], [',
+                        modules,
+                        ']}, :', function,']}, [], ', arguments, '}'
+                    ])
+                False ->
+                    # this is for call a function that is defined in
+                    # the same module
+                    Enum.join(["{:", func_name, ", [], ", arguments, "}"])
 
 def convert_import_node(node):
     case Map.get(node, "modules_import"):

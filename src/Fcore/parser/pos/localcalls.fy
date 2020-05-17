@@ -26,6 +26,7 @@ def convert_local_function_calls(node, var_names_avaliable):
         'ListNode' -> resolve_list_or_tuple_node(node, var_names_avaliable)
         'MapNode' -> resolve_map_node(node, var_names_avaliable)
         'RaiseNode' -> resolve_raise_node(node, var_names_avaliable)
+        'StaticAccessNode' -> resolve_staticaccess_node(node, var_names_avaliable)
         'UnaryOpNode' -> resolve_unary_node(node, var_names_avaliable)
         'BinOpNode' -> resolve_unary_node(node, var_names_avaliable)
         _ -> node
@@ -104,12 +105,19 @@ def resolve_func_or_lambda(func_def_node, var_names_avaliable):
 
 
 def resolve_call_node(node, var_names_avaliable):
-    func_name = Map.get(node, 'node_to_call')
-        |> Map.get('var_name_tok')
-        |> Map.get('value')
+    local_call = case:
+        (Map.get(node, 'node_to_call') |> Map.get('NodeType')) == 'VarAccessNode' ->
+            func_name = Map.get(node, 'node_to_call')
+                |> Map.get('var_name_tok')
+                |> Map.get('value')
+
+            not String.contains?(func_name, ".") and func_name in var_names_avaliable
+        (Map.get(node, 'node_to_call') |> Map.get('NodeType')) == 'CallNode' -> True
+        (Map.get(node, 'node_to_call') |> Map.get('NodeType')) == 'StaticAccessNode' -> True
+        True -> False
 
     node
-        |> Map.put('local_call', func_name in var_names_avaliable)
+        |> Map.put('local_call', local_call)
         |> Map.merge(
             {
                 "arg_nodes": Enum.map(
@@ -242,6 +250,19 @@ def resolve_unary_node(node, var_names_avaliable):
             ),
             "right_node": convert_local_function_calls(
                 Map.get(node, "right_node"), var_names_avaliable
+            )
+        }
+    )
+
+def resolve_staticaccess_node(state, var_names_avaliable):
+    Map.merge(
+        node,
+        {
+            "node": convert_local_function_calls(
+                Map.get(node, "node"), var_names_avaliable
+            ),
+            "node_value": convert_local_function_calls(
+                Map.get(node, "node_value"), var_names_avaliable
             )
         }
     )
