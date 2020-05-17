@@ -41,11 +41,35 @@ def convert_string_node(node):
 def convert_varaccess_node(node):
     tok_value = node |> Map.get("var_name_tok") |> Map.get("value")
 
-    case tok_value:
-        "True" -> "true"
-        "False" -> "false"
-        "None" -> "nil"
-        _ -> Enum.join(["{:", tok_value, ", [], Elixir}"])
+    pinned = Map.get(node, "pinned")
+
+    pin_node = lambda i: Enum.join(["{:^, [], [", i, "]}"]) if pinned else i
+
+    case:
+        tok_value == "True" -> "true"
+        tok_value == "False" -> "false"
+        tok_value == "None" -> "nil"
+        String.contains?(tok_value, ".") ->
+            # this makes possible to access map with dot notation
+            # eg: a = {"b": {"c": 1}}
+            # a.b.c == 1
+
+            ([first], values) = tok_value
+                |> String.split(".")
+                |> Enum.split(1)
+
+            calls = values
+                |> Enum.reduce(
+                    Enum.join(["{:", first, ", [], Elixir}"]),
+                    lambda i, acc:
+                        Enum.join([
+                            "{{:., [], [", acc, ", :", i, "]}, [], []}"
+                        ])
+                    ,
+                )
+                |> pin_node()
+
+        True -> Enum.join(["{:", tok_value, ", [], Elixir}"]) |> pin_node()
 
 def convert_patternmatch_node(node):
     left = Map.get(node, 'left_node') |> convert()
@@ -106,9 +130,20 @@ def convert_map_node(node):
     pairs = node
         |> Map.get("pairs_list")
         |> Enum.map(lambda pair:
-            key = pair |> Enum.at(0)
-            value = pair |> Enum.at(1)
-            Enum.join(["{", convert(key), ", ", convert(value), "}"])
+            [key, value] = pair
+
+            key = case Map.get(key, "NodeType") == 'VarAccessNode':
+                True ->
+                    key_name = Map.get(key, "var_name_tok") |> Map.get("value")
+                    pinned = Map.get(key, 'pinned')
+
+                    case pinned:
+                        True -> Enum.join(["{:", key_name, ", [], Elixir}"])
+                        False -> Enum.join([":", key_name])
+
+                False -> convert(key)
+
+            Enum.join(["{", key, ", ", convert(value), "}"])
         )
         |> Enum.join(', ')
 
@@ -293,15 +328,41 @@ def convert_call_node(node):
         modules = name |> String.split(".") |> List.pop_at(-1) |> elem(1)
         function = name |> String.split(".") |> Enum.at(-1)
 
-        modules = modules
-            |> Enum.map(lambda i: Enum.join([':', i], ''))
-            |> Enum.join(', ')
+        first_letter = Enum.at(modules, 0) |> String.at(0)
 
-        r = Enum.join([
-            '{{:., [], [{:__aliases__, [alias: false], [',
-            modules,
-            ']}, :', function,']}, [], ', arguments, '}'
-        ])
+        case first_letter == String.upcase(first_letter):
+            True ->
+                modules = modules
+                    |> Enum.map(lambda i: Enum.join([':', i], ''))
+                    |> Enum.join(', ')
+
+                r = Enum.join([
+                    '{{:., [], [{:__aliases__, [alias: false], [',
+                    modules,
+                    ']}, :', function,']}, [], ', arguments, '}'
+                ])
+            False ->
+                # this makes possible to access map with dot notation AND call the result
+                # eg:
+                # > a = {"b": lambda i, g: i + g}
+                # > a.b(1, 2)
+                # 3
+
+                ([first], values) = name
+                    |> String.split(".")
+                    |> Enum.split(1)
+
+                calls = values
+                    |> Enum.reduce(
+                        Enum.join(["{:", first, ", [], Elixir}"]),
+                        lambda i, acc:
+                            Enum.join([
+                                "{{:., [], [", acc, ", :", i, "]}, [], []}"
+                            ])
+                        ,
+                    )
+
+                Enum.join(["{{:., [], [", calls,"]}, [], ", arguments, "}"])
 
     case cases:
         [True, _] -> module_function_call_case(func_name, arguments)

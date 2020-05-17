@@ -24,7 +24,7 @@ def advance(state):
         |> Enum.filter(lambda key_n_value: elem(key_n_value, 0) in valid_keys)
         |> Map.new()
 
-    case state_filtered != state:
+    case state_filtered != state and Map.get(state, 'error') == None:
         True ->
             # If you get this error. Almost sure that some key
             # wasnt deleted in some loop_while lambdas
@@ -264,8 +264,12 @@ def atom(state):
         ct_type == 'STRING' ->
             node = Fcore.Parser.Nodes.make_string_node(ct)
             [state |> advance(), node]
-        ct_type == 'IDENTIFIER' ->
-            node = Fcore.Parser.Nodes.make_varaccess_node(ct)
+        ct_type == 'IDENTIFIER' or ct_type == 'PIN' ->
+            is_pinned = ct_type == 'PIN'
+
+            (state, ct) = (advance(state), Map.get(advance(state), 'current_tok')) if is_pinned else (state, ct)
+
+            node = Fcore.Parser.Nodes.make_varaccess_node(ct, is_pinned)
             [state |> advance(), node]
         ct_type == 'ATOM' ->
             node = Fcore.Parser.Nodes.make_atom_node(ct)

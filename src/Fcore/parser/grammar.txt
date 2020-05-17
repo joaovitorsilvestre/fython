@@ -22,7 +22,9 @@ expr                : IDENTIFIER EQ expr
                     : if-expr
                     : pipe-expr
 
-pattern-match       : expr EQ expr
+pattern-match       : map-expr EQ expr
+                    | list-expr EQ expr
+                    | tuple-expr EQ expr
 
 comp-expr           : KEYWORD:not comp-expr
                     : arith-expr ((EE|LT|GT|LTE|GTE) arith-expr)*
@@ -46,7 +48,7 @@ call-expr           : atom (
                         RPAREN
                     )?
 
-atom                : INT|FLOAT|IDENTIFIER|STRING|ATOM
+atom                : INT|FLOAT|IDENTIFIER|STRING|ATOM|PIN IDENTIFIER
                     : LPAREN expr RPAREN
                     : tuple-expr
                     : list-expr

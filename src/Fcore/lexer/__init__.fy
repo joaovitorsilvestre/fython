@@ -73,6 +73,7 @@ def parse(state):
                     state |> make_identifier() |> parse()
                 cc == "&" -> simple_maker(state, "ECOM")
                 String.contains?(Fcore.Lexer.Consts.digists(), cc) -> parse(make_number(state))
+                cc == "^" -> simple_maker(state, "PIN")
                 cc == "," -> simple_maker(state, "COMMA")
                 cc == "+" -> simple_maker(state, "PLUS")
                 cc == '-' -> double_maker(state, "MINUS", ">", "ARROW")
