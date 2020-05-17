@@ -9,7 +9,7 @@ def execute(tokens):
         "_tokens": tokens |> Enum.filter(lambda i: Map.get(i, "type") != 'NEWLINE')
     }
 
-    state |> advance() |> parse() |> Fcore.Parser.Pos.execute()
+    state |> advance() |> parse()
 
 def advance(state):
     # before anything, lets check that the states only contains expected keys
@@ -28,6 +28,7 @@ def advance(state):
         True ->
             # If you get this error. Almost sure that some key
             # wasnt deleted in some loop_while lambdas
+            # OR theres some syntax error that wasnt detected
             raise "trying to advance state with invalid keys"
         False -> None
 
@@ -178,8 +179,6 @@ def expr(state):
             if_expr(state, node)
         Map.get(ct, 'type') == 'PIPE' ->
             pipe_expr(state, node)
-        Map.get(ct, 'type') == 'LSQUARE' ->
-            static_access_expr(state, node)
         Fcore.Parser.Utils.tok_matchs(ct, 'KEYWORD', 'in') ->
             state = advance(state)
 
@@ -217,7 +216,12 @@ def power(state):
     bin_op(state, &call/1, ["POW"], &call/1)
 
 def call(state):
-    [state, _atom] = atom(state)
+    call(state, None)
+
+def call(state, _atom):
+    [state, _atom] = case _atom:
+        None -> atom(state)
+        _ -> [state, _atom]
 
     prev_tok_ln = state
         |> Map.get('_tokens')
@@ -227,12 +231,18 @@ def call(state):
 
     ct = Map.get(state, 'current_tok')
     ct_type = Map.get(ct, 'type')
+    ct_line = Map.get(ct, 'pos_start') |> Map.get('ln')
 
     # we must only consider as a call node if the previous node is
     # in the same line that the left parent
 
-    case ct_type == 'LPAREN' and (Map.get(ct, 'pos_start') |> Map.get('ln')) == prev_tok_ln:
-        True -> call_func_expr(state, _atom)
+    [state, _atom] = case:
+        ct_type == 'LPAREN' and ct_line == prev_tok_ln -> call_func_expr(state, _atom)
+        ct_type == 'RSQUARE' and ct_line == prev_tok_ln -> static_access_expr(state, _atom)
+        True -> [state, _atom]
+
+    case (Map.get(state, 'current_tok') |> Map.get('type')) in ['LPAREN', 'RSQUARE']:
+        True -> call(state, _atom)
         False -> [state, _atom]
 
 def factor(state):

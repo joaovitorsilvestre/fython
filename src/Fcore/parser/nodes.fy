@@ -160,12 +160,16 @@ def make_lambda_node(var_name_tok, arg_name_toks, body_node, pos_start):
 
 
 def make_call_node(node_to_call, arg_nodes, keywords, pos_end):
-    # todo all calls must be local except for the ones
-    # todo that node_to_call is a varaccess node that starts with a capital letter
-
     local_call = case Map.get(node_to_call, "NodeType"):
-        "CallNode" -> True
-        _ -> False
+        "VarAccessNode" ->
+            first_letter = node_to_call
+                |> Map.get("var_name_tok")
+                |> Map.get("value")
+                |> String.graphemes()
+                |> Enum.at(0)
+
+            first_letter == String.downcase(first_letter)
+        _ -> True
 
     {
         "NodeType": "CallNode",

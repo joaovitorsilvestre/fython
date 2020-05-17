@@ -173,7 +173,7 @@ def add(a)
 
 #### MUST HAVE
 - [x] Remove dependency of Jason lib
-- [ ] Stop using PosParser to guess if a call is a local call. It can be a lot easier to just consider
+- [x] Stop using PosParser to guess if a call is a local call. It can be a lot easier to just consider
 all call local calls, but call of modules like Map.get(...)
 - [ ] Use real tuples in conversor instead of strings
 - [ ] Support to range syntax
@@ -183,8 +183,8 @@ all call local calls, but call of modules like Map.get(...)
 - [x] Support to pattern match in variable assign
 - [ ] Support to pattern match in function arguments
 - [x] Create the pos_parser
-- [x] PosParser -> convert the locall function calls to support call function without dot
-- [ ] PosParser -> convert a call function of a callfunction into a local call. Its necessary to support:
+- [x] convert the locall function calls to support call function without dot
+- [x] convert a call function of a callfunction into a local call. Its necessary to support:
 ```
 a = lambda:
     lambda : ""
