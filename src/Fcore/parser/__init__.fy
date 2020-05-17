@@ -24,7 +24,7 @@ def advance(state):
         |> Enum.filter(lambda key_n_value: elem(key_n_value, 0) in valid_keys)
         |> Map.new()
 
-    case state_filtered != state:
+    case state_filtered != state and Map.get(state, 'error') == None:
         True ->
             # If you get this error. Almost sure that some key
             # wasnt deleted in some loop_while lambdas

@@ -182,6 +182,12 @@ def add(a)
 - [ ] Support to pattern match in function arguments
 - [x] Create the pos_parser
 - [x] PosParser -> convert the locall function calls to support call function without dot
+- [ ] PosParser -> convert a call function of a callfunction into a local call. Its necessary to support:
+```
+a = lambda:
+    lambda : ""
+a()()
+```
 - [ ] PosParser -> Add logic to check imports, undefined vars, etc.
 - [ ] PosParser -> support for the pin variable in pattern matching: `e = "a""; {^e: 1} = {"a": 1}`
 - [ ] Support to dict access with dots. Considering `a = {"oi": 2}`, `a.1` must have same effect as `Map.fetch(a, "oi") |> elem(1)`. We must use fetch insted of get to prevent returning None.

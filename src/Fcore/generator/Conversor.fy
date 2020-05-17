@@ -38,6 +38,29 @@ def convert_string_node(node):
     # `"` and `/` (and probably another chars too)
     Enum.join(['"', value ,'"'])
 
+def value_to_call(tok_value, arguments_of_last_call):
+    ([first], values) = tok_value
+        |> String.split(".")
+        |> Enum.split(1)
+
+    calls = values
+        |> Enum.split(-1)
+        |> elem(0)
+        |> Enum.reduce(
+            Enum.join(["{:", first, ", [], Elixir}"]),
+            lambda i, acc:
+                Enum.join([
+                    "{{:., [], [", acc, ", :", i, "]}, [], []}"
+                ])
+            ,
+        )
+
+    r = Enum.join([
+        "{{:., [], [", calls, ", :", Enum.split(values, -1) |> elem(1) |> Enum.at(0), "]}, [], ", arguments_of_last_call, "}"
+    ])
+    IO.inspect(r)
+    r
+
 def convert_varaccess_node(node):
     tok_value = node |> Map.get("var_name_tok") |> Map.get("value")
 
@@ -54,24 +77,7 @@ def convert_varaccess_node(node):
             # eg: a = {"b": {"c": 1}}
             # a.b.c == 1
 
-            values = tok_value
-                |> String.split(".")
-                |> Enum.reverse()
-
-            (values, [last]) = Enum.split(values, -1)
-
-            values
-                |> Enum.reduce(
-                    Enum.join(['"', last, '"']),
-                    lambda i, acc:
-                        current = Enum.join([
-                            "[{:", i, ", [], Elixir}, ", acc, "]"
-                        ])
-
-                        Enum.join(["{{:., [], ", current, "}, [], []}"])
-                    ,
-                )
-                |> pin_node()
+            value_to_call(tok_value, []) |> pin_node()
 
         True -> Enum.join(["{:", tok_value, ", [], Elixir}"]) |> pin_node()
 
@@ -332,15 +338,21 @@ def convert_call_node(node):
         modules = name |> String.split(".") |> List.pop_at(-1) |> elem(1)
         function = name |> String.split(".") |> Enum.at(-1)
 
-        modules = modules
-            |> Enum.map(lambda i: Enum.join([':', i], ''))
-            |> Enum.join(', ')
+        first_letter = Enum.at(modules, 0) |> String.at(0)
 
-        r = Enum.join([
-            '{{:., [], [{:__aliases__, [alias: false], [',
-            modules,
-            ']}, :', function,']}, [], ', arguments, '}'
-        ])
+        case first_letter == String.upcase(first_letter):
+            True ->
+                modules = modules
+                    |> Enum.map(lambda i: Enum.join([':', i], ''))
+                    |> Enum.join(', ')
+
+                r = Enum.join([
+                    '{{:., [], [{:__aliases__, [alias: false], [',
+                    modules,
+                    ']}, :', function,']}, [], ', arguments, '}'
+                ])
+            False ->
+                value_to_call(name, arguments)
 
     case cases:
         [True, _] -> module_function_call_case(func_name, arguments)
