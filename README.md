@@ -1,160 +1,118 @@
-### Fython Syntax
-<br>
+# Fython
 
-#### Basic elements
-| element | syntax   | obs |
-|---------|----------|-----|
-| string | "mystring" or 'mystring' | Differently from elixir, single quote also creates an string |
-| int | 1 | |
-| float | 5.0 |
-| atom   | :myatom |     |
-| list    | [1, 2, 3] |     |
-| tuple   | (1, 2, 3) | For a single element tuple, you need to put a comma before the closing parenteses: ```(1,)```    |
-| map     | {"a": 2} | Differently from elixir, in fython you must put quotes to have a string key, otherwise the compiler will search for a variable with the given name. If the variable is not found, an error will be raised.    |
-| function call | sum(1, 2) | Lambda functions are called in the same way. Unlike elixir, that you need to put a dot in the call: `sum.(1, 2)` |
+Fython is a language build by, and for,  python lovers that are also enthusiastic of functional programing.
 
-#### Basic operations
-| operation | syntax   | result |
-|-----|-----|-----|
-| sum | 2 + 2 | 4 |
-| subtract | 2 - 2 | 0 |
-| multiply | 2 * 2 | 4 |
-| multiply no precedence | (1 + 2) * 2 | 6 |
-| division | 2 / 2 | 1 |
-| division no precedence | (1 + 2) / 2 | 1.5 |
-| power | 2 ** 2 | 4 |
+<hr>
 
-#### Function and lambda definition
-To define a function the required syntax is just like in python:
+### Python Functional 
+
+The main reason to build this language is to see how looks like an language that merges the speed of Elixir and the simple and concise syntax of Python. 
+
+Who has already been using python for some time, probably, have already find itself ...
+
+<hr>
+
+#### Syntax design principles
+
+
+
+##### Indentation, as in python, is what defines a block. 
+
+If you already will indent you code (we hope so), why bother creating a line that just contains a single `{ ` bracket? 
+
+The use of `do` and `end` to define blocks in elixir suffer from the same problem, and also looks a little childish. Don't take it to bad side, we are talking just about the syntax. It just looks like something you would expect in a coding language build for those that just start programing.
+
+##### Strings can be defined using single and double quotes
+
+Raise your hand who haven't, in Elixer, at least once, lost some time searching for a problem in some code that turn out to only be a single quote (charlist) placed where you meant to have a double quote (string).
+
+```elixir
+# in elixir they mean different things
+'text' != "text"
 ```
-def sum (a, b):
-    a + b
+
+In Fython, to define a variable you can use both, single and double quotes to define a string, as the main popular languages does.
+
+```elixir
+# in fython they are the same thing
+'text' == "text"  
 ```
 
-#### lambda
-Defining a lambda and assign it to the variable sum:
+##### Multi-line anonymous functions matter 
 
-```sum = lambda a, b: a + b```
+In Fython the lambdas can have multiple lines, even using indentation
 
-Unlike python, you can use multiline lambdas. The only thing required to do it is to put all statements in a new line after the `:` token and ident the lines correctly. 
-You can also pass the multiline lambda as argument to some function:
-```
-> list = [1, 2, 3]
-
-> Enum.map(
-    list, 
-    lambda item:
-        power_num = 2
-        item ** power_num
+```elixir
+a = [1, 2, 3]
+Enum.map(lambda i:
+	a = 3
+	i + a
 )
-output: [1, 4, 9]
 ```
 
-As you have already notice, you dont need to put a `return` keyword at the end of lambdas or functions.
-The last statement will automaticly be the return value.
+##### Basic language elements must have a simple syntax
 
-#### Modules
-The module name is not defined in the file itself. It will be the file name.
-Given this project structure:
-```
-└── MyProject
-    ├── Calcs
-        ├── __init__.fy
-        ├── utils.fy
-```
-This will be the modules created: `Calcs` and `Calcs.Utils`
+* Lists
 
-### Grammar rules of the language
-```
-legend:
-    *       0 or more
-    +       1 or more
-    ()?     optional
-    |       or
+Nothing especial about lists. They have the same syntax as python, elixir and the major languages.
 
-statements          : NEWLINE* IDENT* statement (NEWLINE+ statement) NEWLINE*
-
-statement           #: import-expr
-                    #: KEYWORD:return expr?
-                    : KEYWORD:raise expr
-                    : expr
-
-# not implemented yet
-import-expr         : import IDENTIFIER (COMMA IDENTIFIER (as IDENTIFIER)?)*
-                    | from IDENTIFIER import IDENTIFIER (as IDENTIFIER)? 
-                      (COMMA IDENTIFIER (as IDENTIFIER)?)*
-
-expr                : IDENTIFIER EQ expr
-                    : comp-expr ((KEYWORD:and|KEYWORD:or) comp-expr)*
-                    : expr IN expr
-                    : if-expr
-                    : pipe-expr
-
-comp-expr           : KEYWORD:not comp-expr
-                    : arith-expr ((EE|LT|GT|LTE|GTE) arith-expr)*
-
-arith-expr          : term ((PLUS|MINUS) term)*
-
-term                : factor ((MUL|DIV) factor)*
-
-factor              : (PLUS|MINUS) factor
-                    : power
-
-power               : call(POW factor)*
-
-call                : call-expr
-                    : atom
-
-call-expr           : atom (
-                        LPAREN
-                        (expr (COMMA expr)*)?
-                        (IDENTIFIER DO expr (COMMA IDENTIFIER EQ expr)*)?
-                        RPAREN
-                    )?
-
-atom                : INT|FLOAT|IDENTIFIER|STRING|ATOM
-                    : LPAREN expr RPAREN
-                    : tuple-expr
-                    : list-expr
-                    : map-expr
-                    : func-def
-                    : lambda-def
-                    : case-def
-                    : func-as-var-expr
-
-list-expr           : LSQUARE (expr (COMMA expr)*)? RSQUARE
-
-map-expr            : LCURLY ((expr DO expr) (COMMA (expr DO expr))*)? RCURLY
-
-tuple-expr          : LPAREN expr? COMMA (expr COMMA)* RPAREN
-
-if-expr             : expr KEYWORD:if expr DO expr
-                    : (KEYWORD:else expr)?
-
-case-def            : KEYWORD:case expr? DO NEWLINE
-                    (expr ARROW NEWLINE? statement NEWLINE)+
-
-pipe-expr           : expr (PIPE expr)+
-
-func-def            : KEYWORD:def IDENTIFIER
-                    LPAREN (IDENTIFIER (COMMA IDENTIFIER)*)? RPAREN DO
-                    (NEWLINE statements)+
-
-lambda-def          : KEYWORD:lambda (IDENTIFIER (COMMA IDENTIFIER)*)?
-                    (DO expr)|(NEWLINE statements)+
-
-func-as-var-expr    : ECOM DIV INT
+```python
+list = [1, 2, 3]
 ```
 
-### Readmap
+* Maps 
 
-#### bugs
+The visual is just like in python. If you come from elixir, you may pay attention when need to set a variable as a key of the map:
+
+In elixir, to use a variable as a key, you need to pin that variable using a `^`. In Fython you only need put it in the key value, as in python. 
+
+```python
+a = "foo"
+{a: "bar"}
+```
+
+To a key be an Atom it needs to have the `:` before the identifier. At first we're a little concert if it was not cause a problem to the readability of the map, but we realize that a good highlight IDE wold fix the problem easily.
+
+* Tuples
+
+Looks like in python. 
+
+```python
+("item_a", 1, 9.0)
+```
+
+* Atoms
+
+```elixir
+:my_atom
+```
+
+##### Functions calls must keeped simple
+
+Differently form Elixir, you don't need to put a dot before every local functions call:
+
+```  python
+hi = lambda: :hello
+
+hi() == :hello
+    
+# in elixir you need to this
+hi.()
+```
+
+*Today, the syntax of the language is following this rule. But, its not sure if it will possible to keep this working, in the future, due to erlang/elixir limitations.*
+
+<hr>
+
+### Roadmap
+
+#### Bugs
 - [x] Map are being compiled empty if theres a comma at end of it. E.g: `{"a": 1,}`
 - [ ] In the pos parser we need to convert any variable that is a elixir keyword to something else
 - [x] Pretty error print is not working when have a comment in a nearby line.
-- [ ] Support to `{"a": 2} |> Map.get("a") == 2`. Today we need to put pipe inside parenteses
+- [ ] Support to `{"a": 2} |> Map.get("a") == 2`. Today we need to put pipe inside parentheses
 - [x] List inside lists are not working
-- [ ] Dont returning error if we have a file with a string missing end quote: `raise "this string is invalid`
+- [ ] Don't returning error if we have a file with a string missing end quote: `raise "this string is invalid`
 - [ ] Use a variable as the match of a case doest seems to work. Eg: 
 ```
 a = 'RPAREN'
@@ -171,7 +129,7 @@ def add(a)
 `Expeted ... Received: KEYWORD` should be `Expeted ... Received: lambda`
 - [ ] `{values, [last]} = ...` the left part of this pattern is being evaluated as a empty map. It should be an error.
 
-#### MUST HAVE
+#### Must have
 - [x] Remove dependency of Jason lib
 - [x] Stop using PosParser to guess if a call is a local call. It can be a lot easier to just consider
 all call local calls, but call of modules like Map.get(...)
@@ -195,11 +153,12 @@ a()()
 - [x] Support to dict access: ```a["key"]["nesteddict_key""]```
 - [ ] `and` and `or` operators must work with multiline
 
-#### GOD TO HAVE
+#### Good to have
 - [ ] support for list 'explode'. Eg: [*[1, 2]] must be converted to [1, 2]. Need do find a way to make this works
 - [ ] support for dict 'explode'. Eg: {\**{"a": 2}} must be converted to {"a": 2}. Need do find a way to make this works
 - [ ] use python style keyword params to make elixir optional arguments like // ops
-- [ ] list comprehentions
+- [ ] list comprehensions
+- [ ] dict/map comprehensions
 - [ ] support to put a variable as a key in a map and, if theres no key, the key is the variable name and the value is te variable. It must work just like JS ES6. Eg: 
 ```
 a = 5
