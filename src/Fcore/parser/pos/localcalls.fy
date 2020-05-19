@@ -123,8 +123,10 @@ def resolve_call_node(node, var_names_avaliable):
     Map.merge(
         node,
         {
+            'node_to_call': convert_local_function_calls(
+                Map.get(node, 'node_to_call'), var_names_avaliable
+            ),
             'local_call': local_call,
-            "var_names_avaliable": var_names_avaliable,
             "arg_nodes": Enum.map(
                 Map.get(node, "arg_nodes"),
                 lambda i: convert_local_function_calls(i, var_names_avaliable)
@@ -262,7 +264,7 @@ def resolve_unary_node(node, var_names_avaliable):
         }
     )
 
-def resolve_staticaccess_node(state, var_names_avaliable):
+def resolve_staticaccess_node(node, var_names_avaliable):
     Map.merge(
         node,
         {

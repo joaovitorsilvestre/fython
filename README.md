@@ -191,8 +191,8 @@ a = lambda:
 a()()
 ```
 - [ ] PosParser -> Add logic to check imports, undefined vars, etc.
-- [ ] PosParser -> support for the pin variable in pattern matching: `e = "a""; {^e: 1} = {"a": 1}`
-- [ ] Support to dict access with dots. Considering `a = {"oi": 2}`, `a.1` must have same effect as `Map.fetch(a, "oi") |> elem(1)`. We must use fetch insted of get to prevent returning None.
+- [x] PosParser -> support for the pin variable in pattern matching: `e = "a""; {^e: 1} = {"a": 1}`
+- [x] Support to dict access: ```a["key"]["nesteddict_key""]```
 - [ ] `and` and `or` operators must work with multiline
 
 #### GOD TO HAVE
