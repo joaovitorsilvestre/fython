@@ -108,26 +108,11 @@ def convert_list_node(node):
     ])
 
 def convert_map_node(node):
-    IO.inspect('map node')
-    IO.inspect(node)
-
     pairs = node
         |> Map.get("pairs_list")
         |> Enum.map(lambda pair:
             [key, value] = pair
-
-            key = case Map.get(key, "NodeType") == 'VarAccessNode':
-                True ->
-                    key_name = Map.get(key, "var_name_tok") |> Map.get("value")
-                    pinned = Map.get(key, 'pinned')
-
-                    case pinned:
-                        True -> Enum.join(["{:", key_name, ", [], Elixir}"])
-                        False -> Enum.join([":", key_name])
-
-                False -> convert(key)
-
-            Enum.join(["{", key, ", ", convert(value), "}"])
+            Enum.join(["{", convert(key), ", ", convert(value), "}"])
         )
         |> Enum.join(', ')
 
