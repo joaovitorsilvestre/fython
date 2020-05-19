@@ -108,6 +108,9 @@ def convert_list_node(node):
     ])
 
 def convert_map_node(node):
+    IO.inspect('map node')
+    IO.inspect(node)
+
     pairs = node
         |> Map.get("pairs_list")
         |> Enum.map(lambda pair:

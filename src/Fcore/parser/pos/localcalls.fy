@@ -13,6 +13,10 @@ def convert_local_function_calls(node, var_names_avaliable):
     # Only the StatementsNode can have a PatternMatchNode
     # and only the matched nodes bellow have a StatementsNode inside
 
+    case None in var_names_avaliable:
+        True -> raise "None should not be in the var names"
+        False -> None
+
     case Map.get(node, 'NodeType') if is_map(node) else None:
         'StatementsNode' -> resolve_statements(node, var_names_avaliable)
         'PatternMatchNode' -> resolve_pattern(node, var_names_avaliable)
@@ -116,35 +120,39 @@ def resolve_call_node(node, var_names_avaliable):
         (Map.get(node, 'node_to_call') |> Map.get('NodeType')) == 'StaticAccessNode' -> True
         True -> False
 
-    node
-        |> Map.put('local_call', local_call)
-        |> Map.merge(
-            {
-                "arg_nodes": Enum.map(
-                    Map.get(node, "arg_nodes"),
-                    lambda i: convert_local_function_calls(i, var_names_avaliable)
-                ),
-                "keywords": Map.new(
-                    Map.get(node, "keywords"),
-                    lambda i:
-                        key = elem(i, 0)
-                        value = elem(i, 1) |> convert_local_function_calls(var_names_avaliable)
-                        Map.to_list({key: value}) |> Enum.at(0)
-                )
-            }
-        )
+    Map.merge(
+        node,
+        {
+            'local_call': local_call,
+            "var_names_avaliable": var_names_avaliable,
+            "arg_nodes": Enum.map(
+                Map.get(node, "arg_nodes"),
+                lambda i: convert_local_function_calls(i, var_names_avaliable)
+            ),
+            "keywords": Map.new(
+                Map.get(node, "keywords"),
+                lambda i:
+                    key = elem(i, 0)
+                    value = elem(i, 1) |> convert_local_function_calls(var_names_avaliable)
+                    Map.to_list({key: value}) |> Enum.at(0)
+            )
+        }
+    )
 
 
 def resolve_case_node(node, var_names_avaliable):
-    cases = Map.get(node, 'cases')
-        |> Enum.map(lambda i:
-            condition = Enum.at(i, 0)
-            statements = Enum.at(i, 1)
-
-            [condition, convert_local_function_calls(statements, var_names_avaliable)]
-        )
-
-    Map.put(node, 'cases', cases)
+    Map.merge(
+        node,
+        {
+            'expr': convert_local_function_calls(Map.get(node, 'expr'), var_names_avaliable),
+            'cases': node
+                |> Map.get('cases')
+                |> Enum.map(lambda i:
+                    [condition, statements] = i
+                    [condition, convert_local_function_calls(statements, var_names_avaliable)]
+                )
+        }
+    )
 
 def resolve_if_node(node, var_names_avaliable):
     Map.merge(
