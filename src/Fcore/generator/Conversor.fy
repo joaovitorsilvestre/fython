@@ -20,6 +20,7 @@ def convert(node):
         "InNode"            -> convert_in_node(node)
         "TupleNode"         -> convert_tuple_node(node)
         "RaiseNode"         -> convert_raise_node(node)
+        "StaticAccessNode"  -> convert_staticaccess_node(node)
         "FuncAsVariableNode" -> convert_funcasvariable_node(node)
 
 def convert_number_node(node):
@@ -49,26 +50,6 @@ def convert_varaccess_node(node):
         tok_value == "True" -> "true"
         tok_value == "False" -> "false"
         tok_value == "None" -> "nil"
-        String.contains?(tok_value, ".") ->
-            # this makes possible to access map with dot notation
-            # eg: a = {"b": {"c": 1}}
-            # a.b.c == 1
-
-            ([first], values) = tok_value
-                |> String.split(".")
-                |> Enum.split(1)
-
-            calls = values
-                |> Enum.reduce(
-                    Enum.join(["{:", first, ", [], Elixir}"]),
-                    lambda i, acc:
-                        Enum.join([
-                            "{{:., [], [", acc, ", :", i, "]}, [], []}"
-                        ])
-                    ,
-                )
-                |> pin_node()
-
         True -> Enum.join(["{:", tok_value, ", [], Elixir}"]) |> pin_node()
 
 def convert_patternmatch_node(node):
@@ -131,19 +112,7 @@ def convert_map_node(node):
         |> Map.get("pairs_list")
         |> Enum.map(lambda pair:
             [key, value] = pair
-
-            key = case Map.get(key, "NodeType") == 'VarAccessNode':
-                True ->
-                    key_name = Map.get(key, "var_name_tok") |> Map.get("value")
-                    pinned = Map.get(key, 'pinned')
-
-                    case pinned:
-                        True -> Enum.join(["{:", key_name, ", [], Elixir}"])
-                        False -> Enum.join([":", key_name])
-
-                False -> convert(key)
-
-            Enum.join(["{", key, ", ", convert(value), "}"])
+            Enum.join(["{", convert(key), ", ", convert(value), "}"])
         )
         |> Enum.join(', ')
 
@@ -309,65 +278,35 @@ def convert_call_node(node):
         "]"
     ], "")
 
-    func_name = node
-        |> Map.get("node_to_call")
-        |> Map.get("var_name_tok")
-        |> Map.get("value")
+    case Map.get(node, "local_call"):
+        True ->
+            func_to_call = convert(Map.get(node, "node_to_call"))
+            Enum.join(["{{:., [], [", func_to_call, "]}, [], ", arguments, "}"])
+        False ->
+            # node_to_call will always be a VarAccessNode on a module call. E.g: Map.get
+            func_name = node
+                |> Map.get("node_to_call")
+                |> Map.get("var_name_tok")
+                |> Map.get("value")
 
-    cases = [
-        func_name |> String.contains?("."),
-        Map.get(node, "local_call")
-    ]
+            case String.contains?(func_name, '.'):
+                True ->
+                    modules = func_name |> String.split(".") |> List.pop_at(-1) |> elem(1)
+                    function = func_name |> String.split(".") |> Enum.at(-1)
 
-    local_call_case = lambda func_name, arguments:
-        Enum.join([
-            "{{:., [], [{:", func_name, ", [], Elixir}]}, [], ", arguments, "}"
-        ])
+                    modules = modules
+                        |> Enum.map(lambda i: Enum.join([':', i], ''))
+                        |> Enum.join(', ')
 
-    module_function_call_case = lambda name,  arguments:
-        modules = name |> String.split(".") |> List.pop_at(-1) |> elem(1)
-        function = name |> String.split(".") |> Enum.at(-1)
-
-        first_letter = Enum.at(modules, 0) |> String.at(0)
-
-        case first_letter == String.upcase(first_letter):
-            True ->
-                modules = modules
-                    |> Enum.map(lambda i: Enum.join([':', i], ''))
-                    |> Enum.join(', ')
-
-                r = Enum.join([
-                    '{{:., [], [{:__aliases__, [alias: false], [',
-                    modules,
-                    ']}, :', function,']}, [], ', arguments, '}'
-                ])
-            False ->
-                # this makes possible to access map with dot notation AND call the result
-                # eg:
-                # > a = {"b": lambda i, g: i + g}
-                # > a.b(1, 2)
-                # 3
-
-                ([first], values) = name
-                    |> String.split(".")
-                    |> Enum.split(1)
-
-                calls = values
-                    |> Enum.reduce(
-                        Enum.join(["{:", first, ", [], Elixir}"]),
-                        lambda i, acc:
-                            Enum.join([
-                                "{{:., [], [", acc, ", :", i, "]}, [], []}"
-                            ])
-                        ,
-                    )
-
-                Enum.join(["{{:., [], [", calls,"]}, [], ", arguments, "}"])
-
-    case cases:
-        [True, _] -> module_function_call_case(func_name, arguments)
-        [_, True] -> local_call_case(func_name, arguments)
-        _         -> Enum.join(["{:", func_name, ", [], ", arguments, "}"])
+                    r = Enum.join([
+                        '{{:., [], [{:__aliases__, [alias: false], [',
+                        modules,
+                        ']}, :', function,']}, [], ', arguments, '}'
+                    ])
+                False ->
+                    # this is for call a function that is defined in
+                    # the same module
+                    Enum.join(["{:", func_name, ", [], ", arguments, "}"])
 
 def convert_import_node(node):
     case Map.get(node, "modules_import"):
@@ -506,3 +445,14 @@ def convert_tuple_node(node):
         |> Enum.join(", ")
 
     Enum.join(["{:{}, [], [", items, "]}"])
+
+def convert_staticaccess_node(node):
+    to_be_accesed = convert(Map.get(node, "node"))
+    value_to_find = convert(Map.get(node, "node_value"))
+
+    Enum.join([
+        "{{:., [], [{:__aliases__, [alias: false], [:Map]}, :fetch!]}, [], [",
+        to_be_accesed, ", ", value_to_find, "]}"
+    ])
+
+

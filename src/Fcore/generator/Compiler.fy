@@ -48,7 +48,7 @@ def compile_project_to_binary(directory_path, compiled_folder):
         |> Enum.join('/')
         |> Path.wildcard()
         |> Enum.sort()
-        |> Enum.map(lambda full_path:
+        |> parallel_map(lambda full_path:
             module_name = get_module_name(directory_path, full_path)
 
             IO.puts(Enum.join(["Compiling module: ", module_name]))
@@ -139,3 +139,8 @@ def get_module_name(project_full_path, module_full_path):
                 |> elem(1)
                 |> Enum.join('.')
         _ -> final |> Enum.join('.')
+
+def parallel_map(collection, func):
+    collection
+        |> Enum.map(lambda i: Task.async(lambda: func(i)))
+        |> Enum.map(lambda i: Task.await(i, :infinity))

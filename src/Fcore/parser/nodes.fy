@@ -26,6 +26,15 @@ def make_varaccess_node(var_name_tok, pinned):
         "pos_end": Map.get(var_name_tok, "pos_end")
     }
 
+def make_staticaccess_node(node_left, node_value, pos_end):
+    {
+        "NodeType": "StaticAccessNode",
+        "node": node_left,
+        "node_value": node_value,
+        "pos_start": Map.get(node_left, "pos_start"),
+        "pos_end": pos_end
+    }
+
 def make_if_node(comp_expr, true_expr, false_expr):
     {
         "NodeType": "IfNode",

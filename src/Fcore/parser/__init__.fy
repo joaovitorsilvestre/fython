@@ -28,6 +28,7 @@ def advance(state):
         True ->
             # If you get this error. Almost sure that some key
             # wasnt deleted in some loop_while lambdas
+            # OR theres some syntax error that wasnt detected
             raise "trying to advance state with invalid keys"
         False -> None
 
@@ -215,22 +216,40 @@ def power(state):
     bin_op(state, &call/1, ["POW"], &call/1)
 
 def call(state):
-    [state, _atom] = atom(state)
+    call(state, None)
 
-    prev_tok_ln = state
-        |> Map.get('_tokens')
-        |> Enum.at(Map.get(state, '_current_tok_idx') - 1)
-        |> Map.get('pos_end')
-        |> Map.get('ln')
+def call(state, _atom):
+    [state, _atom] = case _atom:
+        None -> atom(state)
+        _ -> [state, _atom]
 
-    ct = Map.get(state, 'current_tok')
-    ct_type = Map.get(ct, 'type')
+    get_info = lambda state:
+        ct = Map.get(state, 'current_tok')
+        ct_type = Map.get(ct, 'type')
+        ct_line = Map.get(ct, 'pos_start') |> Map.get('ln')
+
+        prev_tok_ln = state
+            |> Map.get('_tokens')
+            |> Enum.at(Map.get(state, '_current_tok_idx') - 1)
+            |> Map.get('pos_end')
+            |> Map.get('ln')
+
+        (ct, ct_type, ct_line, prev_tok_ln)
 
     # we must only consider as a call node if the previous node is
     # in the same line that the left parent
 
-    case ct_type == 'LPAREN' and (Map.get(ct, 'pos_start') |> Map.get('ln')) == prev_tok_ln:
-        True -> call_func_expr(state, _atom)
+    (ct, ct_type, ct_line, prev_tok_ln) = get_info(state)
+
+    [state, _atom] = case:
+        ct_type == 'LPAREN' and ct_line == prev_tok_ln -> call_func_expr(state, _atom)
+        ct_type == 'LSQUARE' and ct_line == prev_tok_ln -> static_access_expr(state, _atom)
+        True -> [state, _atom]
+
+    (ct, ct_type, ct_line, prev_tok_ln) = get_info(state)
+
+    case ct_line == prev_tok_ln and ct_type in ['LPAREN', 'LSQUARE']:
+        True -> call(state, _atom)
         False -> [state, _atom]
 
 def factor(state):
@@ -1065,3 +1084,28 @@ def pattern_match(state, left_node, pos_start):
             )
 
             [state, node]
+
+def static_access_expr(state, left_node):
+    state = advance(state)
+
+    [state, node_value] = expr(state)
+
+    state = case Map.get(state, 'current_tok') |> Map.get('type'):
+        'RSQUARE' -> state
+        _ ->
+            Fcore.Parser.Utils.set_error(
+                state,
+                "Expected ]",
+                Map.get(Map.get(state, "current_tok"), "pos_start"),
+                Map.get(Map.get(state, "current_tok"), "pos_end")
+            )
+
+    case Map.get(state, 'error'):
+        None ->
+            pos_end = Map.get(state, 'current_tok') |> Map.get('pos_end')
+            node = Fcore.Parser.Nodes.make_staticaccess_node(left_node, node_value, pos_end)
+
+            state = advance(state)
+
+            [state, node]
+        _ -> [state, None]
