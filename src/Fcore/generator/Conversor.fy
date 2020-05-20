@@ -279,6 +279,10 @@ def convert_call_node(node):
 
                     module = Elixir.Enum.join(modules, ".")
 
+                    module = case Elixir.String.starts_with?(module, "Elixir."):
+                        True -> module
+                        False -> Elixir.Enum.join([':"', module, '"'])
+
                     Elixir.Enum.join(["{{:., [], [", module, ", :", function, "]}, [], ", arguments, "}"])
                 False ->
                     # this is for call a function that is defined in
@@ -328,10 +332,10 @@ def convert_import_node(node):
 
 
 def get_childs(right_or_left_node):
-    case Map.get(right_or_left_node, "NodeType") == "PipeNode":
+    case Elixir.Map.get(right_or_left_node, "NodeType") == "PipeNode":
         True -> [
-            get_childs(right_or_left_node |> Map.get("left_node")),
-            get_childs(right_or_left_node |> Map.get("right_node"))
+            get_childs(right_or_left_node |> Elixir.Map.get("left_node")),
+            get_childs(right_or_left_node |> Elixir.Map.get("right_node"))
         ]
         False -> [right_or_left_node]
 
@@ -342,24 +346,24 @@ def convert_pipe_node(node):
     # We do this because elixir pipe ast doesnt work well
     # with a erlang call in the right. Eg: "oii" |> :string.replace("o", "i")
 
-    left_node = Map.get(node, 'left_node')
-    right_node = Map.get(node, 'right_node')
+    left_node = Elixir.Map.get(node, 'left_node')
+    right_node = Elixir.Map.get(node, 'right_node')
 
     ([first], flat_pipe) = left_node
         |> get_childs()
-        |> List.insert_at(-1, get_childs(right_node))
-        |> List.flatten()
-        |> Enum.split(1)
+        |> Elixir.List.insert_at(-1, get_childs(right_node))
+        |> Elixir.List.flatten()
+        |> Elixir.Enum.split(1)
 
-    call_node = Enum.reduce(
+    call_node = Elixir.Enum.reduce(
         flat_pipe,
         first,
         lambda c_node, acc:
             {"arg_nodes": arg_nodes, "arity": arity} = c_node
 
             c_node
-                |> Map.put("arity", arity + 1)
-                |> Map.put("arg_nodes", List.insert_at(arg_nodes, 0, acc))
+                |> Elixir.Map.put("arity", arity + 1)
+                |> Elixir.Map.put("arg_nodes", Elixir.List.insert_at(arg_nodes, 0, acc))
     )
 
     convert(call_node)
