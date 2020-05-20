@@ -24,9 +24,9 @@ def string_with_arrows(state, text):
 
     lines = Elixir.String.split(text, '\n')
 
-    lines_with_error = Range.new(pos_start |> Elixir.Map.get('ln'), pos_end |> Elixir.Map.get('ln'))
+    lines_with_error = Elixir.Range.new(pos_start |> Elixir.Map.get('ln'), pos_end |> Elixir.Map.get('ln'))
 
-    col_range_per_line = Range.new(0, Elixir.Enum.count(lines))
+    col_range_per_line = Elixir.Range.new(0, Elixir.Enum.count(lines))
         |> Elixir.Enum.map(lambda ln:
             case:
                 ln in lines_with_error ->
@@ -43,8 +43,8 @@ def string_with_arrows(state, text):
         )
 
     lines_to_display = lines
-        |> Elixir.Enum.zip(Range.new(0, Elixir.Enum.count(lines)))
-        |> Elixir.Enum.slice(Range.new(
+        |> Elixir.Enum.zip(Elixir.Range.new(0, Elixir.Enum.count(lines)))
+        |> Elixir.Enum.slice(Elixir.Range.new(
             max(0, Elixir.Enum.at(lines_with_error, 0) - num_show_above),
             Elixir.Enum.at(lines_with_error, -1) + num_show_bellow
         ))
@@ -62,9 +62,9 @@ def string_with_arrows(state, text):
                     arrows = Elixir.String.duplicate('^', Elixir.String.length(text))
                     empty = Elixir.String.duplicate(' ', Elixir.String.length(text))
 
-                    start = Elixir.String.slice(empty, Range.new(0, col_start))
-                    middle = Elixir.String.slice(arrows, Range.new(col_start, col_end))
-                    _end = Elixir.String.slice(empty, Range.new(col_end, Elixir.String.length(text)))
+                    start = Elixir.String.slice(empty, Elixir.Range.new(0, col_start))
+                    middle = Elixir.String.slice(arrows, Elixir.Range.new(col_start, col_end))
+                    _end = Elixir.String.slice(empty, Elixir.Range.new(col_end, Elixir.String.length(text)))
 
                     Elixir.Enum.join([start, middle, _end])
                 False -> ''
@@ -76,12 +76,12 @@ def string_with_arrows(state, text):
             index = Elixir.Enum.at(item_index_arrows, 1)
             arrows = Elixir.Enum.at(item_index_arrows, 2)
 
-            prefix = Elixir.Enum.count(Integer.digits(Elixir.Map.get(pos_end, 'ln')))
+            prefix = Elixir.Enum.count(Elixir.Integer.digits(Elixir.Map.get(pos_end, 'ln')))
 
             # num_line = Elixir.Enum.join([index + 1, " "])
             num_line = Elixir.IO.ANSI.format([
                 :bright, :black, Elixir.Kernel.to_string(index + 1),
-                Elixir.String.duplicate(' ', (prefix - Elixir.Enum.count(Integer.digits(index))) + 1)
+                Elixir.String.duplicate(' ', (prefix - Elixir.Enum.count(Elixir.Integer.digits(index))) + 1)
             ])
 
             item = Elixir.Enum.join([num_line, item])
