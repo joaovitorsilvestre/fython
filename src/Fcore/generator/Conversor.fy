@@ -326,36 +326,14 @@ def convert_import_node(node):
 
             Elixir.Enum.join(["{:__block__, [], [", import_commands, "]}"])
 
-def build_single_pipe(node):
-    left = node |> Elixir.Map.get("left_node") |> convert()
-    right = node |> Elixir.Map.get("right_node") |> convert()
-    build_single_pipe(left, right)
-
-def build_single_pipe(left, right):
-    left = case Elixir.Kernel.is_map(left):
-        True -> left |> convert()
-        False -> left
-
-    right = case Elixir.Kernel.is_map(right):
-        True -> right |> convert()
-        False -> right
-
-    Elixir.Enum.join([
-        "{:|>, [context: Elixir, import: Kernel], [",
-        left, ",", right, "]}", ''
-    ], "")
-
-def is_pipenode(node):
-    (node |> Elixir.Map.get("NodeType")) == "PipeNode"
 
 def get_childs(right_or_left_node):
-    case is_pipenode(right_or_left_node):
+    case Map.get(right_or_left_node, "NodeType") == "PipeNode":
         True -> [
-            get_childs(right_or_left_node |> Elixir.Map.get("left_node")),
-            get_childs(right_or_left_node |> Elixir.Map.get("right_node"))
+            get_childs(right_or_left_node |> Map.get("left_node")),
+            get_childs(right_or_left_node |> Map.get("right_node"))
         ]
         False -> [right_or_left_node]
-
 
 def convert_pipe_node(node):
     # Actually, we never convert to elixir pipe ast
@@ -367,20 +345,25 @@ def convert_pipe_node(node):
     left_node = Map.get(node, 'left_node')
     right_node = Map.get(node, 'right_node')
 
-    Elixir.IO.inspect("node")
-    Elixir.IO.inspect(node)
+    ([first], flat_pipe) = left_node
+        |> get_childs()
+        |> List.insert_at(-1, get_childs(right_node))
+        |> List.flatten()
+        |> Enum.split(1)
 
-    right_node case Map.get(right_node, "NodeType"):
-        "CallNode" -> Map.merge(
-            right_node,
-            {
-                "arg_nodes", Map.get(right_node, "arg_nodes") |> List.insert_at(0, left_node),
-                "arity": Map.get(right_node, "arity") + 1
-            }
-        )
-        _ -> right_node
+    call_node = Enum.reduce(
+        flat_pipe,
+        first,
+        lambda c_node, acc:
+            {"arg_nodes": arg_nodes, "arity": arity} = c_node
 
-    convert(right_node)
+            c_node
+                |> Map.put("arity", arity + 1)
+                |> Map.put("arg_nodes", List.insert_at(arg_nodes, 0, acc))
+    )
+
+    convert(call_node)
+
 
 def convert_unaryop_node(node):
     value = convert(node |> Elixir.Map.get("node"))
