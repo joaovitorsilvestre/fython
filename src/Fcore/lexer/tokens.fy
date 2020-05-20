@@ -33,7 +33,7 @@ def valid_token_type?(type):
         "PIN",
         "EOF"
     ]
-    Enum.member?(tokens, type)
+    Elixir.Enum.member?(tokens, type)
 
 def keywords():
     [
@@ -42,11 +42,11 @@ def keywords():
     ]
 
 def add_eof_token(state):
-    tokens = Map.get(state, "tokens")
+    tokens = Elixir.Map.get(state, "tokens")
 
     start_end = case tokens:
         [] -> {"idx": 0, "ln": 0, "col": 0}
-        _ -> Map.get(Enum.at(tokens, -1), "pos_end")
+        _ -> Elixir.Map.get(Elixir.Enum.at(tokens, -1), "pos_end")
 
     add_token(state, "EOF", None, start_end)
 
@@ -54,20 +54,20 @@ def add_token(state, type):
     add_token(state, type, None)
 
 def add_token(state, type, value):
-    pos_start = Map.get(state, 'position')
+    pos_start = Elixir.Map.get(state, 'position')
     add_token(state, type, value, pos_start)
 
 def add_token(state, type, value, pos_start):
-    ident = state |> Map.get("current_ident_level")
+    ident = state |> Elixir.Map.get("current_ident_level")
 
-    pos_end = state |> Map.get("position")
+    pos_end = state |> Elixir.Map.get("position")
 
-    pos_end = case Map.get(pos_end, 'col') != -1:
+    pos_end = case Elixir.Map.get(pos_end, 'col') != -1:
         True -> pos_end
-        False -> Map.get(state, 'prev_position')
+        False -> Elixir.Map.get(state, 'prev_position')
 
     case valid_token_type?(type):
-        False -> raise Enum.join(["Invalid Token Type: ", type])
+        False -> raise Elixir.Enum.join(["Invalid Token Type: ", type])
         True -> None
 
     token = {
@@ -78,4 +78,4 @@ def add_token(state, type, value, pos_start):
         "pos_end": pos_end
     }
 
-    Map.put(state, "tokens", [Map.get(state, "tokens"), token] |> List.flatten())
+    Elixir.Map.put(state, "tokens", [Elixir.Map.get(state, "tokens"), token] |> Elixir.List.flatten())

@@ -1,13 +1,13 @@
 def eval_file(module_name, file_path):
-    text = File.read(file_path) |> elem(1)
+    text = Elixir.File.read(file_path) |> Elixir.Kernel.elem(1)
 
     eval_string(module_name, text)
 
 def eval_string(module_name, text):
     state_n_converted = Fcore.Generator.Compiler.lexer_parse_convert_file(module_name, text)
 
-    state = Enum.at(state_n_converted, 0)
-    converted = Enum.at(state_n_converted, 1)
+    state = Elixir.Enum.at(state_n_converted, 0)
+    converted = Elixir.Enum.at(state_n_converted, 1)
 
     case converted:
         None ->
@@ -15,7 +15,7 @@ def eval_string(module_name, text):
             None
         _ ->
             converted
-                |> Code.eval_string()
-                |> elem(0)
-                |> Code.eval_quoted()
-                |> elem(0)
+                |> Elixir.Code.eval_string()
+                |> Elixir.Kernel.elem(0)
+                |> Elixir.Code.eval_quoted()
+                |> Elixir.Kernel.elem(0)
