@@ -5,9 +5,9 @@ def letters():
     'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
 def letters_digits():
-    Enum.join([letters(), digists()])
+    Elixir.Enum.join([letters(), digists()])
 
 def identifier_chars(firs_char):
     case firs_char:
-        True -> Enum.join([letters(), "_"])
-        False -> Enum.join([letters(), digists(), "_.?!"])
+        True -> Elixir.Enum.join([letters(), "_"])
+        False -> Elixir.Enum.join([letters(), digists(), "_.?!"])

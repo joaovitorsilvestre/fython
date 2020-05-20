@@ -1,37 +1,31 @@
 def compile_project(project_path):
     compile_project(project_path, "_compiled")
 
+
 def compile_project(project_path, destine):
-    compiled_folder = [project_path, destine] |> Enum.join('/')
+    compiled_folder = [project_path, destine] |> Elixir.Enum.join('/')
 
     # Ensure compiled folder is created
-    File.mkdir_p!(compiled_folder)
-    File.mkdir_p!(Enum.join([compiled_folder, '/', 'exs']))
+    Elixir.File.mkdir_p!(compiled_folder)
 
     # Copy elixir beams to folder
     copy_elixir_beams(compiled_folder)
 
-    # Add elixir dependencies
-    Code.append_path(compiled_folder)
-
-    # Compile project and save files into subfolder 'compiled'
-    all_files_path = compile_project_to_binary(project_path, compiled_folder)
-
-    Kernel.ParallelCompiler.compile_to_path(all_files_path, compiled_folder)
+    compile_project_to_binary(project_path, compiled_folder)
 
 
 def copy_elixir_beams(compiled_folder):
     elixir_path = '/usr/lib/elixir/lib/elixir/ebin'
 
-    case File.exists?(elixir_path):
-        True -> Enum.join([elixir_path, '*'], '/')
-            |> Path.wildcard()
-            |> Enum.each(lambda beam_file:
+    case Elixir.File.exists?(elixir_path):
+        True -> Elixir.Enum.join([elixir_path, '*'], '/')
+            |> Elixir.Path.wildcard()
+            |> Elixir.Enum.each(lambda beam_file:
                 file_name = beam_file
-                    |> String.split('/')
-                    |> List.last()
+                    |> Elixir.String.split('/')
+                    |> Elixir.List.last()
 
-                File.cp!(beam_file, Enum.join([compiled_folder, file_name], '/'))
+                Elixir.File.cp!(beam_file, Elixir.Enum.join([compiled_folder, file_name], '/'))
             )
         False -> :error
 
@@ -45,48 +39,42 @@ def compile_project_to_binary(directory_path, compiled_folder):
     # Now, you should be able to call any module of this project in iex
 
     [directory_path, "**/*.fy"]
-        |> Enum.join('/')
-        |> Path.wildcard()
-        |> Enum.sort()
-        |> parallel_map(lambda full_path:
+        |> Elixir.Enum.join('/')
+        |> Elixir.Path.wildcard()
+        |> Elixir.Enum.sort()
+        |> Elixir.Enum.map(lambda full_path:
             module_name = get_module_name(directory_path, full_path)
 
-            IO.puts(Enum.join(["Compiling module: ", module_name]))
+            Elixir.IO.puts(Elixir.Enum.join(["Compiling module: ", module_name]))
 
-            IO.puts("* lexing and parsing")
             state_n_converted = lexer_parse_convert_file(
-                module_name, File.read(full_path) |> elem(1)
+                module_name, Elixir.File.read(full_path) |> Elixir.Kernel.elem(1)
             )
 
-            state = Enum.at(state_n_converted, 0)
-            converted = Enum.at(state_n_converted, 1)
+            state = Elixir.Enum.at(state_n_converted, 0)
+            converted = Elixir.Enum.at(state_n_converted, 1)
 
-            case Map.get(state, "error"):
+            case Elixir.Map.get(state, "error"):
                 None ->
-                    module = Fcore.Generator.Conversor.convert_module_to_ast(
-                        module_name, converted
+                    (quoted, _) = Elixir.Code.eval_string(converted)
+
+                    # Its super important to use this Module.create function
+                    # to ensure that our module binary will not have
+                    # Elixir. in the begin of the module name
+                    (_, _, binary, _) = Elixir.Module.create(
+                        Elixir.String.to_atom(module_name), quoted, Elixir.Macro.Env.location(__ENV__)
                     )
 
-                    #IO.inspect('elixir str:')
-                    #IO.inspect(module)
-
-                    # TODO save in a file to need to compile is pretty ugly
-                    # TODO we need to fix this
-                    elixir_str = Macro.to_string(module)
-                        |> Code.eval_string()
-                        |> elem(0)
-                        |> Code.eval_string()
-                        |> Macro.to_string()
-
-                    ex_path = Enum.join([compiled_folder, "/exs/", module_name, ".ex"])
-
-                    File.write(ex_path, elixir_str)
-                    ex_path
+                    Elixir.File.write(
+                        Elixir.Enum.join([compiled_folder, "/", module_name, ".beam"]),
+                        binary,
+                        mode=:binary
+                    )
                 _ ->
-                    IO.puts("Compilation error:")
-                    IO.puts("file path:")
-                    IO.puts(full_path)
-                    text = File.read(full_path) |> elem(1)
+                    Elixir.IO.puts("Compilation error:")
+                    Elixir.IO.puts("file path:")
+                    Elixir.IO.puts(full_path)
+                    text = Elixir.File.read(full_path) |> Elixir.Kernel.elem(1)
                     Fcore.Errors.Utils.print_error(module_name, state, text)
                     raise "end"
         )
@@ -95,18 +83,18 @@ def compile_project_to_binary(directory_path, compiled_folder):
 def lexer_parse_convert_file(module_name, text):
     lexed = Fcore.Lexer.execute(text)
 
-    state = case Map.get(lexed, "error"):
+    state = case Elixir.Map.get(lexed, "error"):
         None ->
-            tokens = Map.get(lexed, "tokens")
+            tokens = Elixir.Map.get(lexed, "tokens")
             Fcore.Parser.execute(tokens)
         _ ->
             lexed
 
 
-    ast = Map.get(state, 'node')
+    ast = Elixir.Map.get(state, 'node')
 
     # 2º Convert each node from json to Fython format
-    case Map.get(state, 'error'):
+    case Elixir.Map.get(state, 'error'):
         None -> [state, Fcore.Generator.Conversor.convert(ast)]
         _ -> [state, None]
 
@@ -119,28 +107,26 @@ def get_module_name(project_full_path, module_full_path):
     # we wil remove this name and the module name passes to be
     # the name of this file parent folder
 
-    directory_path = project_full_path |> String.replace(".", "\.")
+    regex = Elixir.Regex.compile(Elixir.Enum.join(["^", project_full_path, "/"]))
+        |> Elixir.Kernel.elem(1)
 
-    regex = Regex.compile(Enum.join(["^", project_full_path, "/"]))
-        |> elem(1)
+    name = Elixir.Regex.replace(regex, module_full_path, "")
+        |> Elixir.String.replace("/", ".")
 
-    name = Regex.replace(regex, module_full_path, "")
-        |> String.replace("/", ".")
+    final = Elixir.Regex.compile("\.fy$") |> Elixir.Kernel.elem(1)
+        |> Elixir.Regex.replace(name, "")
+        |> Elixir.String.split('.')
+        |> Elixir.Enum.map(lambda i: Elixir.String.capitalize(i))
 
-    final = Regex.compile("\.fy$") |> elem(1)
-        |> Regex.replace(name, "")
-        |> String.split('.')
-        |> Enum.map(lambda i: String.capitalize(i))
-
-    case final |> List.last():
+    case final |> Elixir.List.last():
         "__init__" ->
             final
-                |> List.pop_at(-1)
-                |> elem(1)
-                |> Enum.join('.')
-        _ -> final |> Enum.join('.')
+                |> Elixir.List.pop_at(-1)
+                |> Elixir.Kernel.elem(1)
+                |> Elixir.Enum.join('.')
+        _ -> final |> Elixir.Enum.join('.')
 
 def parallel_map(collection, func):
     collection
-        |> Enum.map(lambda i: Task.async(lambda: func(i)))
-        |> Enum.map(lambda i: Task.await(i, :infinity))
+        |> Elixir.Enum.map(lambda i: Task.async(lambda: func(i)))
+        |> Elixir.Enum.map(lambda i: Task.await(i, :infinity))

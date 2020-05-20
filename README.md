@@ -135,6 +135,7 @@ def add(a)
 - [x] Stop using PosParser to guess if a call is a local call. It can be a lot easier to just consider
 all call local calls, but call of modules like Map.get(...)
 - [ ] Use real tuples in conversor instead of strings
+- [ ] Define atoms using strings: `:"oii"`. Must work with single and double quotes.
 - [ ] Support to range syntax
 - [ ] Support to try catch. Finally too?
 - [ ] Support to multiline if with elif and else

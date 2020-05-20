@@ -6,7 +6,7 @@ def execute(tokens):
         "next_tok": None,
         "node": None,
         "_current_tok_idx": -1,
-        "_tokens": tokens |> Enum.filter(lambda i: Map.get(i, "type") != 'NEWLINE')
+        "_tokens": tokens |> Elixir.Enum.filter(lambda i: Elixir.Map.get(i, "type") != 'NEWLINE')
     }
 
     state |> advance() |> parse() |> Fcore.Parser.Pos.execute()
@@ -20,11 +20,11 @@ def advance(state):
     ]
 
     state_filtered = state
-        |> Map.to_list()
-        |> Enum.filter(lambda key_n_value: elem(key_n_value, 0) in valid_keys)
-        |> Map.new()
+        |> Elixir.Map.to_list()
+        |> Elixir.Enum.filter(lambda key_n_value: Elixir.Kernel.elem(key_n_value, 0) in valid_keys)
+        |> Elixir.Map.new()
 
-    case state_filtered != state and Map.get(state, 'error') == None:
+    case state_filtered != state and Elixir.Map.get(state, 'error') == None:
         True ->
             # If you get this error. Almost sure that some key
             # wasnt deleted in some loop_while lambdas
@@ -32,112 +32,112 @@ def advance(state):
             raise "trying to advance state with invalid keys"
         False -> None
 
-    idx = state |> Map.get("_current_tok_idx")
-    tokens = state |> Map.get("_tokens")
+    idx = state |> Elixir.Map.get("_current_tok_idx")
+    tokens = state |> Elixir.Map.get("_tokens")
 
     idx = idx + 1
-    current_tok = tokens |> Enum.at(idx, None)
+    current_tok = tokens |> Elixir.Enum.at(idx, None)
 
-    case idx >= Enum.count(tokens):
+    case idx >= Elixir.Enum.count(tokens):
         True -> state
         False ->
             new_state = {
                 "current_tok": current_tok,
-                "prev_tok": Enum.at(tokens, idx - 1, None) if idx > 0 else None,
-                "next_tok": Enum.at(tokens, idx + 1, None),
+                "prev_tok": Elixir.Enum.at(tokens, idx - 1, None) if idx > 0 else None,
+                "next_tok": Elixir.Enum.at(tokens, idx + 1, None),
                 "_current_tok_idx": idx
             }
 
-            Map.merge(state, new_state)
+            Elixir.Map.merge(state, new_state)
 
 def parse(state):
     [state, node] = statements(state)
 
-    ct = Map.get(state, "current_tok")
+    ct = Elixir.Map.get(state, "current_tok")
 
-    case Map.get(state, "error") == None and Map.get(ct, "type") != "EOF":
+    case Elixir.Map.get(state, "error") == None and Elixir.Map.get(ct, "type") != "EOF":
         True ->
             Fcore.Parser.Utils.set_error(
                 state,
                 "Expected '+' or '-' or '*' or '/'",
-                Map.get(ct, "pos_start"),
-                Map.get(ct, "pos_end")
+                Elixir.Map.get(ct, "pos_start"),
+                Elixir.Map.get(ct, "pos_end")
             )
         False ->
-            Map.merge(state, {"node": node})
+            Elixir.Map.merge(state, {"node": node})
 
 def statements(state):
     statements(state, 0)
 
 def statements(state, expected_ident_gte):
-    pos_start = Map.get(state, "current_tok") |> Map.get("pos_start")
+    pos_start = Elixir.Map.get(state, "current_tok") |> Elixir.Map.get("pos_start")
 
     state = loop_while(
         state,
         lambda state, ct:
-            Map.get(state, "_break") != True
+            Elixir.Map.get(state, "_break") != True
         ,
         lambda state, ct:
-            _statements = Map.get(state, "_statements", [])
-            state = Map.delete(state, '_statements')
+            _statements = Elixir.Map.get(state, "_statements", [])
+            state = Elixir.Map.delete(state, '_statements')
 
-            ct_type = Map.get(ct, "type")
+            ct_type = Elixir.Map.get(ct, "type")
 
-            more_statements = Map.get(ct, "ident") >= expected_ident_gte
+            more_statements = Elixir.Map.get(ct, "ident") >= expected_ident_gte
 
             more_statements = False if ct_type == "RPAREN" else more_statements
 
             case:
                 not more_statements or ct_type == "EOF" ->
                     state
-                        |> Map.put("_break", True)
-                        |> Map.put("_statements", _statements)
+                        |> Elixir.Map.put("_break", True)
+                        |> Elixir.Map.put("_statements", _statements)
                 True ->
                     [state, _statement] = statement(state)
 
                     case _statement:
                         None ->
                             state
-                                |> Map.put("_break", True)
-                                |> Map.put("_statements", _statements)
+                                |> Elixir.Map.put("_break", True)
+                                |> Elixir.Map.put("_statements", _statements)
                         _ ->
-                            Map.put(
+                            Elixir.Map.put(
                                 state,
                                 "_statements",
-                                List.insert_at(_statements, -1, _statement)
+                                Elixir.List.insert_at(_statements, -1, _statement)
                             )
     )
 
-    _statements = Map.get(state, "_statements", [])
-    state = Map.delete(state, "_statements") |> Map.delete("_break")
+    _statements = Elixir.Map.get(state, "_statements", [])
+    state = Elixir.Map.delete(state, "_statements") |> Elixir.Map.delete("_break")
 
     case:
-        Map.get(state, "error") != None ->
+        Elixir.Map.get(state, "error") != None ->
             [state, None]
         _statements == [] ->
-            ct = Map.get(state, "current_tok")
+            ct = Elixir.Map.get(state, "current_tok")
 
             state = Fcore.Parser.Utils.set_error(
                 state,
                 "Empty staments are not allowed",
-                Map.get(ct, "pos_start"),
-                Map.get(ct, "pos_end")
+                Elixir.Map.get(ct, "pos_start"),
+                Elixir.Map.get(ct, "pos_end")
             )
             [state, None]
         True ->
-            pos_end = Map.get(state, "current_tok") |> Map.get("pos_end")
+            pos_end = Elixir.Map.get(state, "current_tok") |> Elixir.Map.get("pos_end")
             node = Fcore.Parser.Nodes.make_statements_node(_statements, pos_start, pos_end)
 
             [state, node]
 
 
 def statement(state):
-    ct = Map.get(state, 'current_tok')
-    pos_start = Map.get(ct, 'pos_start')
+    ct = Elixir.Map.get(state, 'current_tok')
+    pos_start = Elixir.Map.get(ct, 'pos_start')
 
     [state, node] = case:
         Fcore.Parser.Utils.tok_matchs(ct, 'KEYWORD', 'raise') ->
-            pos_start = Map.get(ct, 'pos_start')
+            pos_start = Elixir.Map.get(ct, 'pos_start')
 
             [state, _expr] = state |> advance() |> expr()
 
@@ -146,38 +146,38 @@ def statement(state):
         True ->
             [state, _expr] = expr(state)
 
-            case Map.get(state, "error"):
+            case Elixir.Map.get(state, "error"):
                 None -> [state, _expr]
                 _ ->
-                    ct = Map.get(state, "current_tok")
+                    ct = Elixir.Map.get(state, "current_tok")
 
                     state = Fcore.Parser.Utils.set_error(
                         state,
                         "Expected int, float, variable, 'not', '+', '-', '(' or '['",
-                        Map.get(ct, "pos_start"),
-                        Map.get(ct, "pos_end")
+                        Elixir.Map.get(ct, "pos_start"),
+                        Elixir.Map.get(ct, "pos_end")
                     )
                     [state, None]
 
-    case (Map.get(state, 'current_tok') |> Map.get('type')) == 'EQ':
+    case (Elixir.Map.get(state, 'current_tok') |> Elixir.Map.get('type')) == 'EQ':
         True -> pattern_match(state, node, pos_start)
         False -> [state, node]
 
 def expr(state):
-    ct = state |> Map.get('current_tok')
-    ct_type = ct |> Map.get('type')
+    ct = state |> Elixir.Map.get('current_tok')
+    ct_type = ct |> Elixir.Map.get('type')
 
     _and = ["KEYWORD", "and"]
     _or = ["KEYWORD", "or"]
 
     [state, node] = bin_op(state, &comp_expr/1, [_and, _or], None)
 
-    ct = Map.get(state, "current_tok")
+    ct = Elixir.Map.get(state, "current_tok")
 
     case:
         Fcore.Parser.Utils.tok_matchs(ct, 'KEYWORD', 'if') ->
             if_expr(state, node)
-        Map.get(ct, 'type') == 'PIPE' ->
+        Elixir.Map.get(ct, 'type') == 'PIPE' ->
             pipe_expr(state, node)
         Fcore.Parser.Utils.tok_matchs(ct, 'KEYWORD', 'in') ->
             state = advance(state)
@@ -192,7 +192,7 @@ def expr(state):
 
 
 def comp_expr(state):
-    ct = Map.get(state, "current_tok")
+    ct = Elixir.Map.get(state, "current_tok")
 
     case Fcore.Parser.Utils.tok_matchs(ct, "KEYWORD", 'not'):
         True ->
@@ -224,15 +224,15 @@ def call(state, _atom):
         _ -> [state, _atom]
 
     get_info = lambda state:
-        ct = Map.get(state, 'current_tok')
-        ct_type = Map.get(ct, 'type')
-        ct_line = Map.get(ct, 'pos_start') |> Map.get('ln')
+        ct = Elixir.Map.get(state, 'current_tok')
+        ct_type = Elixir.Map.get(ct, 'type')
+        ct_line = Elixir.Map.get(ct, 'pos_start') |> Elixir.Map.get('ln')
 
         prev_tok_ln = state
-            |> Map.get('_tokens')
-            |> Enum.at(Map.get(state, '_current_tok_idx') - 1)
-            |> Map.get('pos_end')
-            |> Map.get('ln')
+            |> Elixir.Map.get('_tokens')
+            |> Elixir.Enum.at(Elixir.Map.get(state, '_current_tok_idx') - 1)
+            |> Elixir.Map.get('pos_end')
+            |> Elixir.Map.get('ln')
 
         (ct, ct_type, ct_line, prev_tok_ln)
 
@@ -253,8 +253,8 @@ def call(state, _atom):
         False -> [state, _atom]
 
 def factor(state):
-    ct = Map.get(state, "current_tok")
-    ct_type = ct |> Map.get('type')
+    ct = Elixir.Map.get(state, "current_tok")
+    ct_type = ct |> Elixir.Map.get('type')
 
     case ct_type in ['PLUS', 'MINUS']:
         True ->
@@ -262,7 +262,7 @@ def factor(state):
 
             [state, _factor] = factor(state)
 
-            case Map.get(state, "error"):
+            case Elixir.Map.get(state, "error"):
                 None ->
                     node = Fcore.Parser.Nodes.make_unary_node(ct, _factor)
                     [state, node]
@@ -271,10 +271,10 @@ def factor(state):
         False -> power(state)
 
 def atom(state):
-    ct = Map.get(state, "current_tok")
-    ct_type = ct |> Map.get('type')
+    ct = Elixir.Map.get(state, "current_tok")
+    ct_type = ct |> Elixir.Map.get('type')
 
-    pos_start = Map.get(ct, 'pos_start')
+    pos_start = Elixir.Map.get(ct, 'pos_start')
 
     case:
         ct_type in ['INT', 'FLOAT'] ->
@@ -286,7 +286,7 @@ def atom(state):
         ct_type == 'IDENTIFIER' or ct_type == 'PIN' ->
             is_pinned = ct_type == 'PIN'
 
-            (state, ct) = (advance(state), Map.get(advance(state), 'current_tok')) if is_pinned else (state, ct)
+            (state, ct) = (advance(state), Elixir.Map.get(advance(state), 'current_tok')) if is_pinned else (state, ct)
 
             node = Fcore.Parser.Nodes.make_varaccess_node(ct, is_pinned)
             [state |> advance(), node]
@@ -298,11 +298,11 @@ def atom(state):
         ct_type == 'LPAREN' ->
             state = advance(state)
 
-            [state, _expr] = case (Map.get(state, 'current_tok') |> Map.get('type')) == 'RPAREN':
+            [state, _expr] = case (Elixir.Map.get(state, 'current_tok') |> Elixir.Map.get('type')) == 'RPAREN':
                 True -> [state, None]
                 False -> expr(state)
 
-            ct_type = Map.get(state, 'current_tok') |> Map.get('type')
+            ct_type = Elixir.Map.get(state, 'current_tok') |> Elixir.Map.get('type')
 
             case:
                 # if the _expr is None it means that we are defining
@@ -313,10 +313,10 @@ def atom(state):
                     state = advance(state)
                     [state, _expr]
                 True ->
-                    ct = Map.get(state, 'current_tok')
+                    ct = Elixir.Map.get(state, 'current_tok')
 
                     state = Fcore.Parser.Utils.set_error(
-                        state, "Expected ')'", Map.get(ct, "pos_start"), Map.get(ct, "pos_end")
+                        state, "Expected ')'", Elixir.Map.get(ct, "pos_start"), Elixir.Map.get(ct, "pos_end")
                     )
                     [state, None]
         ct_type == 'LSQUARE' -> list_expr(state)
@@ -330,19 +330,19 @@ def atom(state):
         True ->
             state = Fcore.Parser.Utils.set_error(
                 state,
-                Enum.join([
+                Elixir.Enum.join([
                     "Expected int, float, identifier, '+', '-', '(', '[', if, def, lambda or case. ",
                     "Received: ",
                     ct_type
                 ]),
-                Map.get(ct, "pos_start"),
-                Map.get(ct, "pos_end")
+                Elixir.Map.get(ct, "pos_start"),
+                Elixir.Map.get(ct, "pos_end")
             )
             [state, None]
 
 
 def loop_while(st, while_func, do_func):
-    ct = Map.get(st, "current_tok")
+    ct = Elixir.Map.get(st, "current_tok")
 
     valid = while_func(st, ct)
 
@@ -355,76 +355,76 @@ def bin_op(state, func_a, ops, func_b):
 
     [state, first_left] = func_a(state)
 
-    ct = Map.get(state, "current_tok")
+    ct = Elixir.Map.get(state, "current_tok")
 
     state = loop_while(
         state,
         lambda state, ct:
             case:
-                Map.get(ct, "type") == "EOF" -> False
-                Map.get(state, "error") != None -> False
-                Enum.member?(ops, Map.get(ct, "type")) or Enum.member?(ops, [Map.get(ct, "type"), Map.get(ct, "value")]) -> True
+                Elixir.Map.get(ct, "type") == "EOF" -> False
+                Elixir.Map.get(state, "error") != None -> False
+                Elixir.Enum.member?(ops, Elixir.Map.get(ct, "type")) or Elixir.Enum.member?(ops, [Elixir.Map.get(ct, "type"), Elixir.Map.get(ct, "value")]) -> True
                 True -> False
         ,
         lambda state, ct:
-            left = Map.get(state, "_node", first_left)
-            state = Map.delete(state, "_node")
+            left = Elixir.Map.get(state, "_node", first_left)
+            state = Elixir.Map.delete(state, "_node")
 
-            op_tok = Map.get(state, 'current_tok')
+            op_tok = Elixir.Map.get(state, 'current_tok')
             state = advance(state)
 
             [state, right] = func_b(state)
 
-            case Map.get(state, "error"):
+            case Elixir.Map.get(state, "error"):
                 None ->
                     left = Fcore.Parser.Nodes.make_bin_op_node(left, op_tok, right)
-                    Map.put(state, "_node", left)
+                    Elixir.Map.put(state, "_node", left)
                 _ -> state
     )
 
-    left = Map.get(state, '_node', first_left)
-    state = Map.delete(state, '_node')
+    left = Elixir.Map.get(state, '_node', first_left)
+    state = Elixir.Map.delete(state, '_node')
 
     [state, left]
 
 def list_expr(state):
-    pos_start = Map.get(state, "current_tok") |> Map.get("pos_start")
+    pos_start = Elixir.Map.get(state, "current_tok") |> Elixir.Map.get("pos_start")
 
     state = loop_while(
         state,
         lambda state, ct:
             case:
-                Map.get(ct, "type") == "RSQUARE" -> False
-                Map.get(ct, "type") == "EOF" -> False
-                Map.get(state, "error") != None -> False
+                Elixir.Map.get(ct, "type") == "RSQUARE" -> False
+                Elixir.Map.get(ct, "type") == "EOF" -> False
+                Elixir.Map.get(state, "error") != None -> False
                 True -> True
         ,
         lambda state, ct:
-            element_nodes = Map.get(state, "_element_nodes", [])
-            state = Map.delete(state, "_element_nodes")
+            element_nodes = Elixir.Map.get(state, "_element_nodes", [])
+            state = Elixir.Map.delete(state, "_element_nodes")
 
-            state = state if Map.get(ct, "type") == "COMMA" and element_nodes == [] else advance(state)
+            state = state if Elixir.Map.get(ct, "type") == "COMMA" and element_nodes == [] else advance(state)
 
-            case Map.get(state, "current_tok") |> Map.get("type"):
+            case Elixir.Map.get(state, "current_tok") |> Elixir.Map.get("type"):
                 "RSQUARE" -> state
                 _ ->
                     [state, _expr] = expr(state)
 
-                    Map.put(
-                        state |> Map.put("_element_nodes", element_nodes),
+                    Elixir.Map.put(
+                        state |> Elixir.Map.put("_element_nodes", element_nodes),
                         "_element_nodes",
-                        List.flatten([element_nodes, _expr])
+                        Elixir.List.flatten([element_nodes, _expr])
                     )
     )
 
-    ct = Map.get(state, "current_tok")
+    ct = Elixir.Map.get(state, "current_tok")
 
-    case Map.get(ct, 'type'):
+    case Elixir.Map.get(ct, 'type'):
         'RSQUARE' ->
-            element_nodes = Map.get(state, "_element_nodes", [])
-            state = Map.delete(state, "_element_nodes")
+            element_nodes = Elixir.Map.get(state, "_element_nodes", [])
+            state = Elixir.Map.delete(state, "_element_nodes")
 
-            pos_end = Map.get(state, "current_tok") |> Map.get("pos_end")
+            pos_end = Elixir.Map.get(state, "current_tok") |> Elixir.Map.get("pos_end")
 
             node = Fcore.Parser.Nodes.make_list_node(element_nodes, pos_start, pos_end)
 
@@ -435,32 +435,32 @@ def list_expr(state):
             state = Fcore.Parser.Utils.set_error(
                 state,
                 "Expected ']'",
-                Map.get(ct, "pos_start"),
-                Map.get(ct, "pos_end")
+                Elixir.Map.get(ct, "pos_start"),
+                Elixir.Map.get(ct, "pos_end")
             )
             [state, None]
 
 
 def map_expr(state):
-    pos_start = Map.get(state, "current_tok") |> Map.get("pos_start")
+    pos_start = Elixir.Map.get(state, "current_tok") |> Elixir.Map.get("pos_start")
 
     map_get_pairs = lambda state:
         [state, key] = expr(state)
 
         case:
-            (Map.get(state, "current_tok") |> Map.get("type")) == "DO" ->
+            (Elixir.Map.get(state, "current_tok") |> Elixir.Map.get("type")) == "DO" ->
                 state = advance(state)
 
                 [state, value] = expr(state)
 
                 [state, {key: value}]
             True ->
-                ct = Map.get(state, "current_tok")
+                ct = Elixir.Map.get(state, "current_tok")
                 Fcore.Parser.Utils.set_error(
                     state,
                     "Empty staments are not allowed",
-                    Map.get(ct, "pos_start"),
-                    Map.get(ct, "pos_end")
+                    Elixir.Map.get(ct, "pos_start"),
+                    Elixir.Map.get(ct, "pos_end")
                 )
                 [state, None]
 
@@ -468,48 +468,48 @@ def map_expr(state):
         state,
         lambda state, ct:
             case:
-                Map.get(ct, "type") == "RCURLY" -> False
-                Map.get(ct, "type") == "EOF" -> False
-                Map.get(state, "error") != None -> False
+                Elixir.Map.get(ct, "type") == "RCURLY" -> False
+                Elixir.Map.get(ct, "type") == "EOF" -> False
+                Elixir.Map.get(state, "error") != None -> False
                 True -> True
         ,
         lambda state, ct:
-            pairs = Map.get(state, "_pairs", {})
-            state = Map.delete(state, "_pairs")
+            pairs = Elixir.Map.get(state, "_pairs", {})
+            state = Elixir.Map.delete(state, "_pairs")
 
             state = advance(state)
 
-            case Map.get(state, "current_tok") |> Map.get("type"):
+            case Elixir.Map.get(state, "current_tok") |> Elixir.Map.get("type"):
                 "RCURLY" -> state
                 _ ->
                     [state, map] = map_get_pairs(state)
 
                     case map:
                         None -> state
-                        _ -> Map.put(state, "_pairs", Map.merge(pairs, map))
+                        _ -> Elixir.Map.put(state, "_pairs", Elixir.Map.merge(pairs, map))
     )
 
-    ct = Map.get(state, "current_tok")
+    ct = Elixir.Map.get(state, "current_tok")
 
-    case Map.get(ct, 'type'):
+    case Elixir.Map.get(ct, 'type'):
         'RCURLY' ->
-            pairs = Map.get(state, "_pairs", {})
-                |> Map.to_list()
-                |> Enum.map(lambda i: [elem(i, 0), elem(i, 1)])
+            pairs = Elixir.Map.get(state, "_pairs", {})
+                |> Elixir.Map.to_list()
+                |> Elixir.Enum.map(lambda i: [Elixir.Kernel.elem(i, 0), Elixir.Kernel.elem(i, 1)])
 
-            pos_end = Map.get(state, "current_tok") |> Map.get("pos_end")
+            pos_end = Elixir.Map.get(state, "current_tok") |> Elixir.Map.get("pos_end")
 
             node = Fcore.Parser.Nodes.make_map_node(pairs, pos_start, pos_end)
 
-            state = state |> Map.delete("_pairs") |> Map.delete("_break") |> advance()
+            state = state |> Elixir.Map.delete("_pairs") |> Elixir.Map.delete("_break") |> advance()
 
             [state, node]
         _ ->
             state = Fcore.Parser.Utils.set_error(
                 state,
                 "Expected '}'",
-                Map.get(ct, "pos_start"),
-                Map.get(ct, "pos_end")
+                Elixir.Map.get(ct, "pos_start"),
+                Elixir.Map.get(ct, "pos_end")
             )
             [state, None]
 
@@ -519,7 +519,7 @@ def if_expr(state, expr_for_true):
 
     [state, condition] = expr(state)
 
-    case Fcore.Parser.Utils.tok_matchs(Map.get(state, "current_tok"), "KEYWORD", "else"):
+    case Fcore.Parser.Utils.tok_matchs(Elixir.Map.get(state, "current_tok"), "KEYWORD", "else"):
         True ->
             state = advance(state)
 
@@ -533,8 +533,8 @@ def if_expr(state, expr_for_true):
             state = Fcore.Parser.Utils.set_error(
                 state,
                 "Expected 'else'",
-                Map.get(Map.get(state, "current_tok"), "pos_start"),
-                Map.get(Map.get(state, "current_tok"), "pos_end")
+                Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_start"),
+                Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_end")
             )
 
             [state, None]
@@ -545,7 +545,7 @@ def pipe_expr(state, left_node):
 
     [state, right_node] = expr(state)
 
-    case Map.get(state, 'error'):
+    case Elixir.Map.get(state, 'error'):
         None ->
             node = Fcore.Parser.Nodes.make_pipe_node(left_node, right_node)
             [state, node]
@@ -553,30 +553,30 @@ def pipe_expr(state, left_node):
             state = Fcore.Parser.Utils.set_error(
                 state,
                 "Expected and expression after '|>'",
-                Map.get(Map.get(state, "current_tok"), "pos_start"),
-                Map.get(Map.get(state, "current_tok"), "pos_end")
+                Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_start"),
+                Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_end")
             )
 
             [state, None]
 
 def func_as_var_expr(state):
-    pos_start = Map.get(state, 'current_tok') |> Map.get('pos_start')
+    pos_start = Elixir.Map.get(state, 'current_tok') |> Elixir.Map.get('pos_start')
     state = advance(state)
 
     sequence = [
-        state |> Map.get('current_tok') |> Map.get('type'),
-        state |> advance() |> Map.get('current_tok') |> Map.get('type'),
-        state |> advance() |> advance() |> Map.get('current_tok') |> Map.get('type')
+        state |> Elixir.Map.get('current_tok') |> Elixir.Map.get('type'),
+        state |> advance() |> Elixir.Map.get('current_tok') |> Elixir.Map.get('type'),
+        state |> advance() |> advance() |> Elixir.Map.get('current_tok') |> Elixir.Map.get('type')
     ]
 
     case sequence:
         ["IDENTIFIER", "DIV", "INT"] ->
-            var_name_tok = Map.get(state, 'current_tok')
+            var_name_tok = Elixir.Map.get(state, 'current_tok')
 
             state = advance(state)
             state = advance(state)
 
-            arity = Map.get(state, 'current_tok')
+            arity = Elixir.Map.get(state, 'current_tok')
             state = advance(state)
 
             node = Fcore.Parser.Nodes.make_funcasvariable_node(
@@ -588,8 +588,8 @@ def func_as_var_expr(state):
             state = Fcore.Parser.Utils.set_error(
                 state,
                 "Expected '/'",
-                Map.get(Map.get(state, "current_tok"), "pos_start"),
-                Map.get(Map.get(state, "current_tok"), "pos_end")
+                Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_start"),
+                Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_end")
             )
             [state, None]
         ['IDENTIFIER', "DIV", _] ->
@@ -597,149 +597,149 @@ def func_as_var_expr(state):
             state = Fcore.Parser.Utils.set_error(
                 state,
                 "Expected arity number as int",
-                Map.get(Map.get(state, "current_tok"), "pos_start"),
-                Map.get(Map.get(state, "current_tok"), "pos_end")
+                Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_start"),
+                Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_end")
             )
             [state, None]
         [_, _, _] ->
             state = Fcore.Parser.Utils.set_error(
                 state,
                 "Expected the function name and arity. E.g: &sum/2",
-                Map.get(Map.get(state, "current_tok"), "pos_start"),
-                Map.get(Map.get(state, "current_tok"), "pos_end")
+                Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_start"),
+                Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_end")
             )
             [state, None]
 
 
 def case_expr(state):
-    pos_start = Map.get(state, 'current_tok') |> Map.get('pos_start')
-    initial_ident = Map.get(state, "current_tok") |> Map.get('ident')
+    pos_start = Elixir.Map.get(state, 'current_tok') |> Elixir.Map.get('pos_start')
+    initial_ident = Elixir.Map.get(state, "current_tok") |> Elixir.Map.get('ident')
 
     state = advance(state)
 
-    is_cond = (Map.get(state, "current_tok") |> Map.get("type")) == "DO"
+    is_cond = (Elixir.Map.get(state, "current_tok") |> Elixir.Map.get("type")) == "DO"
 
     [state, _expr] = case is_cond:
         True -> [state, None]
         False -> expr(state)
 
-    do_line = pos_start |> Map.get('ln')
+    do_line = pos_start |> Elixir.Map.get('ln')
     state = advance(state)
 
     check_ident = lambda state:
-        case (Map.get(state, "current_tok") |> Map.get('ident')) <= initial_ident:
+        case (Elixir.Map.get(state, "current_tok") |> Elixir.Map.get('ident')) <= initial_ident:
             True ->
                 Fcore.Parser.Utils.set_error(
                     state,
                     "The expresions of case must be idented 4 spaces forward in reference to 'case' keyword",
-                    Map.get(Map.get(state, "current_tok"), "pos_start"),
-                    Map.get(Map.get(state, "current_tok"), "pos_end")
+                    Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_start"),
+                    Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_end")
                 )
             False -> state
 
-    state = case (Map.get(state, "current_tok") |> Map.get("pos_start") |> Map.get('ln')) > do_line:
+    state = case (Elixir.Map.get(state, "current_tok") |> Elixir.Map.get("pos_start") |> Elixir.Map.get('ln')) > do_line:
         True ->
             loop_while(
                 state,
                 lambda state, ct:
                     case:
-                        Map.get(ct, "type") == "EOF" -> False
-                        Map.get(state, "error") != None -> False
-                        Map.get(ct, "ident") != initial_ident + 4 -> False
+                        Elixir.Map.get(ct, "type") == "EOF" -> False
+                        Elixir.Map.get(state, "error") != None -> False
+                        Elixir.Map.get(ct, "ident") != initial_ident + 4 -> False
                         True -> True
                 ,
                 lambda state, ct:
                     state = check_ident(state)
 
-                    cases = Map.get(state, "_cases", [])
-                    state = Map.delete(state, "_cases")
+                    cases = Elixir.Map.get(state, "_cases", [])
+                    state = Elixir.Map.delete(state, "_cases")
 
-                    this_ident = Map.get(state, 'current_tok') |> Map.get('ident')
+                    this_ident = Elixir.Map.get(state, 'current_tok') |> Elixir.Map.get('ident')
 
                     [state, left_expr] = expr(state)
 
-                    case (Map.get(state, 'current_tok') |> Map.get('type')) == 'ARROW':
+                    case (Elixir.Map.get(state, 'current_tok') |> Elixir.Map.get('type')) == 'ARROW':
                         True ->
                             state = advance(state)
 
-                            [state, right_expr] = case (Map.get(state, 'current_tok') |> Map.get('ident')) == this_ident:
+                            [state, right_expr] = case (Elixir.Map.get(state, 'current_tok') |> Elixir.Map.get('ident')) == this_ident:
                                 True -> statement(state)
                                 False -> statements(state, this_ident + 4)
 
-                            cases = List.insert_at(cases, -1, [left_expr, right_expr])
+                            cases = Elixir.List.insert_at(cases, -1, [left_expr, right_expr])
 
-                            state |> Map.put('_cases', cases)
+                            state |> Elixir.Map.put('_cases', cases)
                         False ->
                             Fcore.Parser.Utils.set_error(
                                 state,
                                 "Expected '->'",
-                                Map.get(Map.get(state, "current_tok"), "pos_start"),
-                                Map.get(Map.get(state, "current_tok"), "pos_end")
+                                Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_start"),
+                                Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_end")
                             )
             )
         False ->
             Fcore.Parser.Utils.set_error(
                 state,
                 "Expected new line after ':'",
-                Map.get(Map.get(state, "current_tok"), "pos_start"),
-                Map.get(Map.get(state, "current_tok"), "pos_end")
+                Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_start"),
+                Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_end")
             )
 
-    cases = Map.get(state, '_cases', [])
+    cases = Elixir.Map.get(state, '_cases', [])
 
     case cases:
         [] ->
             state = Fcore.Parser.Utils.set_error(
                 state,
                 "Case must have at least one case",
-                Map.get(Map.get(state, "current_tok"), "pos_start"),
-                Map.get(Map.get(state, "current_tok"), "pos_end")
+                Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_start"),
+                Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_end")
             )
             [state, None]
         _ ->
-            state = Map.delete(state, '_cases')
+            state = Elixir.Map.delete(state, '_cases')
 
             node = Fcore.Parser.Nodes.make_case_node(
-                _expr, cases, pos_start, Map.get(state, 'current_tok') |> Map.get('pos_start')
+                _expr, cases, pos_start, Elixir.Map.get(state, 'current_tok') |> Elixir.Map.get('pos_start')
             )
 
             [state, node]
 
 
 def func_def_expr(state):
-    state = case (Map.get(state, "current_tok") |> Map.get('ident')) != 0:
+    state = case (Elixir.Map.get(state, "current_tok") |> Elixir.Map.get('ident')) != 0:
         True -> Fcore.Parser.Utils.set_error(
             state,
             "'def' is only allowed in modules scope. TO define functions inside functions use 'lambda' instead.",
-            Map.get(Map.get(state, "current_tok"), "pos_start"),
-            Map.get(Map.get(state, "current_tok"), "pos_end")
+            Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_start"),
+            Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_end")
         )
         False -> state
 
-    pos_start = Map.get(state, 'current_tok') |> Map.get('pos_start')
-    def_token_ln = pos_start |> Map.get('ln')
+    pos_start = Elixir.Map.get(state, 'current_tok') |> Elixir.Map.get('pos_start')
+    def_token_ln = pos_start |> Elixir.Map.get('ln')
 
     state = advance(state)
 
-    state = case (Map.get(state, "current_tok") |> Map.get('type')) != 'IDENTIFIER':
+    state = case (Elixir.Map.get(state, "current_tok") |> Elixir.Map.get('type')) != 'IDENTIFIER':
         True -> Fcore.Parser.Utils.set_error(
             state,
             "Expected a identifier after 'def'.",
-            Map.get(Map.get(state, "current_tok"), "pos_start"),
-            Map.get(Map.get(state, "current_tok"), "pos_end")
+            Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_start"),
+            Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_end")
         )
         False -> state
 
-    var_name_tok = Map.get(state, 'current_tok')
+    var_name_tok = Elixir.Map.get(state, 'current_tok')
 
     state = advance(state)
 
-    state = case (Map.get(state, "current_tok") |> Map.get('type')) != 'LPAREN':
+    state = case (Elixir.Map.get(state, "current_tok") |> Elixir.Map.get('type')) != 'LPAREN':
         True -> Fcore.Parser.Utils.set_error(
             state,
             "Expected '('",
-            Map.get(Map.get(state, "current_tok"), "pos_start"),
-            Map.get(Map.get(state, "current_tok"), "pos_end")
+            Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_start"),
+            Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_end")
         )
         False -> state
 
@@ -749,22 +749,22 @@ def func_def_expr(state):
 
     state = advance(state)
 
-    state = case (Map.get(state, 'current_tok') |> Map.get('type')) == 'DO':
+    state = case (Elixir.Map.get(state, 'current_tok') |> Elixir.Map.get('type')) == 'DO':
         True -> advance(state)
         False -> Fcore.Parser.Utils.set_error(
             state,
             "Expected ':'",
-            Map.get(Map.get(state, "current_tok"), "pos_start"),
-            Map.get(Map.get(state, "current_tok"), "pos_end")
+            Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_start"),
+            Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_end")
         )
 
-    state = case (Map.get(state, 'current_tok') |> Map.get('pos_start') |> Map.get('ln')) > def_token_ln:
+    state = case (Elixir.Map.get(state, 'current_tok') |> Elixir.Map.get('pos_start') |> Elixir.Map.get('ln')) > def_token_ln:
         True -> state
         False -> Fcore.Parser.Utils.set_error(
             state,
             "Expected a new line after ':'",
-            Map.get(Map.get(state, "current_tok"), "pos_start"),
-            Map.get(Map.get(state, "current_tok"), "pos_end")
+            Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_start"),
+            Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_end")
         )
 
     [state, body] = statements(state, 4)
@@ -786,163 +786,163 @@ def resolve_params(state, end_tok):
         state,
         lambda state, ct:
             case:
-                Map.get(ct, "type") == "EOF" -> False
-                Map.get(ct, "type") == end_tok -> False
-                Map.get(state, "error") != None -> False
+                Elixir.Map.get(ct, "type") == "EOF" -> False
+                Elixir.Map.get(ct, "type") == end_tok -> False
+                Elixir.Map.get(state, "error") != None -> False
                 True -> True
         ,
         lambda state, ct:
-            arg_name_toks = Map.get(state, '_arg_name_toks', [])
-            state = Map.delete(state, "_arg_name_toks")
+            arg_name_toks = Elixir.Map.get(state, '_arg_name_toks', [])
+            state = Elixir.Map.delete(state, "_arg_name_toks")
 
-            case Map.get(ct, 'type') == 'IDENTIFIER':
+            case Elixir.Map.get(ct, 'type') == 'IDENTIFIER':
                 True ->
-                    arg_name_toks = List.insert_at(arg_name_toks, -1, ct)
+                    arg_name_toks = Elixir.List.insert_at(arg_name_toks, -1, ct)
 
                     state = advance(state)
 
-                    ct_type = Map.get(state, 'current_tok') |> Map.get('type')
+                    ct_type = Elixir.Map.get(state, 'current_tok') |> Elixir.Map.get('type')
 
                     case:
                         ct_type == 'COMMA' ->
                             state = advance(state)
-                            Map.put(state, '_arg_name_toks', arg_name_toks)
+                            Elixir.Map.put(state, '_arg_name_toks', arg_name_toks)
                         ct_type == end_tok ->
-                            Map.put(state, '_arg_name_toks', arg_name_toks)
+                            Elixir.Map.put(state, '_arg_name_toks', arg_name_toks)
                         True ->
                             Fcore.Parser.Utils.set_error(
                                 state,
-                                Enum.join(["Expected ',' or '", end_tok, "'"]),
-                                Map.get(Map.get(state, "current_tok"), "pos_start"),
-                                Map.get(Map.get(state, "current_tok"), "pos_end")
+                                Elixir.Enum.join(["Expected ',' or '", end_tok, "'"]),
+                                Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_start"),
+                                Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_end")
                             )
 
                 False -> Fcore.Parser.Utils.set_error(
                     state,
                     "Expected identifier",
-                    Map.get(Map.get(state, "current_tok"), "pos_start"),
-                    Map.get(Map.get(state, "current_tok"), "pos_end")
+                    Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_start"),
+                    Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_end")
                 )
     )
 
-    arg_name_toks = Map.get(state, '_arg_name_toks', [])
+    arg_name_toks = Elixir.Map.get(state, '_arg_name_toks', [])
 
-    case (Map.get(state, 'current_tok') |> Map.get('type')) == end_tok:
+    case (Elixir.Map.get(state, 'current_tok') |> Elixir.Map.get('type')) == end_tok:
         True ->
-            [state |> Map.delete('_arg_name_toks'), arg_name_toks]
+            [state |> Elixir.Map.delete('_arg_name_toks'), arg_name_toks]
         False ->
             state = Fcore.Parser.Utils.set_error(
                 state,
-                Enum.join(["Expected ", "':'" if end_tok == 'DO' else "')'"]),
-                Map.get(Map.get(state, "current_tok"), "pos_start"),
-                Map.get(Map.get(state, "current_tok"), "pos_end")
+                Elixir.Enum.join(["Expected ", "':'" if end_tok == 'DO' else "')'"]),
+                Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_start"),
+                Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_end")
             )
 
-            state = state |> Map.delete('_arg_name_toks')
+            state = state |> Elixir.Map.delete('_arg_name_toks')
             [state, None]
 
 def is_keyword(state):
-    (Map.get(state, 'current_tok') |> Map.get('type')) == 'IDENTIFIER' and (Map.get(advance(state), 'current_tok') |> Map.get('type')) == 'EQ'
+    (Elixir.Map.get(state, 'current_tok') |> Elixir.Map.get('type')) == 'IDENTIFIER' and (Elixir.Map.get(advance(state), 'current_tok') |> Elixir.Map.get('type')) == 'EQ'
 
 def call_func_expr(state, atom):
-    pos_start = Map.get(state, 'pos_start')
+    pos_start = Elixir.Map.get(state, 'pos_start')
 
     state = advance(state)
 
-    state = case (Map.get(state, 'current_tok') |> Map.get('type')) == 'RPAREN':
+    state = case (Elixir.Map.get(state, 'current_tok') |> Elixir.Map.get('type')) == 'RPAREN':
         True ->
-            state |> Map.put('_arg_nodes', []) |> Map.put('_keywords', {})
+            state |> Elixir.Map.put('_arg_nodes', []) |> Elixir.Map.put('_keywords', {})
         False ->
             loop_while(
                 state,
                 lambda state, ct:
                     case:
-                        Map.get(ct, "type") == "EOF" -> False
-                        Map.get(ct, "type") == "RPAREN" -> False
-                        Map.get(state, "error") != None -> False
+                        Elixir.Map.get(ct, "type") == "EOF" -> False
+                        Elixir.Map.get(ct, "type") == "RPAREN" -> False
+                        Elixir.Map.get(state, "error") != None -> False
                         True -> True
                 ,
                 lambda state, ct:
-                    arg_nodes = Map.get(state, '_arg_nodes', [])
-                    keywords = Map.get(state, '_keywords', {})
+                    arg_nodes = Elixir.Map.get(state, '_arg_nodes', [])
+                    keywords = Elixir.Map.get(state, '_keywords', {})
 
-                    state = Map.delete(state, '_arg_nodes') |> Map.delete('_keywords')
+                    state = Elixir.Map.delete(state, '_arg_nodes') |> Elixir.Map.delete('_keywords')
 
                     case:
                         not is_keyword(state) and keywords != {} ->
                             Fcore.Parser.Utils.set_error(
                                 state,
                                 "Non keyword arguments must be placed before any keyword argument",
-                                Map.get(state, Map.get('current_tok'), "pos_start"),
-                                Map.get(state, Map.get('current_tok'), "pos_end")
+                                Elixir.Map.get(state, Elixir.Map.get('current_tok'), "pos_start"),
+                                Elixir.Map.get(state, Elixir.Map.get('current_tok'), "pos_end")
                             )
                         True ->
                             updated_fields = case is_keyword(state):
                                 True ->
-                                    _key = Map.get(state, 'current_tok')
-                                    key_value = _key |> Map.get('value')
+                                    _key = Elixir.Map.get(state, 'current_tok')
+                                    key_value = _key |> Elixir.Map.get('value')
 
                                     state = state |> advance() |> advance()
 
-                                    state = case Map.has_key?(keywords, key_value):
+                                    state = case Elixir.Map.has_key?(keywords, key_value):
                                         True ->
                                             Fcore.Parser.Utils.set_error(
                                                 state,
                                                 "Duplicated keyword",
-                                                Map.get(_key, "pos_start"),
-                                                Map.get(Map.get(state, 'current_tok'), "pos_start")
+                                                Elixir.Map.get(_key, "pos_start"),
+                                                Elixir.Map.get(Elixir.Map.get(state, 'current_tok'), "pos_start")
                                             )
                                         False -> state
 
                                     [state, value] = expr(state)
 
-                                    [state, arg_nodes, Map.merge(keywords, {key_value: value})]
+                                    [state, arg_nodes, Elixir.Map.merge(keywords, {key_value: value})]
                                 False ->
                                     [state, _expr] = expr(state)
 
-                                    [state, List.insert_at(arg_nodes, -1, _expr), keywords]
+                                    [state, Elixir.List.insert_at(arg_nodes, -1, _expr), keywords]
 
-                            state = Enum.at(updated_fields, 0)
-                            arg_nodes = Enum.at(updated_fields, 1)
-                            keywords = Enum.at(updated_fields, 2)
+                            state = Elixir.Enum.at(updated_fields, 0)
+                            arg_nodes = Elixir.Enum.at(updated_fields, 1)
+                            keywords = Elixir.Enum.at(updated_fields, 2)
 
-                            case Map.get(state, 'current_tok') |> Map.get('type'):
+                            case Elixir.Map.get(state, 'current_tok') |> Elixir.Map.get('type'):
                                 'COMMA' ->
                                     state
                                         |> advance()
-                                        |> Map.put('_arg_nodes', arg_nodes)
-                                        |> Map.put('_keywords', keywords)
+                                        |> Elixir.Map.put('_arg_nodes', arg_nodes)
+                                        |> Elixir.Map.put('_keywords', keywords)
 
                                 'RPAREN' ->
                                     state
-                                        |> Map.put('_arg_nodes', arg_nodes)
-                                        |> Map.put('_keywords', keywords)
+                                        |> Elixir.Map.put('_arg_nodes', arg_nodes)
+                                        |> Elixir.Map.put('_keywords', keywords)
                                 _ ->
                                     Fcore.Parser.Utils.set_error(
                                         state,
                                         "Expected ')', keyword or ','",
-                                        Map.get(Map.get(state, "current_tok"), "pos_start"),
-                                        Map.get(Map.get(state, "current_tok"), "pos_end")
+                                        Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_start"),
+                                        Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_end")
                                     )
             )
 
-    arg_nodes = Map.get(state, '_arg_nodes')
-    keywords = Map.get(state, '_keywords')
+    arg_nodes = Elixir.Map.get(state, '_arg_nodes')
+    keywords = Elixir.Map.get(state, '_keywords')
 
-    state = state |> Map.delete('_arg_nodes') |> Map.delete('_keywords')
+    state = state |> Elixir.Map.delete('_arg_nodes') |> Elixir.Map.delete('_keywords')
 
-    state = case (Map.get(state, 'current_tok') |> Map.get('type')) == 'RPAREN':
+    state = case (Elixir.Map.get(state, 'current_tok') |> Elixir.Map.get('type')) == 'RPAREN':
         True -> state
         False -> Fcore.Parser.Utils.set_error(
             state,
             "Expected ')'",
-            Map.get(Map.get(state, "current_tok"), "pos_start"),
-            Map.get(Map.get(state, "current_tok"), "pos_end")
+            Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_start"),
+            Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_end")
         )
 
-    case Map.get(state, 'error'):
+    case Elixir.Map.get(state, 'error'):
         None ->
-            pos_end = Map.get(state, 'current_tok') |> Map.get('pos_end')
+            pos_end = Elixir.Map.get(state, 'current_tok') |> Elixir.Map.get('pos_end')
 
             state = advance(state)
 
@@ -953,25 +953,25 @@ def call_func_expr(state, atom):
             [state, None]
 
 def lambda_expr(state):
-    pos_start = Map.get(state, 'current_tok') |> Map.get('pos_start')
-    lambda_token_ln = pos_start |> Map.get('ln')
-    lambda_token_ident = Map.get(state, "current_tok") |> Map.get('ident')
+    pos_start = Elixir.Map.get(state, 'current_tok') |> Elixir.Map.get('pos_start')
+    lambda_token_ln = pos_start |> Elixir.Map.get('ln')
+    lambda_token_ident = Elixir.Map.get(state, "current_tok") |> Elixir.Map.get('ident')
 
     state = advance(state)
 
     [state, arg_name_toks] = resolve_params(state, 'DO')
 
-    state = case (Map.get(state, 'current_tok') |> Map.get('type')) == 'DO':
+    state = case (Elixir.Map.get(state, 'current_tok') |> Elixir.Map.get('type')) == 'DO':
         True -> advance(state)
         False -> Fcore.Parser.Utils.set_error(
             state,
             "Expected ':'",
-            Map.get(Map.get(state, "current_tok"), "pos_start"),
-            Map.get(Map.get(state, "current_tok"), "pos_end")
+            Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_start"),
+            Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_end")
         )
 
 
-    [state, body] = case (Map.get(state, 'current_tok') |> Map.get('pos_start') |> Map.get('ln')) == lambda_token_ln:
+    [state, body] = case (Elixir.Map.get(state, 'current_tok') |> Elixir.Map.get('pos_start') |> Elixir.Map.get('ln')) == lambda_token_ln:
         True -> expr(state)
         False -> statements(state, lambda_token_ident + 4)
 
@@ -998,34 +998,34 @@ def tuple_expr(state, pos_start, first_expr):
         state,
         lambda state, ct:
             case:
-                Map.get(ct, "type") == "EOF" -> False
-                Map.get(ct, "type") == "RPAREN" -> False
-                Map.get(state, "error") != None -> False
+                Elixir.Map.get(ct, "type") == "EOF" -> False
+                Elixir.Map.get(ct, "type") == "RPAREN" -> False
+                Elixir.Map.get(state, "error") != None -> False
                 True -> True
         ,
         lambda state, ct:
-            exprs = Map.get(state, '_element_nodes', [])
-            state = Map.delete(state, '_element_nodes')
+            exprs = Elixir.Map.get(state, '_element_nodes', [])
+            state = Elixir.Map.delete(state, '_element_nodes')
 
             [state, _expr] = expr(state)
 
-            exprs = List.insert_at(exprs, -1, _expr)
+            exprs = Elixir.List.insert_at(exprs, -1, _expr)
 
-            case Map.get(state, 'current_tok') |> Map.get('type'):
+            case Elixir.Map.get(state, 'current_tok') |> Elixir.Map.get('type'):
                 'COMMA' ->
                     state
                         |> advance()
-                        |> Map.put('_element_nodes', exprs)
+                        |> Elixir.Map.put('_element_nodes', exprs)
 
                 'RPAREN' ->
                     state
-                        |> Map.put('_element_nodes', exprs)
+                        |> Elixir.Map.put('_element_nodes', exprs)
                 _ ->
                     Fcore.Parser.Utils.set_error(
                         state,
                         "Expected ',' or ')'",
-                        Map.get(Map.get(state, "current_tok"), "pos_start"),
-                        Map.get(Map.get(state, "current_tok"), "pos_end")
+                        Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_start"),
+                        Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_end")
                     )
     )
 
@@ -1033,23 +1033,23 @@ def tuple_expr(state, pos_start, first_expr):
         None -> []
         _ ->
             state
-                |> Map.get('_element_nodes', [])
-                |> List.insert_at(0, first_expr)
+                |> Elixir.Map.get('_element_nodes', [])
+                |> Elixir.List.insert_at(0, first_expr)
 
-    state = state |> Map.delete('_element_nodes')
+    state = state |> Elixir.Map.delete('_element_nodes')
 
-    state = case (Map.get(state, 'current_tok') |> Map.get('type')) == 'RPAREN':
+    state = case (Elixir.Map.get(state, 'current_tok') |> Elixir.Map.get('type')) == 'RPAREN':
         True -> state
         False -> Fcore.Parser.Utils.set_error(
             state,
             "Expected ')'",
-            Map.get(Map.get(state, "current_tok"), "pos_start"),
-            Map.get(Map.get(state, "current_tok"), "pos_end")
+            Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_start"),
+            Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_end")
         )
 
-    case Map.get(state, 'error'):
+    case Elixir.Map.get(state, 'error'):
         None ->
-            pos_end = Map.get(state, 'current_tok') |> Map.get('pos_end')
+            pos_end = Elixir.Map.get(state, 'current_tok') |> Elixir.Map.get('pos_end')
 
             state = advance(state)
 
@@ -1062,22 +1062,22 @@ def tuple_expr(state, pos_start, first_expr):
 def pattern_match(state, left_node, pos_start):
     state = advance(state)
 
-    valid_left_node = is_map(left_node) and Map.get(left_node, "NodeType") in Fcore.Parser.Nodes.node_types_accept_pattern()
+    valid_left_node = Elixir.Kernel.is_map(left_node) and Elixir.Map.get(left_node, "NodeType") in Fcore.Parser.Nodes.node_types_accept_pattern()
 
     case:
-        Map.get(state, 'error') -> [state, None]
+        Elixir.Map.get(state, 'error') -> [state, None]
         valid_left_node == False ->
             state = Fcore.Parser.Utils.set_error(
                 state,
                 "Invalid pattern",
                 pos_start,
-                Map.get(Map.get(state, "current_tok"), "pos_end")
+                Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_end")
             )
             [state, None]
         valid_left_node == True ->
             [state, right_node] = expr(state)
 
-            pos_end = Map.get(state, 'current_tok') |> Map.get('pos_start')
+            pos_end = Elixir.Map.get(state, 'current_tok') |> Elixir.Map.get('pos_start')
 
             node = Fcore.Parser.Nodes.make_patternmatch_node(
                 left_node, right_node, pos_start, pos_end
@@ -1090,19 +1090,19 @@ def static_access_expr(state, left_node):
 
     [state, node_value] = expr(state)
 
-    state = case Map.get(state, 'current_tok') |> Map.get('type'):
+    state = case Elixir.Map.get(state, 'current_tok') |> Elixir.Map.get('type'):
         'RSQUARE' -> state
         _ ->
             Fcore.Parser.Utils.set_error(
                 state,
                 "Expected ]",
-                Map.get(Map.get(state, "current_tok"), "pos_start"),
-                Map.get(Map.get(state, "current_tok"), "pos_end")
+                Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_start"),
+                Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_end")
             )
 
-    case Map.get(state, 'error'):
+    case Elixir.Map.get(state, 'error'):
         None ->
-            pos_end = Map.get(state, 'current_tok') |> Map.get('pos_end')
+            pos_end = Elixir.Map.get(state, 'current_tok') |> Elixir.Map.get('pos_end')
             node = Fcore.Parser.Nodes.make_staticaccess_node(left_node, node_value, pos_end)
 
             state = advance(state)
