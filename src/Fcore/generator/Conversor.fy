@@ -358,29 +358,29 @@ def get_childs(right_or_left_node):
 
 
 def convert_pipe_node(node):
-    # this funciton all sequence pipe nodes, its not suppose to be recursive
+    # Actually, we never convert to elixir pipe ast
+    # Instead, we do elixier job to put the left node of the pipe
+    # as the first parameter of the right node
+    # We do this because elixir pipe ast doesnt work well
+    # with a erlang call in the right. Eg: "oii" |> :string.replace("o", "i")
 
+    left_node = Map.get(node, 'left_node')
+    right_node = Map.get(node, 'right_node')
 
-    build_multiple_pipes = lambda node:
-        all = [
-            get_childs(node |> Elixir.Map.get("left_node")),
-            get_childs(node |> Elixir.Map.get("right_node"))
-        ]
-            |> Elixir.List.flatten()
+    Elixir.IO.inspect("node")
+    Elixir.IO.inspect(node)
 
-        first = build_single_pipe(
-            all |> Elixir.Enum.at(0), all |> Elixir.Enum.at(1)
+    right_node case Map.get(right_node, "NodeType"):
+        "CallNode" -> Map.merge(
+            right_node,
+            {
+                "arg_nodes", Map.get(right_node, "arg_nodes") |> List.insert_at(0, left_node),
+                "arity": Map.get(right_node, "arity") + 1
+            }
         )
+        _ -> right_node
 
-        [first, all |> Elixir.Enum.drop(2)]
-            |> Elixir.List.flatten()
-            |> Elixir.Enum.reduce(lambda x, acc:
-                build_single_pipe(acc, x)
-            )
-
-    case is_pipenode(node |> Elixir.Map.get("right_node")):
-        False -> build_single_pipe(node)
-        True -> build_multiple_pipes(node)
+    convert(right_node)
 
 def convert_unaryop_node(node):
     value = convert(node |> Elixir.Map.get("node"))
