@@ -107,6 +107,7 @@ hi.()
 ### Roadmap
 
 #### Bugs
+- [ ] If you put pycharm in mode of use tab instead of 4 spaces the compile doesnt work properly. It just cant understand what is a statement anymore, and give a syntax error. Probably the fix is only in the lexer in the part that add the indent key to Token.
 - [x] Map are being compiled empty if theres a comma at end of it. E.g: `{"a": 1,}`
 - [ ] In the pos parser we need to convert any variable that is a elixir keyword to something else
 - [x] Pretty error print is not working when have a comment in a nearby line.
