@@ -189,27 +189,6 @@ def convert_funcasvariable_node(node):
         name, ", [], Elixir}, ", arity, "]}]}"
     ])
 
-def convert_module_to_ast(module_name, compiled_body):
-    module_name = case String.contains?(module_name, "."):
-        False -> Enum.join([":", module_name])
-        True ->
-            module_name = module_name
-                |> String.split('.')
-                |> Enum.map(lambda i: Enum.join([":", i]))
-                |> Enum.join(", ")
-
-            Enum.join([
-                "{:__aliases__, [alias: false], [",
-                module_name,
-                "]}"
-            ])
-
-    Enum.join([
-        "{:defmodule, [line: 1], ",
-        "[{:__aliases__, [line: 1], [", module_name, "]}, ",
-        "[do: ", compiled_body, "]]}"
-    ])
-
 def convert_binop_node(node):
     a = convert(Map.get(node, "left_node"))
     b = convert(Map.get(node, "right_node"))
