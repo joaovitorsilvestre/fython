@@ -281,7 +281,7 @@ def convert_call_node(node):
 
                     module = case Elixir.String.starts_with?(module, "Elixir."):
                         True -> module
-                        False -> Elixir.Enum.join([':"', module, '"'])
+                        False -> Elixir.Enum.join([':"Fython.', module, '"'])
 
                     Elixir.Enum.join(["{{:., [], [", module, ", :", function, "]}, [], ", arguments, "}"])
                 False ->

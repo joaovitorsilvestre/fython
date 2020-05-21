@@ -172,7 +172,7 @@ def make_call_node(node_to_call, arg_nodes, keywords, pos_end):
     }
 
 def make_unary_node(tok, node):
-    case Fcore.Parser.Utils.valid_node?(node):
+    case Core.Parser.Utils.valid_node?(node):
         [False, reason] -> raise reason
         [True, _] -> {
             "NodeType": "UnaryOpNode",
@@ -183,11 +183,11 @@ def make_unary_node(tok, node):
         }
 
 def make_bin_op_node(left, op_tok, right):
-    case Fcore.Parser.Utils.valid_node?(left):
+    case Core.Parser.Utils.valid_node?(left):
         [False, reason] -> raise reason
         [True, _] ->
 
-            case Fcore.Parser.Utils.valid_node?(right):
+            case Core.Parser.Utils.valid_node?(right):
                 [False, reason] -> raise reason
                 [True, _] -> {
                     "NodeType": "BinOpNode",

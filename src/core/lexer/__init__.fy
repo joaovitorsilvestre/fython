@@ -9,7 +9,7 @@ def execute(text):
         "tokens": []
     }
 
-    result = state |> advance() |> parse() |> Fcore.Lexer.Tokens.add_eof_token()
+    result = state |> advance() |> parse() |> Core.Lexer.Tokens.add_eof_token()
 
     result
 
@@ -64,15 +64,15 @@ def parse(state):
                 cc == "\n" ->
                     state
                         |> Elixir.Map.put("current_ident_level", 0)
-                        |> Fcore.Lexer.Tokens.add_token("NEWLINE")
+                        |> Core.Lexer.Tokens.add_token("NEWLINE")
                         |> advance()
                         |> parse()
                 cc == ':' -> parse(make_do_or_token(state))
                 cc == "'" or cc == '"' -> parse(make_string(state))
-                Elixir.String.contains?(Fcore.Lexer.Consts.identifier_chars(True), cc) ->
+                Elixir.String.contains?(Core.Lexer.Consts.identifier_chars(True), cc) ->
                     state |> make_identifier() |> parse()
                 cc == "&" -> simple_maker(state, "ECOM")
-                Elixir.String.contains?(Fcore.Lexer.Consts.digists(), cc) -> parse(make_number(state))
+                Elixir.String.contains?(Core.Lexer.Consts.digists(), cc) -> parse(make_number(state))
                 cc == "^" -> simple_maker(state, "PIN")
                 cc == "," -> simple_maker(state, "COMMA")
                 cc == "+" -> simple_maker(state, "PLUS")
@@ -95,7 +95,7 @@ def parse(state):
 
 def simple_maker(st, type):
     st
-        |> Fcore.Lexer.Tokens.add_token(type)
+        |> Core.Lexer.Tokens.add_token(type)
         |> advance()
         |> parse()
 
@@ -104,8 +104,8 @@ def double_maker(st, type_1, second_char, type_2):
     cc = Elixir.Map.get(st, "current_char")
 
     case:
-        cc == second_char -> st |> Fcore.Lexer.Tokens.add_token(type_2) |> advance() |> parse()
-        True -> st |> Fcore.Lexer.Tokens.add_token(type_1) |> parse()
+        cc == second_char -> st |> Core.Lexer.Tokens.add_token(type_2) |> advance() |> parse()
+        True -> st |> Core.Lexer.Tokens.add_token(type_1) |> parse()
 
 
 def expected_double_maker(st, first, type, expected):
@@ -113,7 +113,7 @@ def expected_double_maker(st, first, type, expected):
     cc = Elixir.Map.get(st, "current_char")
 
     case:
-        cc == expected -> st |> Fcore.Lexer.Tokens.add_token(type) |> advance() |> parse()
+        cc == expected -> st |> Core.Lexer.Tokens.add_token(type) |> advance() |> parse()
         True -> st |> set_error(Elixir.Enum.join(["Expected '", expected, "' after '", first, "'"]))
 
 def make_ident(state):
@@ -149,15 +149,15 @@ def make_do_or_token(state):
 
     first_char = Elixir.Map.get(state, "current_char")
 
-    case first_char != None and Elixir.String.contains?(Fcore.Lexer.Consts.letters(), first_char):
+    case first_char != None and Elixir.String.contains?(Core.Lexer.Consts.letters(), first_char):
         True ->
             state = state
                 |> Elixir.Map.put("result",  Elixir.Map.get(state, "current_char"))
                 |> loop_while(lambda cc:
-                    cc != None and Elixir.String.contains?(Fcore.Lexer.Consts.letters_digits(), cc)
+                    cc != None and Elixir.String.contains?(Core.Lexer.Consts.letters_digits(), cc)
                 )
             state = state
-                |> Fcore.Lexer.Tokens.add_token(
+                |> Core.Lexer.Tokens.add_token(
                     "ATOM", Elixir.Map.get(state, "result"), pos_start
                 )
                 |> Elixir.Map.delete("result")
@@ -166,7 +166,7 @@ def make_do_or_token(state):
         False ->
             state
                 |> advance()
-                |> Fcore.Lexer.Tokens.add_token("DO")
+                |> Core.Lexer.Tokens.add_token("DO")
 
 
 def make_string(state):
@@ -189,7 +189,7 @@ def make_string(state):
         |> Elixir.Enum.join()
 
     state
-        |> Fcore.Lexer.Tokens.add_token(
+        |> Core.Lexer.Tokens.add_token(
             "STRING", string, pos_start
         )
         |> Elixir.Map.delete("result")
@@ -207,7 +207,7 @@ def make_number(state):
     first_number = Elixir.Map.get(state, "current_char")
 
     state = loop_while(state, lambda cc:
-        cc != None and Elixir.String.contains?(Elixir.Enum.join([Fcore.Lexer.Consts.digists(), '._']), cc)
+        cc != None and Elixir.String.contains?(Elixir.Enum.join([Core.Lexer.Consts.digists(), '._']), cc)
     )
     result = Elixir.Enum.join([first_number, Elixir.Map.get(state, "result")])
 
@@ -216,12 +216,12 @@ def make_number(state):
             set_error(state, Elixir.Enum.join(["IllegalCharError: ."]))
         Elixir.String.contains?(result, '.') ->
             state
-                |> Fcore.Lexer.Tokens.add_token(
+                |> Core.Lexer.Tokens.add_token(
                     "FLOAT", result, pos_start
                 )
         True ->
             state
-                |> Fcore.Lexer.Tokens.add_token(
+                |> Core.Lexer.Tokens.add_token(
                     "INT", result, pos_start
                 )
 
@@ -232,15 +232,15 @@ def make_identifier(state):
     first_char = Elixir.Map.get(state, "current_char")
 
     state = loop_while(state, lambda cc:
-        cc != None and Elixir.String.contains?(Fcore.Lexer.Consts.identifier_chars(False), cc)
+        cc != None and Elixir.String.contains?(Core.Lexer.Consts.identifier_chars(False), cc)
     )
 
     result = Elixir.Enum.join([first_char, Elixir.Map.get(state, "result")])
 
-    type = case Elixir.Enum.member?(Fcore.Lexer.Tokens.keywords(), result):
+    type = case Elixir.Enum.member?(Core.Lexer.Tokens.keywords(), result):
         True -> "KEYWORD"
         False -> "IDENTIFIER"
 
     state
-        |> Fcore.Lexer.Tokens.add_token(type, result, pos_start)
+        |> Core.Lexer.Tokens.add_token(type, result, pos_start)
         |> Elixir.Map.delete("result")

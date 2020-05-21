@@ -39,7 +39,7 @@ def convert_local_function_calls(node, var_names_avaliable):
 def get_variables_bound_in_pattern(node):
     node_type = Elixir.Map.get(node, 'NodeType')
 
-    filter_types = lambda i: Elixir.Map.get(i, 'NodeType') in Fcore.Parser.Nodes.node_types_accept_pattern()
+    filter_types = lambda i: Elixir.Map.get(i, 'NodeType') in Core.Parser.Nodes.node_types_accept_pattern()
 
     case:
         node_type == 'MapNode' ->

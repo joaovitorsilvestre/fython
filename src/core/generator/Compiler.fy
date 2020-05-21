@@ -42,7 +42,7 @@ def compile_project_to_binary(directory_path, compiled_folder):
         |> Elixir.Enum.join('/')
         |> Elixir.Path.wildcard()
         |> Elixir.Enum.sort()
-        |> Elixir.Enum.map(lambda full_path:
+        |> parallel_map(lambda full_path:
             module_name = get_module_name(directory_path, full_path)
 
             Elixir.IO.puts(Elixir.Enum.join(["Compiling module: ", module_name]))
@@ -75,18 +75,18 @@ def compile_project_to_binary(directory_path, compiled_folder):
                     Elixir.IO.puts("file path:")
                     Elixir.IO.puts(full_path)
                     text = Elixir.File.read(full_path) |> Elixir.Kernel.elem(1)
-                    Fcore.Errors.Utils.print_error(module_name, state, text)
-                    raise "end"
+                    Core.Errors.Utils.print_error(module_name, state, text)
+                    :error
         )
 
 
 def lexer_parse_convert_file(module_name, text):
-    lexed = Fcore.Lexer.execute(text)
+    lexed = Core.Lexer.execute(text)
 
     state = case Elixir.Map.get(lexed, "error"):
         None ->
             tokens = Elixir.Map.get(lexed, "tokens")
-            Fcore.Parser.execute(tokens)
+            Core.Parser.execute(tokens)
         _ ->
             lexed
 
@@ -95,7 +95,7 @@ def lexer_parse_convert_file(module_name, text):
 
     # 2º Convert each node from json to Fython format
     case Elixir.Map.get(state, 'error'):
-        None -> [state, Fcore.Generator.Conversor.convert(ast)]
+        None -> [state, Core.Generator.Conversor.convert(ast)]
         _ -> [state, None]
 
 
@@ -118,7 +118,7 @@ def get_module_name(project_full_path, module_full_path):
         |> Elixir.String.split('.')
         |> Elixir.Enum.map(lambda i: Elixir.String.capitalize(i))
 
-    case final |> Elixir.List.last():
+    final = case final |> Elixir.List.last():
         "__init__" ->
             final
                 |> Elixir.List.pop_at(-1)
@@ -126,7 +126,9 @@ def get_module_name(project_full_path, module_full_path):
                 |> Elixir.Enum.join('.')
         _ -> final |> Elixir.Enum.join('.')
 
+    Elixir.Enum.join(["Fython.", final])
+
 def parallel_map(collection, func):
     collection
-        |> Elixir.Enum.map(lambda i: Task.async(lambda: func(i)))
-        |> Elixir.Enum.map(lambda i: Task.await(i, :infinity))
+        |> Elixir.Enum.map(lambda i: Elixir.Task.async(lambda: func(i)))
+        |> Elixir.Enum.map(lambda i: Elixir.Task.await(i, :infinity))

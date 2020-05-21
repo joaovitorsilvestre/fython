@@ -3,7 +3,7 @@ def execute(state):
         None ->
             node = state
                 |> Elixir.Map.get('node')
-                |> Fcore.Parser.Pos.Localcalls.convert_local_function_calls([])
+                |> Core.Parser.Pos.Localcalls.convert_local_function_calls([])
 
             Elixir.Map.put(state, 'node', node)
         _ -> state
