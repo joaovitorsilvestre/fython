@@ -1,8 +1,10 @@
 def compile_project(project_path):
     compile_project(project_path, "_compiled")
 
-
 def compile_project(project_path, destine):
+    compile_project(project_path, destine, False)
+
+def compile_project(project_path, destine, bootstrap):
     compiled_folder = [project_path, destine] |> Elixir.Enum.join('/')
 
     # Ensure compiled folder is created
@@ -11,7 +13,7 @@ def compile_project(project_path, destine):
     # Copy elixir beams to folder
     copy_elixir_beams(compiled_folder)
 
-    compile_project_to_binary(project_path, compiled_folder)
+    compile_project_to_binary(project_path, compiled_folder, bootstrap)
 
 
 def copy_elixir_beams(compiled_folder):
@@ -29,7 +31,7 @@ def copy_elixir_beams(compiled_folder):
             )
         False -> :error
 
-def compile_project_to_binary(directory_path, compiled_folder):
+def compile_project_to_binary(directory_path, compiled_folder, bootstrap):
     # Return a list of each module compiled into elixir AST in binary
     # read to be evaluated in Elixir
     # Ex:
@@ -38,10 +40,39 @@ def compile_project_to_binary(directory_path, compiled_folder):
     # go to compiled folder and start iex again.
     # Now, you should be able to call any module of this project in iex
 
-    [directory_path, "**/*.fy"]
+    files_path = [directory_path, "**/*.fy"]
         |> Elixir.Enum.join('/')
         |> Elixir.Path.wildcard()
-        |> Elixir.Enum.sort()
+        |> Elixir.Enum.sort_by(lambda full_path:
+            case bootstrap:
+                True ->
+                    # Nowdays, our compiler evaluate the code when finishes
+                    # the compilation. It can cause some problems when doing
+                    # a bootstrap. We try to mitigate it putting the most important
+                    # core modules to be compiled at the end of the process if its
+                    # a bootstrap. This is a temporary fix. We may want to
+                    # compile a module without ever evaluate it.
+
+                    current_folder_parent = Elixir.File.cwd!()
+                        |> Elixir.String.split("/")
+                        |> Elixir.Enum.split(-1)
+                        |> elem(0)
+                        |> Elixir.Enum.join("/")
+
+                    local_path = Elixir.String.replace(full_path, current_folder_parent, "")
+
+                    case:
+                        Elixir.String.starts_with?(local_path, "/core/parser/__init__.fy") -> 1
+                        Elixir.String.starts_with?(local_path, "/core/generator/Compiler.fy") -> 1
+                        Elixir.String.starts_with?(local_path, "/core/generator/Conversor.fy") -> 2
+                        True -> 0
+                False -> 0
+        )
+
+    Elixir.IO.inspect('filess')
+    Elixir.IO.inspect(files_path)
+
+    files_path
         |> parallel_map(lambda full_path:
             module_name = get_module_name(directory_path, full_path)
 

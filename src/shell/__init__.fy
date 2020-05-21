@@ -10,9 +10,9 @@ def start(count, state):
     head = Elixir.IO.ANSI.format([
         :black, :bright , "[", :cyan, count |> Elixir.Kernel.to_string(), :black, :bright, "]: "
     ])
-    user_input = Elixir.IO.gets(head)
+    user_input = Elixir.IO.gets(head) |> to_string()
 
-    case user_input |> Elixir.String.trim():
+    case Elixir.String.trim(user_input):
         "" -> start(count, state)
         _ ->
             state = case user_input |> Elixir.String.at(0):
@@ -38,7 +38,7 @@ def start(count, state):
             start(count + 1, state)
 
 def execute(text):
-    result = Fcore.eval_string('<stdin>', text)
+    result = Core.eval_string('<stdin>', text)
 
     case result:
         None -> None

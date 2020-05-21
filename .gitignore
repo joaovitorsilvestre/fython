@@ -1,4 +1,5 @@
 .idea
 **/compiled/
 **/_compiled/
+**/_bootstrap*
 /example/
