@@ -62,6 +62,7 @@ def compile_project_to_binary(directory_path, compiled_folder, bootstrap):
                     local_path = Elixir.String.replace(full_path, current_folder_parent, "")
 
                     case:
+                        Elixir.String.starts_with?(local_path, "/core/parser/__init__.fy") -> 1
                         Elixir.String.starts_with?(local_path, "/core/generator/Compiler.fy") -> 1
                         Elixir.String.starts_with?(local_path, "/core/generator/Conversor.fy") -> 2
                         True -> 0

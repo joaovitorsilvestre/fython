@@ -31,6 +31,7 @@ def valid_token_type?(type):
         "NEWLINE",
         "PIPE",
         "PIN",
+        "MULLINESTRING",
         "EOF"
     ]
     Elixir.Enum.member?(tokens, type)

@@ -143,6 +143,37 @@ def loop_while(st, func):
         False -> st
 
 
+def loop_until_sequence(state, expected_seq):
+    state = advance(state)
+    idx = state |> Elixir.Map.get("position") |> Elixir.Map.get("idx")
+    text = Elixir.Map.get(state, 'text')
+    cc = Elixir.Map.get(state, "current_char")
+
+    result = Elixir.Map.get(state, "result", "")
+
+    exp_seq_size = Elixir.String.length(expected_seq)
+
+    this_seq = Elixir.String.slice(text, Elixir.Range.new(idx, idx + exp_seq_size - 1))
+
+    Elixir.IO.inspect("opa")
+    Elixir.IO.inspect(this_seq)
+
+    state = case:
+        this_seq == expected_seq ->
+            # skip the expected_seq
+            state = Elixir.Range.new(0, exp_seq_size - 1)
+                |> Elixir.Enum.reduce(
+                    state,
+                    lambda _, acc: advance(acc)
+                )
+            state
+        cc == None -> set_error(state, Elixir.Enum.join(["expected: ", expected_seq]))
+        True -> loop_until_sequence(state, expected_seq)
+
+    Elixir.Map.put(
+        state, "result", Elixir.Enum.join([result, cc])
+    )
+
 def make_do_or_token(state):
     pos_start = Elixir.Map.get(state, "position")
     state = advance(state)
@@ -173,26 +204,40 @@ def make_string(state):
     pos_start = Elixir.Map.get(state, "position")
     string_char_type = Elixir.Map.get(state, "current_char") # ' or "
 
-    state = loop_while(state, lambda cc:
-        cc != string_char_type and cc != None
-    )
+    next_char = advance(state) |> Map.get('current_char')
+    next_next_char = advance(state) |> advance() |> Map.get('current_char')
 
-    # to advance the end string char
-    state = advance(state)
+    case Elixir.Enum.join([string_char_type, next_char, next_next_char]) == '"""':
+        True ->
+            state = advance(state) |> loop_until_sequence('"""')
 
-    string = state
-        |> Elixir.Map.get("result", "")
-        |> Elixir.String.graphemes()
-        |> Elixir.Enum.map(lambda i:
-            Elixir.Enum.join(['\\', '"']) if i == '"' else i
-        )
-        |> Elixir.Enum.join()
+            (result, state) = Elixir.Map.pop(state, "result")
 
-    state
-        |> Core.Lexer.Tokens.add_token(
-            "STRING", string, pos_start
-        )
-        |> Elixir.Map.delete("result")
+            state
+                |> Core.Lexer.Tokens.add_token(
+                    "MULLINESTRING", result, pos_start
+                )
+        False ->
+            state = loop_while(state, lambda cc:
+                cc != string_char_type and cc != None
+            )
+
+            # to advance the end string char
+            state = advance(state)
+
+            string = state
+                |> Elixir.Map.get("result", "")
+                |> Elixir.String.graphemes()
+                |> Elixir.Enum.map(lambda i:
+                    Elixir.Enum.join(['\\', '"']) if i == '"' else i
+                )
+                |> Elixir.Enum.join()
+
+            state
+                |> Core.Lexer.Tokens.add_token(
+                    "STRING", string, pos_start
+                )
+                |> Elixir.Map.delete("result")
 
 def skip_comment(state):
     state = advance(state)

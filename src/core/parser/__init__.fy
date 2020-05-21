@@ -767,6 +767,18 @@ def func_def_expr(state):
             Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_end")
         )
 
+    # Here we check if a doc string exists
+    # but we only consider the MULLINESTRING Token as a docstring
+    # if there's any other statements in the function
+    # otherwise this token is just the return of the function
+
+    ct_type = state["current_tok"]['type']
+
+    (state, docstring) = case ct_type == 'MULLINESTRING' and advance(state)['current_tok']['ident'] > def_token_ln:
+        True -> (advance(state), Map.get(state, "current_tok"))
+        False -> (state, None)
+
+    # evaluates body of function
     [state, body] = statements(state, 4)
 
     case [arg_name_toks, body]:
