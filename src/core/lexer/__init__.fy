@@ -155,9 +155,6 @@ def loop_until_sequence(state, expected_seq):
 
     this_seq = Elixir.String.slice(text, Elixir.Range.new(idx, idx + exp_seq_size - 1))
 
-    Elixir.IO.inspect("opa")
-    Elixir.IO.inspect(this_seq)
-
     state = case:
         this_seq == expected_seq ->
             # skip the expected_seq
