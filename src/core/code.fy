@@ -85,6 +85,7 @@ def get_module_name(project_full_path, file_full_path):
         |> Elixir.Kernel.elem(0)
         |> Elixir.Enum.join()
         |> Elixir.String.split("/")
+        |> Elixir.Enum.map(lambda i: Elixir.String.capitalize(i))
 
     final = case Elixir.List.last(final):
         "__init__" ->
