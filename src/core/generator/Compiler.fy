@@ -69,11 +69,8 @@ def compile_project_to_binary(directory_path, compiled_folder, bootstrap):
                 False -> 0
         )
 
-    Elixir.IO.inspect('filess')
-    Elixir.IO.inspect(files_path)
-
     files_path
-        |> parallel_map(lambda full_path:
+        |> Elixir.Enum.map(lambda full_path:
             module_name = get_module_name(directory_path, full_path)
 
             Elixir.IO.puts(Elixir.Enum.join(["Compiling module: ", module_name]))
