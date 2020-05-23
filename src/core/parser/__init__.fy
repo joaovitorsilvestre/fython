@@ -787,7 +787,7 @@ def func_def_expr(state):
         [None, None] -> [state, None]
         _ ->
             node = Core.Parser.Nodes.make_funcdef_node(
-                var_name_tok, arg_name_toks, body, pos_start
+                var_name_tok, arg_name_toks, body, docstring, pos_start
             )
 
             [state, node]
