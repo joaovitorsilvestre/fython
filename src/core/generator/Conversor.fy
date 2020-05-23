@@ -34,10 +34,7 @@ def convert_string_node(node):
         |> Elixir.Map.get("tok")
         |> Elixir.Map.get("value")
 
-    # We need to remove this dependency, eventually
-    # Convert to json is te easiest way that we found for scape
-    # `"` and `/` (and probably another chars too)
-    Elixir.Enum.join(['"', value ,'"'])
+    Elixir.Enum.join(['{:<<>>, [], ["', value, '"]}'])
 
 def convert_varaccess_node(node):
     tok_value = node |> Elixir.Map.get("var_name_tok") |> Elixir.Map.get("value")
