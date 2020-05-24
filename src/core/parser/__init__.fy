@@ -136,8 +136,8 @@ def statement(state):
     pos_start = Elixir.Map.get(ct, 'pos_start')
 
     [state, node] = case:
-        Core.Parser.Utils.tok_matchs(ct, 'KEYWORD', 'try') ->
-            try_except_expr(state)
+        Core.Parser.Utils.tok_matchs(ct, "KEYWORD", "def") ->
+            func_def_expr(state)
         Core.Parser.Utils.tok_matchs(ct, 'KEYWORD', 'raise') ->
             [state, _expr] = state |> advance() |> expr()
 
@@ -323,10 +323,10 @@ def atom(state):
         ct_type == 'LCURLY' -> map_expr(state)
         Core.Parser.Utils.tok_matchs(ct, "KEYWORD", "case") ->
             case_expr(state)
-        Core.Parser.Utils.tok_matchs(ct, "KEYWORD", "def") ->
-            func_def_expr(state)
         Core.Parser.Utils.tok_matchs(ct, "KEYWORD", "lambda") ->
             lambda_expr(state)
+        Core.Parser.Utils.tok_matchs(ct, 'KEYWORD', 'try') ->
+            try_except_expr(state)
         True ->
             state = Core.Parser.Utils.set_error(
                 state,
