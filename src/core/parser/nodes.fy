@@ -198,3 +198,15 @@ def make_bin_op_node(left, op_tok, right):
                     "pos_start": Elixir.Map.get(left, "pos_start"),
                     "pos_end": Elixir.Map.get(right, "pos_end")
                 }
+
+
+def make_try_node(try_block_node, exceptions, finally_block, pos_start, pos_end):
+    {
+        "NodeType": "TryNode",
+        "try_block_node": try_block_node,
+        "exceptions": exceptions,
+        "finally_block": finally_block,
+        "pos_start": pos_start,
+        "pos_end": pos_end
+    }
+

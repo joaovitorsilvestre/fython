@@ -136,9 +136,9 @@ def statement(state):
     pos_start = Elixir.Map.get(ct, 'pos_start')
 
     [state, node] = case:
+        Core.Parser.Utils.tok_matchs(ct, 'KEYWORD', 'try') ->
+            try_except_expr(state)
         Core.Parser.Utils.tok_matchs(ct, 'KEYWORD', 'raise') ->
-            pos_start = Elixir.Map.get(ct, 'pos_start')
-
             [state, _expr] = state |> advance() |> expr()
 
             node = Core.Parser.Nodes.make_raise_node(_expr, pos_start)
@@ -1121,3 +1121,108 @@ def static_access_expr(state, left_node):
 
             [state, node]
         _ -> [state, None]
+
+
+def handle_do_new_line(state, base_line):
+    # helper to set error in state if theres no DO or
+    # ift dont have a new line, correctly idented, after a DO
+
+    state = case state['current_tok']['type']:
+        'DO' -> advance(state)
+        _ ->
+            Core.Parser.Utils.set_error(
+                state, "Expected ':'",
+                state["current_tok"]["pos_start"],
+                state["current_tok"]["pos_end"]
+            )
+
+    state = case state['current_tok']['pos_start']['ln'] > base_line:
+        True -> state
+        False -> Core.Parser.Utils.set_error(
+            state,
+            "Expected a new line after ':'",
+            state["current_tok"]["pos_start"],
+            state["current_tok"]["pos_end"]
+        )
+
+    state
+
+
+def handle_except_blocks(state, base_line, prev_blocks):
+    (state, except_expr) = case state['current_tok']['type'] != 'IDENTIFIER':
+        True ->
+            state = Core.Parser.Utils.set_error(
+                state, "Expected identifier",
+                state["current_tok"]["pos_start"],
+                state["current_tok"]["pos_end"]
+            )
+            (state, None)
+        False ->
+            (advance(state), state['current_tok']['value'])
+
+    (state, alias) = case Core.Parser.Utils.tok_matchs(state['current_tok'], 'KEYWORD', 'as'):
+        True ->
+            state = advance(state)
+
+            case state['current_tok']['type'] != 'IDENTIFIER':
+                True ->
+                    state = Core.Parser.Utils.set_error(
+                        state, "Expected identifier",
+                        state["current_tok"]["pos_start"],
+                        state["current_tok"]["pos_end"]
+                    )
+                    (state, None)
+                False ->
+                    (advance(state), state['current_tok']['value'])
+        False -> (state, None)
+
+    state = handle_do_new_line(state, base_line)
+
+    [state, block] = statements(state)
+
+    new_list_blocks = Elixir.List.insert_at(prev_blocks, -1, (except_expr, alias, block))
+
+    case Core.Parser.Utils.tok_matchs(state['current_tok'], 'KEYWORD', 'except'):
+        True ->
+            advance(state) |> handle_except_blocks(base_line, new_list_blocks)
+        False ->
+            [state, new_list_blocks]
+
+
+def try_except_expr(state):
+    pos_start = state['current_tok']['pos_start']
+    try_token_ln = pos_start['ln']
+    try_token_ident = state['current_tok']['ident']
+
+    state = advance(state)
+
+    ## TRY BLOCK #################################
+
+    state = handle_do_new_line(state, try_token_ln)
+
+    [state, try_statements] = statements(state, try_token_ident + 4)
+
+    ## EXCEPT BLOCK #################################
+
+    state = case Core.Parser.Utils.tok_matchs(state['current_tok'], 'KEYWORD', 'except'):
+        True -> advance(state)
+        False ->
+            Core.Parser.Utils.set_error(
+                state, "Expected 'except' keyword",
+                state["current_tok"]["pos_start"],
+                state["current_tok"]["pos_end"]
+            )
+
+    [state, except_blocks] = handle_except_blocks(state, try_token_ln, [])
+
+    ## FINALLY BLOCK #################################
+
+    (state, finally_block) = case Core.Parser.Utils.tok_matchs(state['current_tok'], 'KEYWORD', 'finally'):
+        True -> statements(state, try_token_ident + 4)
+        False -> (state, None)
+
+    pos_end = state['current_tok']['pos_start']
+
+    node = Core.Parser.Nodes.make_try_node(try_statements, except_blocks, finally_block, pos_start, pos_end)
+
+    [state, node]

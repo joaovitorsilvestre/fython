@@ -12,7 +12,7 @@ statement           : import-expr
                     : expr
 
 try-expect-expr     : KEYWORD:try DO NEWLINE statements
-                    (KEYWORD:except expr? DO NEWLINE)+
+                    (KEYWORD:except expr? KEYWORD:as IDENTIFIER DO NEWLINE)+
                     (KEYWORD:finally DO NEWLINE statements)?
 
 
