@@ -6,11 +6,15 @@ legend:
 
 statements          : NEWLINE* IDENT* statement (NEWLINE+ statement) NEWLINE*
 
-statement           #: import-expr
-                    #: KEYWORD:return expr?
+statement           : import-expr
+                    : try-expect-expr
                     : KEYWORD:raise expr
                     : expr
-                    : pattern-match
+
+try-expect-expr     : KEYWORD:try DO NEWLINE statements
+                    (KEYWORD:except expr? DO NEWLINE)+
+                    (KEYWORD:finally DO NEWLINE statements)?
+
 
 # not implemented yet
 import-expr         : import IDENTIFIER (COMMA IDENTIFIER (as IDENTIFIER)?)*
@@ -71,7 +75,7 @@ if-expr             : expr KEYWORD:if expr DO expr
                     : (KEYWORD:else expr)?
 
 case-def            : KEYWORD:case expr? DO NEWLINE
-                    (expr ARROW NEWLINE? statement NEWLINE)+
+                    (expr ARROW (statement|statements) NEWLINE)+
 
 pipe-expr           : expr (PIPE expr)+
 

@@ -149,11 +149,13 @@ def loop_until_sequence(state, expected_seq):
     text = Elixir.Map.get(state, 'text')
     cc = Elixir.Map.get(state, "current_char")
 
-    result = Elixir.Map.get(state, "result", "")
+    result = Elixir.Enum.join([Elixir.Map.get(state, "result", ""), cc])
 
     exp_seq_size = Elixir.String.length(expected_seq)
 
     this_seq = Elixir.String.slice(text, Elixir.Range.new(idx, idx + exp_seq_size - 1))
+
+    state = Elixir.Map.put(state, "result", result)
 
     state = case:
         this_seq == expected_seq ->
@@ -163,13 +165,12 @@ def loop_until_sequence(state, expected_seq):
                     state,
                     lambda _, acc: advance(acc)
                 )
+
             state
         cc == None -> set_error(state, Elixir.Enum.join(["expected: ", expected_seq]))
         True -> loop_until_sequence(state, expected_seq)
 
-    Elixir.Map.put(
-        state, "result", Elixir.Enum.join([result, cc])
-    )
+    state
 
 def make_do_or_token(state):
     pos_start = Elixir.Map.get(state, "position")
@@ -206,7 +207,10 @@ def make_string(state):
 
     case Elixir.Enum.join([string_char_type, next_char, next_next_char]) == '"""':
         True ->
-            state = advance(state) |> loop_until_sequence('"""')
+            state = advance(state)
+                |> advance()
+                |> advance()
+                |> loop_until_sequence('"""')
 
             (result, state) = Elixir.Map.pop(state, "result")
 
