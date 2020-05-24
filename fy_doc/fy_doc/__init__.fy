@@ -8,7 +8,7 @@ def create_doc(project_root):
             (:ok, text) = Elixir.File.read(file_full_path)
             ast = lexer_and_parser(text)
 
-            docstring = get_doc_strings(ast)
+            get_doc_strings(ast)
         )
 
 
@@ -39,6 +39,13 @@ def get_doc_strings(node_ast):
 
     node_ast['statement_nodes']
         |> Elixir.Enum.map(lambda func_def_node:
-            func_def_node["docstring"] |> Map.get("value")
+            func_name = Elixir.Enum.join([
+                func_def_node['var_name_tok']['value'],
+                "/",
+                Elixir.Enum.count(func_def_node['arg_name_toks'])
+            ])
+            docstring = func_def_node["docstring"] |> Map.get("value")
+
+            (func_name, docstring)
         )
-        |> Elixir.Enum.filter(lambda i: i != None)
+        |> Elixir.Enum.filter(lambda i: Elixir.Kernel.elem(i, 1) != None)
