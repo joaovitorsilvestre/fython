@@ -21,6 +21,7 @@ def convert(node):
         "TupleNode"         -> convert_tuple_node(node)
         "RaiseNode"         -> convert_raise_node(node)
         "StaticAccessNode"  -> convert_staticaccess_node(node)
+        "TryNode"           -> convert_try_node(node)
         "FuncAsVariableNode" -> convert_funcasvariable_node(node)
 
 def convert_number_node(node):
@@ -416,4 +417,35 @@ def convert_staticaccess_node(node):
         to_be_accesed, ", ", value_to_find, "]}"
     ])
 
+def convert_try_node(node):
+    do = Elixir.Enum.join([
+        "{:do, ", convert(node['try_block_node']), "}"
+    ])
 
+    each_rescue = Elixir.Enum.map(
+        node['exceptions'],
+        lambda i :
+            (except_expr, alias, block) = i
+
+            case alias:
+                None -> Elixir.Enum.join([
+                    "{:->, [], [[{:__aliases__, [alias: false], [:",
+                    except_expr, "]}], ", convert(block), "]}"
+                ])
+                _ -> Elixir.Enum.join([
+                    "{:->, [],", "[[",
+                    "{:in, [context: Elixir, import: Kernel],",
+                    "[{:", alias, ", [], Elixir}, {:__aliases__, [alias: false], [:", except_expr, "]}]}",
+                    "],", convert(block), "]}"
+                ])
+    )
+
+    each_rescue = Elixir.Enum.join(each_rescue, ", ")
+
+    rescue = Elixir.Enum.join([
+        "{:rescue, [", each_rescue, "]}"
+    ])
+
+    Elixir.Enum.join([
+        "{:try, [], [[", do, ", ", rescue, "]]}"
+    ])
