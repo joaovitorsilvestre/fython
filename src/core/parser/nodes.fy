@@ -141,20 +141,21 @@ def make_raise_node(expr, pos_start):
     }
 
 
-def make_funcdef_node(var_name_tok, arg_name_toks, body_node, pos_start):
+def make_funcdef_node(var_name_tok, arg_name_toks, body_node, docstring, pos_start):
     {
         "NodeType": "FuncDefNode",
         "var_name_tok": var_name_tok,
         "arg_name_toks": arg_name_toks,
         "arity": Elixir.Enum.count(arg_name_toks),
         "body_node": body_node,
+        "docstring": docstring,
         "pos_start": pos_start,
         "pos_end": Elixir.Map.get(body_node, 'pos_end')
     }
 
 def make_lambda_node(var_name_tok, arg_name_toks, body_node, pos_start):
     Elixir.Map.merge(
-        make_funcdef_node(var_name_tok, arg_name_toks, body_node, pos_start),
+        make_funcdef_node(var_name_tok, arg_name_toks, body_node, None, pos_start),
         {"NodeType": "LambdaNode"}
     )
 

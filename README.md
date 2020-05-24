@@ -114,7 +114,7 @@ hi.()
 - [ ] Support to `{"a": 2} |> Map.get("a") == 2`. Today we need to put pipe inside parentheses
 - [x] List inside lists are not working
 - [ ] Don't returning error if we have a file with a string missing end quote: `raise "this string is invalid`
-- [ ] Use a variable as the match of a case doest seems to work. Eg: 
+- [x] Use a variable as the match of a case doest seems to work. Eg: 
 ```
 a = 'RPAREN'
 b = 'RPAREN'
@@ -128,7 +128,7 @@ def add(a)
 ```
 - [ ] Lexer must save the value for KEYWORD arguments so we can show they in the expection.
 `Expeted ... Received: KEYWORD` should be `Expeted ... Received: lambda`
-- [ ] `{values, [last]} = ...` the left part of this pattern is being evaluated as a empty map. It should be an error.
+- [x] `(values, [last]) = ...` the left part of this pattern is being evaluated as a empty map. It should be an error.
 
 #### Must have
 - [x] Remove dependency of Jason lib
@@ -168,11 +168,3 @@ a = 5
 ```
 - [ ] Support to `not in` 
 - [x] Create the error visualizer.
-
-
-#### Run in the erlang shell (have some problems :/ )
-> cd /usr/lib/elixir/lib/elixir/ebin
-> erl -pa /home/joao/fython/src/_compiled/
-1> application:start(compiler).
-2> application:start(elixir). 
-3> 'Elixir.Fshell':start().
