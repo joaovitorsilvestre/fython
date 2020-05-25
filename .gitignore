@@ -3,3 +3,4 @@
 **/_compiled/
 **/_bootstrap*
 /example/
+**/erl_crash.dump
