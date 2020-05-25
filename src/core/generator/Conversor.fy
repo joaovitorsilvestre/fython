@@ -277,9 +277,11 @@ def convert_call_node(node):
 
                     module = Elixir.Enum.join(modules, ".")
 
-                    module = case Elixir.String.starts_with?(module, "Elixir."):
-                        True -> module
-                        False -> Elixir.Enum.join([':"Fython.', module, '"'])
+                    module = case:
+                        Elixir.String.starts_with?(module, "Elixir.") -> module
+                        Elixir.String.starts_with?(module, "Erlang.") ->
+                            Elixir.Enum.join([':"', Elixir.String.replace(module, "Erlang.", ""), '"'])
+                        True -> Elixir.Enum.join([':"Fython.', module, '"'])
 
                     Elixir.Enum.join(["{{:., [], [", module, ", :", function, "]}, [], ", arguments, "}"])
                 False ->
