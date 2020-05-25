@@ -1,6 +1,6 @@
 .idea
 **/compiled/
 **/_compiled/
-**/_bootstrap*
+src/_compiled
 /example/
 **/erl_crash.dump

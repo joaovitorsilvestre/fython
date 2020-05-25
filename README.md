@@ -129,6 +129,7 @@ def add(a)
 - [ ] Lexer must save the value for KEYWORD arguments so we can show they in the expection.
 `Expeted ... Received: KEYWORD` should be `Expeted ... Received: lambda`
 - [x] `(values, [last]) = ...` the left part of this pattern is being evaluated as a empty map. It should be an error.
+- [ ] Access map value returned by a function (e.g: `advance()['current_char']`) is not working
 
 #### Must have
 - [x] Remove dependency of Jason lib

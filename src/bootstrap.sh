@@ -21,7 +21,7 @@ cp -r $ELIXIR_PATH/* $CURRENT_DIR/$BOOTSTRAP_FOLDER
 # compile all the modules idependitly
 for FILE_PATH in $ALL_FILES_PATH
 do
-  ERL_COMMAND_CALL="application:start(compiler), application:start(elixir), 'Fython.Core.Code':compile_project_file(<<"'"'${CURRENT_DIR}'"'">>, <<"'"'${FILE_PATH}'"'">>, "'"'${BOOTSTRAP_FOLDER}'"'"), init:stop()."
+  ERL_COMMAND_CALL="application:start(compiler), application:start(elixir), 'Elixir.Code':compiler_options(#{ignore_module_conflict => true}), 'Fython.Core.Code':compile_project_file(<<"'"'${CURRENT_DIR}'"'">>, <<"'"'${FILE_PATH}'"'">>, "'"'${BOOTSTRAP_FOLDER}'"'"), init:stop()."
   erl -pa $PRE_COMPILER  -noshell -eval "$ERL_COMMAND_CALL"
 done
 
