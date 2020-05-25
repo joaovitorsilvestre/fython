@@ -1,7 +1,7 @@
 def execute(text):
     state = {
-        "text": text,
-        "position": position(-1, 0, -1),
+        "text": None,
+        "position": None,
         "prev_position": None,
         "current_ident_level": 0,
         "error": None,
@@ -10,12 +10,53 @@ def execute(text):
     }
 
     yay = lambda:
-        result = state |> advance() |> parse() |> Core.Lexer.Tokens.add_eof_token()
+        all_lines_parsed = text
+            |> Elixir.String.split("\n")
+            |> Elixir.Enum.with_index()
+            |> Elixir.Enum.map(lambda i:
+                (text, index) = i
+                state
+                    |> Elixir.Map.put("text", text)
+                    |> Elixir.Map.put("position", position(-1, i, -1))
+            )
+            |> parallel_map(&parse/1)
+
+        first_error = Elixir.Enum.find(all_lines_parsed, lambda i: i['error'] != None)
+
+        tokens = all_lines_parsed
+            |> Elixir.Enum.reduce(
+                [],
+                lambda i, acc:
+                    Elixir.List.flatten([i['tokens'], acc])
+            )
+
+        last_position = position(
+            Elixir.String.length(text) - 1,
+            (Elixir.String.split(text, "\n") |> Elixir.Enum.count()) - 1,
+            (Elixir.String.split(text, "\n") |> Elixir.List.last() |> Elixir.String.length()) -1
+        )
+
+        tokens
+            |> Elixir.Enum.map(lambda i:
+                Elixir.IO.inspect(i['position'])
+            )
+
+        state
+            |> Elixir.Map.put("error", first_error)
+            |> Elixir.Map.put("tokens", tokens)
+            |> Elixir.Map.put("position", last_position)
+            |> Core.Lexer.Tokens.add_eof_token()
 
     (result, time) = measure(yay)
     Elixir.IO.inspect("Lexer tok (seconds):")
     Elixir.IO.inspect(time)
     result
+
+def parallel_map(collection, func):
+    collection
+        |> Elixir.Enum.map(lambda i: Elixir.Task.async(lambda: func(i)))
+        |> Elixir.Enum.map(lambda i: Elixir.Task.await(i, :infinity))
+
 
 def measure(function):
     (time, result) = Erlang.timer.tc(function)
