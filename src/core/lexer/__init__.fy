@@ -110,7 +110,7 @@ def parse(state):
                         |> Core.Lexer.Tokens.add_token("NEWLINE")
                         |> advance()
                         |> parse()
-                cc == ':' -> parse(make_do_or_token(state))
+                cc == ':' -> parse(make_do_or_atom(state))
                 cc == "'" or cc == '"' -> parse(make_string(state))
                 Elixir.String.contains?(Core.Lexer.Consts.identifier_chars(True), cc) ->
                     state |> make_identifier() |> parse()
@@ -215,19 +215,29 @@ def loop_until_sequence(state, expected_seq):
 
     state
 
-def make_do_or_token(state):
+def make_do_or_atom(state):
     pos_start = state["position"]
     state = advance(state)
 
     first_char = state["current_char"]
 
-    case first_char != None and Elixir.String.contains?(Core.Lexer.Consts.letters(), first_char):
-        True ->
+    valid_letter = not (first_char in ["'", '"', None]) and Elixir.String.contains?(Core.Lexer.Consts.letters(), first_char)
+    is_atom_of_string = Elixir.Enum.member?(['"', "'"], first_char)
+
+    case:
+        valid_letter or is_atom_of_string ->
+            state = advance(state) if is_atom_of_string else state
+
             state = state
                 |> Elixir.Map.put("result",  state["current_char"])
                 |> loop_while(lambda cc:
-                    cc != None and Elixir.String.contains?(Core.Lexer.Consts.letters_digits(), cc)
+                    case is_atom_of_string:
+                        True -> cc != first_char
+                        False -> cc != None and Elixir.String.contains?(Core.Lexer.Consts.letters_digits(), cc)
                 )
+
+            state = advance(state) if is_atom_of_string else state
+
             state = state
                 |> Core.Lexer.Tokens.add_token(
                     "ATOM", Elixir.Map.get(state, "result"), pos_start
@@ -235,7 +245,7 @@ def make_do_or_token(state):
                 |> Elixir.Map.delete("result")
 
             state
-        False ->
+        True ->
             state
                 |> advance()
                 |> Core.Lexer.Tokens.add_token("DO")
