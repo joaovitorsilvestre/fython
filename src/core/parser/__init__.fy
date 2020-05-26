@@ -9,17 +9,7 @@ def execute(tokens):
         "_tokens": tokens |> Elixir.Enum.filter(lambda i: i["type"] != 'NEWLINE')
     }
 
-    yay = lambda:
-        state |> advance() |> parse() |> Core.Parser.Pos.execute()
-
-    (result, time) = measure(yay)
-    Elixir.IO.inspect("Parser tok (seconds):")
-    Elixir.IO.inspect(time)
-    result
-
-def measure(function):
-    (time, result) = Erlang.timer.tc(function)
-    (result, time / 1000000)
+    state |> advance() |> parse() |> Core.Parser.Pos.execute()
 
 def advance(state):
     # before anything, lets check that the states only contains expected keys

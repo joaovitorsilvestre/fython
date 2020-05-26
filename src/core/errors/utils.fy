@@ -91,7 +91,7 @@ def string_with_arrows(state, text):
                 arrows
             ])
 
-            [item, arrows]
+            [item, Elixir.String.trim_trailing(arrows)]
         )
         |> Elixir.List.flatten()
         |> Elixir.Enum.filter(lambda i: Elixir.String.trim(i) != '' if Elixir.Kernel.is_bitstring(i) else True)

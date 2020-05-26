@@ -130,6 +130,7 @@ def add(a)
 `Expeted ... Received: KEYWORD` should be `Expeted ... Received: lambda`
 - [x] `(values, [last]) = ...` the left part of this pattern is being evaluated as a empty map. It should be an error.
 - [ ] Access map value returned by a function (e.g: `advance()['current_char']`) is not working
+- [ ] Cant pass a variable as argument if it's form another module: `Elixir.Enum.reduce(0, &Elixir.String.length/1))`. Probably the dot is not treated in conversor.
 
 #### Must have
 - [x] Remove dependency of Jason lib

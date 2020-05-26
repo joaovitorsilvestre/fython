@@ -9,58 +9,52 @@ def execute(text):
         "tokens": []
     }
 
-    yay = lambda:
-        all_lines_parsed = text
-            |> Elixir.String.split("\n")
-            |> Elixir.Enum.with_index()
-            |> Elixir.Enum.map(lambda i:
-                (text, index) = i
-                state
-                    |> Elixir.Map.put("text", text)
-                    |> Elixir.Map.put("position", position(-1, i, -1))
-            )
-            |> parallel_map(&parse/1)
+    lines = text |> Elixir.String.split("\n")
 
-        first_error = Elixir.Enum.find(all_lines_parsed, lambda i: i['error'] != None)
+    all_lines_parsed = lines
+        |> Elixir.Enum.with_index()
+        |> Elixir.Enum.map(lambda line_n_number:
+            (text, ln) = line_n_number
 
-        tokens = all_lines_parsed
-            |> Elixir.Enum.reduce(
-                [],
-                lambda i, acc:
-                    Elixir.List.flatten([i['tokens'], acc])
-            )
+            idx = case ln:
+                0 -> 0
+                _ ->
+                    lines
+                        |> Elixir.Enum.slice(Elixir.Range.new(0, ln - 1))
+                        |> Elixir.Enum.reduce(0, lambda i, acc: Elixir.String.length(i) + acc)
 
-        last_position = position(
-            Elixir.String.length(text) - 1,
-            (Elixir.String.split(text, "\n") |> Elixir.Enum.count()) - 1,
-            (Elixir.String.split(text, "\n") |> Elixir.List.last() |> Elixir.String.length()) -1
+            state
+                |> Elixir.Map.put("text", text)
+                |> Elixir.Map.put("position", position(-1, ln, -1))
+                |> advance()
+        )
+        |> parallel_map(&parse/1)
+
+    first_error = Elixir.Enum.find(all_lines_parsed, lambda i: i['error'] != None)
+
+    tokens = all_lines_parsed
+        |> Elixir.Enum.reduce(
+            [],
+            lambda i, acc:
+                Elixir.List.flatten([acc, i['tokens']])
         )
 
-        tokens
-            |> Elixir.Enum.map(lambda i:
-                Elixir.IO.inspect(i['position'])
-            )
+    last_position = position(
+        Elixir.String.length(text) - 1,
+        (Elixir.String.split(text, "\n") |> Elixir.Enum.count()) - 1,
+        (Elixir.String.split(text, "\n") |> Elixir.List.last() |> Elixir.String.length()) -1
+    )
 
-        state
-            |> Elixir.Map.put("error", first_error)
-            |> Elixir.Map.put("tokens", tokens)
-            |> Elixir.Map.put("position", last_position)
-            |> Core.Lexer.Tokens.add_eof_token()
-
-    (result, time) = measure(yay)
-    Elixir.IO.inspect("Lexer tok (seconds):")
-    Elixir.IO.inspect(time)
-    result
+    state
+        |> Elixir.Map.put("error", first_error)
+        |> Elixir.Map.put("tokens", tokens)
+        |> Elixir.Map.put("position", last_position)
+        |> Core.Lexer.Tokens.add_eof_token()
 
 def parallel_map(collection, func):
     collection
         |> Elixir.Enum.map(lambda i: Elixir.Task.async(lambda: func(i)))
         |> Elixir.Enum.map(lambda i: Elixir.Task.await(i, :infinity))
-
-
-def measure(function):
-    (time, result) = Erlang.timer.tc(function)
-    (result, time / 1000000)
 
 def position(idx, ln, col):
     {"idx": idx, "ln": ln, "col": col}
@@ -293,7 +287,7 @@ def skip_comment(state):
     state = advance(state)
 
     state = loop_while(state, lambda cc:
-        cc != '\n'
+        cc != '\n' and cc != None
     )
     Elixir.Map.delete(state, "result")
 
