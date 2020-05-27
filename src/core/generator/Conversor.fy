@@ -45,7 +45,7 @@ def convert_varaccess_node(node):
 
     pinned = Elixir.Map.get(node, "pinned")
 
-    pin_node = lambda i: Elixir.Enum.join(["{:^, [], [", i, "]}"]) if pinned else i
+    pin_node = lambda i: Elixir.Enum.join(["{:^, ", meta(node), ", [", i, "]}"]) if pinned else i
 
     case:
         tok_value == "True" -> "true"
@@ -94,7 +94,7 @@ def convert_lambda_node(node):
     params = ['[', params, ']'] |> Elixir.Enum.join('')
 
     Elixir.Enum.join([
-        "{:fn, ", meta(node), ", [{:->, [], [",
+        "{:fn, ", meta(node), ", [{:->, ", meta(node), ", [",
         params,
         ", ",
         convert(node |> Elixir.Map.get('body_node')),
@@ -137,7 +137,7 @@ def convert_deffunc_node(node):
     arguments = node
         |> Elixir.Map.get("arg_name_toks")
         |> Elixir.Enum.map(lambda argument:
-            Elixir.Enum.join(["{:", Elixir.Map.get(argument, "value"), ", [], Elixir}"])
+            Elixir.Enum.join(["{:", Elixir.Map.get(argument, "value"), ", ",meta(node),", Elixir}"])
         )
         |> Elixir.Enum.join(', ')
 
@@ -180,14 +180,14 @@ def convert_in_node(node):
 def convert_raise_node(node):
     expr = Elixir.Map.get(node, "expr") |> convert()
 
-    Elixir.Enum.join(["{:raise, [context: Elixir, import: Kernel], [", expr, "]}"])
+    Elixir.Enum.join(["{:raise, ", meta(node), ", [", expr, "]}"])
 
 def convert_funcasvariable_node(node):
     name = node |> Elixir.Map.get("var_name_tok") |> Elixir.Map.get("value")
     arity = node |> Elixir.Map.get("arity")
     Elixir.Enum.join([
-        "{:&, ", meta(node), ", [{:/, [context: Elixir, import: Kernel], [{:",
-        name, ", [], Elixir}, ", arity, "]}]}"
+        "{:&, ", meta(node), ", [{:/, ", meta(node), ", [{:",
+        name, ", ", meta(node), ", Elixir}, ", arity, "]}]}"
     ])
 
 def convert_binop_node(node):
@@ -218,7 +218,7 @@ def convert_binop_node(node):
 
     power_op = lambda a, b:
         Elixir.Enum.join([
-            "{{:., ", meta(node), ", [:math, :pow]}, [], [", a, ", ", b, "]}"
+            "{{:., ", meta(node), ", [:math, :pow]}, ", meta(node), ", [", a, ", ", b, "]}"
         ])
 
     or_op = lambda a, b:
@@ -261,7 +261,7 @@ def convert_call_node(node):
     case Elixir.Map.get(node, "local_call"):
         True ->
             func_to_call = convert(Elixir.Map.get(node, "node_to_call"))
-            Elixir.Enum.join(["{{:., ", meta(node), ", [", func_to_call, "]}, [], ", arguments, "}"])
+            Elixir.Enum.join(["{{:., ", meta(node), ", [", func_to_call, "]}, ", meta(node), ", ", arguments, "}"])
         False ->
             # node_to_call will always be a VarAccessNode on a module call. E.g: Elixir.Map.get
             func_name = node
@@ -286,7 +286,7 @@ def convert_call_node(node):
                             Elixir.Enum.join([':"', Elixir.String.replace(module, "Erlang.", ""), '"'])
                         True -> Elixir.Enum.join([':"Fython.', module, '"'])
 
-                    Elixir.Enum.join(["{{:., ", meta(node), ", [", module, ", :", function, "]}, [], ", arguments, "}"])
+                    Elixir.Enum.join(["{{:., ", meta(node), ", [", module, ", :", function, "]}, ", meta(node), ", ", arguments, "}"])
                 False ->
                     # this is for call a function that is defined in
                     # the same module
@@ -311,7 +311,7 @@ def convert_import_node(node):
                         False -> Elixir.Enum.join([':', name])
 
                     import_command = Elixir.Enum.join([
-                        "{:import, [context: Elixir], ",
+                        "{:import, ", meta(node), ", ",
                         "[{:__aliases__, [alias: false], ",
                         "[", name, "]}]}"
                     ])
@@ -321,7 +321,7 @@ def convert_import_node(node):
                         _ -> Elixir.Enum.join([
                             "{:__block__, ", meta(node), ", [",
                                 import_command,
-                                ", {:alias, [context: Elixir], [",
+                                ", {:alias, ", meta(node), ", [",
                                 "{:__aliases__, [alias: false], [", name, "]},",
                                 "[as: {:__aliases__, [alias: ", name, "], [:", alias,"]}]",
                                 "]}",
@@ -386,7 +386,7 @@ def convert_unaryop_node(node):
 
     not_case = lambda value:
         Elixir.Enum.join([
-            "{:__block__, ", meta(node), ", [{:!, [context: Elixir, import: Kernel], [", value, "]}]}"
+            "{:__block__, ", meta(node), ", [{:!, ", meta(node), ", [", value, "]}]}"
         ])
 
     plus_case = lambda value:
@@ -418,7 +418,7 @@ def convert_staticaccess_node(node):
     value_to_find = convert(Elixir.Map.get(node, "node_value"))
 
     Elixir.Enum.join([
-        "{{:., ", meta(node), ", [{:__aliases__, [alias: false], [:Map]}, :fetch!]}, [], [",
+        "{{:., ", meta(node), ", [{:__aliases__, [alias: false], [:Map]}, :fetch!]}, ", meta(node), ", [",
         to_be_accesed, ", ", value_to_find, "]}"
     ])
 
