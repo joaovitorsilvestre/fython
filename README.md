@@ -129,15 +129,17 @@ def add(a)
 - [ ] Lexer must save the value for KEYWORD arguments so we can show they in the expection.
 `Expeted ... Received: KEYWORD` should be `Expeted ... Received: lambda`
 - [x] `(values, [last]) = ...` the left part of this pattern is being evaluated as a empty map. It should be an error.
+- [ ] Access map value returned by a function (e.g: `advance()['current_char']`) is not working
+- [ ] Cant pass a variable as argument if it's form another module: `Elixir.Enum.reduce(0, &Elixir.String.length/1))`. Probably the dot is not treated in conversor.
 
 #### Must have
 - [x] Remove dependency of Jason lib
 - [x] Stop using PosParser to guess if a call is a local call. It can be a lot easier to just consider
 all call local calls, but call of modules like Map.get(...)
 - [ ] Use real tuples in conversor instead of strings
-- [ ] Define atoms using strings: `:"oii"`. Must work with single and double quotes.
+- [x] Define atoms using strings: `:"oii"`. Must work with single and double quotes.
 - [ ] Support to range syntax
-- [ ] Support to try catch. Finally too?
+- [x] Support to try catch
 - [ ] Support to multiline if with elif and else
 - [x] Support to tuples
 - [x] Support to pattern match in variable assign
@@ -150,6 +152,7 @@ a = lambda:
     lambda : ""
 a()()
 ```
+- [ ] Support to struct
 - [ ] PosParser -> Add logic to check imports, undefined vars, etc.
 - [x] PosParser -> support for the pin variable in pattern matching: `e = "a""; {^e: 1} = {"a": 1}`
 - [x] Support to dict access: ```a["key"]["nesteddict_key""]```

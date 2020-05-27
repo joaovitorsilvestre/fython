@@ -6,7 +6,7 @@ def execute(tokens):
         "next_tok": None,
         "node": None,
         "_current_tok_idx": -1,
-        "_tokens": tokens |> Elixir.Enum.filter(lambda i: Elixir.Map.get(i, "type") != 'NEWLINE')
+        "_tokens": tokens |> Elixir.Enum.filter(lambda i: i["type"] != 'NEWLINE')
     }
 
     state |> advance() |> parse() |> Core.Parser.Pos.execute()
@@ -24,7 +24,7 @@ def advance(state):
         |> Elixir.Enum.filter(lambda key_n_value: Elixir.Kernel.elem(key_n_value, 0) in valid_keys)
         |> Elixir.Map.new()
 
-    case state_filtered != state and Elixir.Map.get(state, 'error') == None:
+    case state_filtered != state and state['error'] == None:
         True ->
             # If you get this error. Almost sure that some key
             # wasnt deleted in some loop_while lambdas
@@ -32,8 +32,8 @@ def advance(state):
             raise "trying to advance state with invalid keys"
         False -> None
 
-    idx = state |> Elixir.Map.get("_current_tok_idx")
-    tokens = state |> Elixir.Map.get("_tokens")
+    idx = state["_current_tok_idx"]
+    tokens = state["_tokens"]
 
     idx = idx + 1
     current_tok = tokens |> Elixir.Enum.at(idx, None)
@@ -53,15 +53,15 @@ def advance(state):
 def parse(state):
     [state, node] = statements(state)
 
-    ct = Elixir.Map.get(state, "current_tok")
+    ct = state["current_tok"]
 
-    case Elixir.Map.get(state, "error") == None and Elixir.Map.get(ct, "type") != "EOF":
+    case state["error"] == None and ct["type"] != "EOF":
         True ->
             Core.Parser.Utils.set_error(
                 state,
                 "Expected '+' or '-' or '*' or '/'",
-                Elixir.Map.get(ct, "pos_start"),
-                Elixir.Map.get(ct, "pos_end")
+                ct["pos_start"],
+                ct["pos_end"]
             )
         False ->
             Elixir.Map.merge(state, {"node": node})
@@ -70,7 +70,7 @@ def statements(state):
     statements(state, 0)
 
 def statements(state, expected_ident_gte):
-    pos_start = Elixir.Map.get(state, "current_tok") |> Elixir.Map.get("pos_start")
+    pos_start = state["current_tok"]["pos_start"]
 
     state = loop_while(
         state,
@@ -81,9 +81,9 @@ def statements(state, expected_ident_gte):
             _statements = Elixir.Map.get(state, "_statements", [])
             state = Elixir.Map.delete(state, '_statements')
 
-            ct_type = Elixir.Map.get(ct, "type")
+            ct_type = ct["type"]
 
-            more_statements = Elixir.Map.get(ct, "ident") >= expected_ident_gte
+            more_statements = ct["ident"] >= expected_ident_gte
 
             more_statements = False if ct_type == "RPAREN" else more_statements
 
@@ -112,33 +112,33 @@ def statements(state, expected_ident_gte):
     state = Elixir.Map.delete(state, "_statements") |> Elixir.Map.delete("_break")
 
     case:
-        Elixir.Map.get(state, "error") != None ->
+        state["error"] != None ->
             [state, None]
         _statements == [] ->
-            ct = Elixir.Map.get(state, "current_tok")
+            ct = state["current_tok"]
 
             state = Core.Parser.Utils.set_error(
                 state,
                 "Empty staments are not allowed",
-                Elixir.Map.get(ct, "pos_start"),
-                Elixir.Map.get(ct, "pos_end")
+                ct["pos_start"],
+                ct["pos_end"]
             )
             [state, None]
         True ->
-            pos_end = Elixir.Map.get(state, "current_tok") |> Elixir.Map.get("pos_end")
+            pos_end = state["current_tok"]["pos_end"]
             node = Core.Parser.Nodes.make_statements_node(_statements, pos_start, pos_end)
 
             [state, node]
 
 
 def statement(state):
-    ct = Elixir.Map.get(state, 'current_tok')
-    pos_start = Elixir.Map.get(ct, 'pos_start')
+    ct = state['current_tok']
+    pos_start = ct['pos_start']
 
     [state, node] = case:
+        Core.Parser.Utils.tok_matchs(ct, "KEYWORD", "def") ->
+            func_def_expr(state)
         Core.Parser.Utils.tok_matchs(ct, 'KEYWORD', 'raise') ->
-            pos_start = Elixir.Map.get(ct, 'pos_start')
-
             [state, _expr] = state |> advance() |> expr()
 
             node = Core.Parser.Nodes.make_raise_node(_expr, pos_start)
@@ -146,38 +146,35 @@ def statement(state):
         True ->
             [state, _expr] = expr(state)
 
-            case Elixir.Map.get(state, "error"):
+            case state["error"]:
                 None -> [state, _expr]
                 _ ->
-                    ct = Elixir.Map.get(state, "current_tok")
+                    ct = state["current_tok"]
 
                     state = Core.Parser.Utils.set_error(
                         state,
                         "Expected int, float, variable, 'not', '+', '-', '(' or '['",
-                        Elixir.Map.get(ct, "pos_start"),
-                        Elixir.Map.get(ct, "pos_end")
+                        ct["pos_start"],
+                        ct["pos_end"]
                     )
                     [state, None]
 
-    case (Elixir.Map.get(state, 'current_tok') |> Elixir.Map.get('type')) == 'EQ':
+    case (state['current_tok']['type']) == 'EQ':
         True -> pattern_match(state, node, pos_start)
         False -> [state, node]
 
 def expr(state):
-    ct = state |> Elixir.Map.get('current_tok')
-    ct_type = ct |> Elixir.Map.get('type')
+    ct = state['current_tok']
+    ct_type = ct['type']
 
-    _and = ["KEYWORD", "and"]
-    _or = ["KEYWORD", "or"]
+    [state, node] = bin_op(state, &comp_expr/1, [['KEYWORD', 'and'], ['KEYWORD', 'or']], None)
 
-    [state, node] = bin_op(state, &comp_expr/1, [_and, _or], None)
-
-    ct = Elixir.Map.get(state, "current_tok")
+    ct = state["current_tok"]
 
     case:
         Core.Parser.Utils.tok_matchs(ct, 'KEYWORD', 'if') ->
             if_expr(state, node)
-        Elixir.Map.get(ct, 'type') == 'PIPE' ->
+        ct['type'] == 'PIPE' ->
             pipe_expr(state, node)
         Core.Parser.Utils.tok_matchs(ct, 'KEYWORD', 'in') ->
             state = advance(state)
@@ -192,7 +189,7 @@ def expr(state):
 
 
 def comp_expr(state):
-    ct = Elixir.Map.get(state, "current_tok")
+    ct = state["current_tok"]
 
     case Core.Parser.Utils.tok_matchs(ct, "KEYWORD", 'not'):
         True ->
@@ -224,9 +221,9 @@ def call(state, _atom):
         _ -> [state, _atom]
 
     get_info = lambda state:
-        ct = Elixir.Map.get(state, 'current_tok')
-        ct_type = Elixir.Map.get(ct, 'type')
-        ct_line = Elixir.Map.get(ct, 'pos_start') |> Elixir.Map.get('ln')
+        ct = state['current_tok']
+        ct_type = ct['type']
+        ct_line = ct['pos_start']['ln']
 
         prev_tok_ln = state
             |> Elixir.Map.get('_tokens')
@@ -253,8 +250,8 @@ def call(state, _atom):
         False -> [state, _atom]
 
 def factor(state):
-    ct = Elixir.Map.get(state, "current_tok")
-    ct_type = ct |> Elixir.Map.get('type')
+    ct = state["current_tok"]
+    ct_type = ct['type']
 
     case ct_type in ['PLUS', 'MINUS']:
         True ->
@@ -262,7 +259,7 @@ def factor(state):
 
             [state, _factor] = factor(state)
 
-            case Elixir.Map.get(state, "error"):
+            case state["error"]:
                 None ->
                     node = Core.Parser.Nodes.make_unary_node(ct, _factor)
                     [state, node]
@@ -271,10 +268,10 @@ def factor(state):
         False -> power(state)
 
 def atom(state):
-    ct = Elixir.Map.get(state, "current_tok")
-    ct_type = ct |> Elixir.Map.get('type')
+    ct = state["current_tok"]
+    ct_type = ct['type']
 
-    pos_start = Elixir.Map.get(ct, 'pos_start')
+    pos_start = ct['pos_start']
 
     case:
         ct_type in ['INT', 'FLOAT'] ->
@@ -298,11 +295,11 @@ def atom(state):
         ct_type == 'LPAREN' ->
             state = advance(state)
 
-            [state, _expr] = case (Elixir.Map.get(state, 'current_tok') |> Elixir.Map.get('type')) == 'RPAREN':
+            [state, _expr] = case (state['current_tok']['type']) == 'RPAREN':
                 True -> [state, None]
                 False -> expr(state)
 
-            ct_type = Elixir.Map.get(state, 'current_tok') |> Elixir.Map.get('type')
+            ct_type = state['current_tok']['type']
 
             case:
                 # if the _expr is None it means that we are defining
@@ -313,20 +310,20 @@ def atom(state):
                     state = advance(state)
                     [state, _expr]
                 True ->
-                    ct = Elixir.Map.get(state, 'current_tok')
+                    ct = state['current_tok']
 
                     state = Core.Parser.Utils.set_error(
-                        state, "Expected ')'", Elixir.Map.get(ct, "pos_start"), Elixir.Map.get(ct, "pos_end")
+                        state, "Expected ')'", ct["pos_start"], ct["pos_end"]
                     )
                     [state, None]
         ct_type == 'LSQUARE' -> list_expr(state)
         ct_type == 'LCURLY' -> map_expr(state)
         Core.Parser.Utils.tok_matchs(ct, "KEYWORD", "case") ->
             case_expr(state)
-        Core.Parser.Utils.tok_matchs(ct, "KEYWORD", "def") ->
-            func_def_expr(state)
         Core.Parser.Utils.tok_matchs(ct, "KEYWORD", "lambda") ->
             lambda_expr(state)
+        Core.Parser.Utils.tok_matchs(ct, 'KEYWORD', 'try') ->
+            try_except_expr(state)
         True ->
             state = Core.Parser.Utils.set_error(
                 state,
@@ -335,14 +332,14 @@ def atom(state):
                     "Received: ",
                     ct_type
                 ]),
-                Elixir.Map.get(ct, "pos_start"),
-                Elixir.Map.get(ct, "pos_end")
+                ct["pos_start"],
+                ct["pos_end"]
             )
             [state, None]
 
 
 def loop_while(st, while_func, do_func):
-    ct = Elixir.Map.get(st, "current_tok")
+    ct = st["current_tok"]
 
     valid = while_func(st, ct)
 
@@ -355,27 +352,27 @@ def bin_op(state, func_a, ops, func_b):
 
     [state, first_left] = func_a(state)
 
-    ct = Elixir.Map.get(state, "current_tok")
+    ct = state["current_tok"]
 
     state = loop_while(
         state,
         lambda state, ct:
             case:
-                Elixir.Map.get(ct, "type") == "EOF" -> False
-                Elixir.Map.get(state, "error") != None -> False
-                Elixir.Enum.member?(ops, Elixir.Map.get(ct, "type")) or Elixir.Enum.member?(ops, [Elixir.Map.get(ct, "type"), Elixir.Map.get(ct, "value")]) -> True
+                ct["type"] == "EOF" -> False
+                state["error"] != None -> False
+                Elixir.Enum.member?(ops, ct["type"]) or Elixir.Enum.member?(ops, [ct["type"], ct["value"]]) -> True
                 True -> False
         ,
         lambda state, ct:
             left = Elixir.Map.get(state, "_node", first_left)
             state = Elixir.Map.delete(state, "_node")
 
-            op_tok = Elixir.Map.get(state, 'current_tok')
+            op_tok = state['current_tok']
             state = advance(state)
 
             [state, right] = func_b(state)
 
-            case Elixir.Map.get(state, "error"):
+            case state["error"]:
                 None ->
                     left = Core.Parser.Nodes.make_bin_op_node(left, op_tok, right)
                     Elixir.Map.put(state, "_node", left)
@@ -388,24 +385,24 @@ def bin_op(state, func_a, ops, func_b):
     [state, left]
 
 def list_expr(state):
-    pos_start = Elixir.Map.get(state, "current_tok") |> Elixir.Map.get("pos_start")
+    pos_start = state["current_tok"]["pos_start"]
 
     state = loop_while(
         state,
         lambda state, ct:
             case:
-                Elixir.Map.get(ct, "type") == "RSQUARE" -> False
-                Elixir.Map.get(ct, "type") == "EOF" -> False
-                Elixir.Map.get(state, "error") != None -> False
+                ct["type"] == "RSQUARE" -> False
+                ct["type"] == "EOF" -> False
+                state["error"] != None -> False
                 True -> True
         ,
         lambda state, ct:
             element_nodes = Elixir.Map.get(state, "_element_nodes", [])
             state = Elixir.Map.delete(state, "_element_nodes")
 
-            state = state if Elixir.Map.get(ct, "type") == "COMMA" and element_nodes == [] else advance(state)
+            state = state if ct["type"] == "COMMA" and element_nodes == [] else advance(state)
 
-            case Elixir.Map.get(state, "current_tok") |> Elixir.Map.get("type"):
+            case state["current_tok"]["type"]:
                 "RSQUARE" -> state
                 _ ->
                     [state, _expr] = expr(state)
@@ -417,14 +414,14 @@ def list_expr(state):
                     )
     )
 
-    ct = Elixir.Map.get(state, "current_tok")
+    ct = state["current_tok"]
 
-    case Elixir.Map.get(ct, 'type'):
+    case ct['type']:
         'RSQUARE' ->
             element_nodes = Elixir.Map.get(state, "_element_nodes", [])
             state = Elixir.Map.delete(state, "_element_nodes")
 
-            pos_end = Elixir.Map.get(state, "current_tok") |> Elixir.Map.get("pos_end")
+            pos_end = state["current_tok"]["pos_end"]
 
             node = Core.Parser.Nodes.make_list_node(element_nodes, pos_start, pos_end)
 
@@ -435,32 +432,32 @@ def list_expr(state):
             state = Core.Parser.Utils.set_error(
                 state,
                 "Expected ']'",
-                Elixir.Map.get(ct, "pos_start"),
-                Elixir.Map.get(ct, "pos_end")
+                ct["pos_start"],
+                ct["pos_end"]
             )
             [state, None]
 
 
 def map_expr(state):
-    pos_start = Elixir.Map.get(state, "current_tok") |> Elixir.Map.get("pos_start")
+    pos_start = state["current_tok"]["pos_start"]
 
     map_get_pairs = lambda state:
         [state, key] = expr(state)
 
         case:
-            (Elixir.Map.get(state, "current_tok") |> Elixir.Map.get("type")) == "DO" ->
+            (state["current_tok"]["type"]) == "DO" ->
                 state = advance(state)
 
                 [state, value] = expr(state)
 
                 [state, {key: value}]
             True ->
-                ct = Elixir.Map.get(state, "current_tok")
+                ct = state["current_tok"]
                 Core.Parser.Utils.set_error(
                     state,
                     "Empty staments are not allowed",
-                    Elixir.Map.get(ct, "pos_start"),
-                    Elixir.Map.get(ct, "pos_end")
+                    ct["pos_start"],
+                    ct["pos_end"]
                 )
                 [state, None]
 
@@ -468,9 +465,9 @@ def map_expr(state):
         state,
         lambda state, ct:
             case:
-                Elixir.Map.get(ct, "type") == "RCURLY" -> False
-                Elixir.Map.get(ct, "type") == "EOF" -> False
-                Elixir.Map.get(state, "error") != None -> False
+                ct["type"] == "RCURLY" -> False
+                ct["type"] == "EOF" -> False
+                state["error"] != None -> False
                 True -> True
         ,
         lambda state, ct:
@@ -479,7 +476,7 @@ def map_expr(state):
 
             state = advance(state)
 
-            case Elixir.Map.get(state, "current_tok") |> Elixir.Map.get("type"):
+            case state["current_tok"]["type"]:
                 "RCURLY" -> state
                 _ ->
                     [state, map] = map_get_pairs(state)
@@ -489,15 +486,15 @@ def map_expr(state):
                         _ -> Elixir.Map.put(state, "_pairs", Elixir.Map.merge(pairs, map))
     )
 
-    ct = Elixir.Map.get(state, "current_tok")
+    ct = state["current_tok"]
 
-    case Elixir.Map.get(ct, 'type'):
+    case ct['type']:
         'RCURLY' ->
             pairs = Elixir.Map.get(state, "_pairs", {})
                 |> Elixir.Map.to_list()
                 |> Elixir.Enum.map(lambda i: [Elixir.Kernel.elem(i, 0), Elixir.Kernel.elem(i, 1)])
 
-            pos_end = Elixir.Map.get(state, "current_tok") |> Elixir.Map.get("pos_end")
+            pos_end = state["current_tok"]["pos_end"]
 
             node = Core.Parser.Nodes.make_map_node(pairs, pos_start, pos_end)
 
@@ -508,8 +505,8 @@ def map_expr(state):
             state = Core.Parser.Utils.set_error(
                 state,
                 "Expected '}'",
-                Elixir.Map.get(ct, "pos_start"),
-                Elixir.Map.get(ct, "pos_end")
+                ct["pos_start"],
+                ct["pos_end"]
             )
             [state, None]
 
@@ -519,7 +516,7 @@ def if_expr(state, expr_for_true):
 
     [state, condition] = expr(state)
 
-    case Core.Parser.Utils.tok_matchs(Elixir.Map.get(state, "current_tok"), "KEYWORD", "else"):
+    case Core.Parser.Utils.tok_matchs(state["current_tok"], "KEYWORD", "else"):
         True ->
             state = advance(state)
 
@@ -533,8 +530,8 @@ def if_expr(state, expr_for_true):
             state = Core.Parser.Utils.set_error(
                 state,
                 "Expected 'else'",
-                Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_start"),
-                Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_end")
+                state["current_tok"]["pos_start"],
+                state["current_tok"]["pos_end"]
             )
 
             [state, None]
@@ -545,7 +542,7 @@ def pipe_expr(state, left_node):
 
     [state, right_node] = expr(state)
 
-    case Elixir.Map.get(state, 'error'):
+    case state['error']:
         None ->
             node = Core.Parser.Nodes.make_pipe_node(left_node, right_node)
             [state, node]
@@ -553,30 +550,30 @@ def pipe_expr(state, left_node):
             state = Core.Parser.Utils.set_error(
                 state,
                 "Expected and expression after '|>'",
-                Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_start"),
-                Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_end")
+                state["current_tok"]["pos_start"],
+                state["current_tok"]["pos_end"]
             )
 
             [state, None]
 
 def func_as_var_expr(state):
-    pos_start = Elixir.Map.get(state, 'current_tok') |> Elixir.Map.get('pos_start')
+    pos_start = state['current_tok']['pos_start']
     state = advance(state)
 
     sequence = [
-        state |> Elixir.Map.get('current_tok') |> Elixir.Map.get('type'),
+        state['current_tok']['type'],
         state |> advance() |> Elixir.Map.get('current_tok') |> Elixir.Map.get('type'),
         state |> advance() |> advance() |> Elixir.Map.get('current_tok') |> Elixir.Map.get('type')
     ]
 
     case sequence:
         ["IDENTIFIER", "DIV", "INT"] ->
-            var_name_tok = Elixir.Map.get(state, 'current_tok')
+            var_name_tok = state['current_tok']
 
             state = advance(state)
             state = advance(state)
 
-            arity = Elixir.Map.get(state, 'current_tok')
+            arity = state['current_tok']
             state = advance(state)
 
             node = Core.Parser.Nodes.make_funcasvariable_node(
@@ -588,8 +585,8 @@ def func_as_var_expr(state):
             state = Core.Parser.Utils.set_error(
                 state,
                 "Expected '/'",
-                Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_start"),
-                Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_end")
+                state["current_tok"]["pos_start"],
+                state["current_tok"]["pos_end"]
             )
             [state, None]
         ['IDENTIFIER', "DIV", _] ->
@@ -597,55 +594,55 @@ def func_as_var_expr(state):
             state = Core.Parser.Utils.set_error(
                 state,
                 "Expected arity number as int",
-                Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_start"),
-                Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_end")
+                state["current_tok"]["pos_start"],
+                state["current_tok"]["pos_end"]
             )
             [state, None]
         [_, _, _] ->
             state = Core.Parser.Utils.set_error(
                 state,
                 "Expected the function name and arity. E.g: &sum/2",
-                Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_start"),
-                Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_end")
+                state["current_tok"]["pos_start"],
+                state["current_tok"]["pos_end"]
             )
             [state, None]
 
 
 def case_expr(state):
-    pos_start = Elixir.Map.get(state, 'current_tok') |> Elixir.Map.get('pos_start')
-    initial_ident = Elixir.Map.get(state, "current_tok") |> Elixir.Map.get('ident')
+    pos_start = state['current_tok']['pos_start']
+    initial_ident = state['current_tok']['ident']
 
     state = advance(state)
 
-    is_cond = (Elixir.Map.get(state, "current_tok") |> Elixir.Map.get("type")) == "DO"
+    is_cond = (state["current_tok"]["type"]) == "DO"
 
     [state, _expr] = case is_cond:
         True -> [state, None]
         False -> expr(state)
 
-    do_line = pos_start |> Elixir.Map.get('ln')
+    do_line = pos_start['ln']
     state = advance(state)
 
     check_ident = lambda state:
-        case (Elixir.Map.get(state, "current_tok") |> Elixir.Map.get('ident')) <= initial_ident:
+        case state["current_tok"]['ident'] <= initial_ident:
             True ->
                 Core.Parser.Utils.set_error(
                     state,
                     "The expresions of case must be idented 4 spaces forward in reference to 'case' keyword",
-                    Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_start"),
-                    Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_end")
+                    state["current_tok"]["pos_start"],
+                    state["current_tok"]["pos_end"]
                 )
             False -> state
 
-    state = case (Elixir.Map.get(state, "current_tok") |> Elixir.Map.get("pos_start") |> Elixir.Map.get('ln')) > do_line:
+    state = case state["current_tok"]["pos_start"]['ln'] > do_line:
         True ->
             loop_while(
                 state,
                 lambda state, ct:
                     case:
-                        Elixir.Map.get(ct, "type") == "EOF" -> False
-                        Elixir.Map.get(state, "error") != None -> False
-                        Elixir.Map.get(ct, "ident") != initial_ident + 4 -> False
+                        ct["type"] == "EOF" -> False
+                        state["error"] != None -> False
+                        ct["ident"] != initial_ident + 4 -> False
                         True -> True
                 ,
                 lambda state, ct:
@@ -654,15 +651,15 @@ def case_expr(state):
                     cases = Elixir.Map.get(state, "_cases", [])
                     state = Elixir.Map.delete(state, "_cases")
 
-                    this_ident = Elixir.Map.get(state, 'current_tok') |> Elixir.Map.get('ident')
+                    this_ident = state['current_tok']['ident']
 
                     [state, left_expr] = expr(state)
 
-                    case (Elixir.Map.get(state, 'current_tok') |> Elixir.Map.get('type')) == 'ARROW':
+                    case (state['current_tok']['type']) == 'ARROW':
                         True ->
                             state = advance(state)
 
-                            [state, right_expr] = case (Elixir.Map.get(state, 'current_tok') |> Elixir.Map.get('ident')) == this_ident:
+                            [state, right_expr] = case (state['current_tok']['ident']) == this_ident:
                                 True -> statement(state)
                                 False -> statements(state, this_ident + 4)
 
@@ -673,16 +670,16 @@ def case_expr(state):
                             Core.Parser.Utils.set_error(
                                 state,
                                 "Expected '->'",
-                                Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_start"),
-                                Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_end")
+                                state["current_tok"]["pos_start"],
+                                state["current_tok"]["pos_end"]
                             )
             )
         False ->
             Core.Parser.Utils.set_error(
                 state,
                 "Expected new line after ':'",
-                Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_start"),
-                Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_end")
+                state["current_tok"]["pos_start"],
+                state["current_tok"]["pos_end"]
             )
 
     cases = Elixir.Map.get(state, '_cases', [])
@@ -692,36 +689,36 @@ def case_expr(state):
             state = Core.Parser.Utils.set_error(
                 state,
                 "Case must have at least one case",
-                Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_start"),
-                Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_end")
+                state["current_tok"]["pos_start"],
+                state["current_tok"]["pos_end"]
             )
             [state, None]
         _ ->
             state = Elixir.Map.delete(state, '_cases')
 
             node = Core.Parser.Nodes.make_case_node(
-                _expr, cases, pos_start, Elixir.Map.get(state, 'current_tok') |> Elixir.Map.get('pos_start')
+                _expr, cases, pos_start, state['current_tok']['pos_start']
             )
 
             [state, node]
 
 
 def func_def_expr(state):
-    state = case (Elixir.Map.get(state, "current_tok") |> Elixir.Map.get('ident')) != 0:
+    state = case state["current_tok"]['ident'] != 0:
         True -> Core.Parser.Utils.set_error(
             state,
             "'def' is only allowed in modules scope. TO define functions inside functions use 'lambda' instead.",
-            Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_start"),
-            Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_end")
+            state["current_tok"]["pos_start"],
+            state["current_tok"]["pos_end"]
         )
         False -> state
 
-    pos_start = Elixir.Map.get(state, 'current_tok') |> Elixir.Map.get('pos_start')
-    def_token_ln = pos_start |> Elixir.Map.get('ln')
+    pos_start = state['current_tok']['pos_start']
+    def_token_ln = pos_start['ln']
 
     state = advance(state)
 
-    state = case (Elixir.Map.get(state, "current_tok") |> Elixir.Map.get('type')) != 'IDENTIFIER':
+    state = case state["current_tok"]['type'] != 'IDENTIFIER':
         True -> Core.Parser.Utils.set_error(
             state,
             "Expected a identifier after 'def'.",
@@ -730,16 +727,16 @@ def func_def_expr(state):
         )
         False -> state
 
-    var_name_tok = Elixir.Map.get(state, 'current_tok')
+    var_name_tok = state['current_tok']
 
     state = advance(state)
 
-    state = case (Elixir.Map.get(state, "current_tok") |> Elixir.Map.get('type')) != 'LPAREN':
+    state = case (state["current_tok"]['type']) != 'LPAREN':
         True -> Core.Parser.Utils.set_error(
             state,
             "Expected '('",
-            Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_start"),
-            Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_end")
+            state["current_tok"]["pos_start"],
+            state["current_tok"]["pos_end"]
         )
         False -> state
 
@@ -749,22 +746,22 @@ def func_def_expr(state):
 
     state = advance(state)
 
-    state = case (Elixir.Map.get(state, 'current_tok') |> Elixir.Map.get('type')) == 'DO':
+    state = case (state['current_tok']['type']) == 'DO':
         True -> advance(state)
         False -> Core.Parser.Utils.set_error(
             state,
             "Expected ':'",
-            Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_start"),
-            Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_end")
+            state["current_tok"]["pos_start"],
+            state["current_tok"]["pos_end"]
         )
 
-    state = case (Elixir.Map.get(state, 'current_tok') |> Elixir.Map.get('pos_start') |> Elixir.Map.get('ln')) > def_token_ln:
+    state = case (state['current_tok']['pos_start']['ln']) > def_token_ln:
         True -> state
         False -> Core.Parser.Utils.set_error(
             state,
             "Expected a new line after ':'",
-            Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_start"),
-            Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_end")
+            state["current_tok"]["pos_start"],
+            state["current_tok"]["pos_end"]
         )
 
     # Here we check if a doc string exists
@@ -775,7 +772,7 @@ def func_def_expr(state):
     ct_type = state["current_tok"]['type']
 
     (state, docstring) = case ct_type == 'MULLINESTRING' and advance(state)['current_tok']['ident'] > def_token_ln:
-        True -> (advance(state), Map.get(state, "current_tok"))
+        True -> (advance(state), state["current_tok"])
         False -> (state, None)
 
     # evaluates body of function
@@ -798,22 +795,22 @@ def resolve_params(state, end_tok):
         state,
         lambda state, ct:
             case:
-                Elixir.Map.get(ct, "type") == "EOF" -> False
-                Elixir.Map.get(ct, "type") == end_tok -> False
-                Elixir.Map.get(state, "error") != None -> False
+                ct["type"] == "EOF" -> False
+                ct["type"] == end_tok -> False
+                state["error"] != None -> False
                 True -> True
         ,
         lambda state, ct:
             arg_name_toks = Elixir.Map.get(state, '_arg_name_toks', [])
             state = Elixir.Map.delete(state, "_arg_name_toks")
 
-            case Elixir.Map.get(ct, 'type') == 'IDENTIFIER':
+            case ct['type'] == 'IDENTIFIER':
                 True ->
                     arg_name_toks = Elixir.List.insert_at(arg_name_toks, -1, ct)
 
                     state = advance(state)
 
-                    ct_type = Elixir.Map.get(state, 'current_tok') |> Elixir.Map.get('type')
+                    ct_type = state['current_tok']['type']
 
                     case:
                         ct_type == 'COMMA' ->
@@ -825,43 +822,43 @@ def resolve_params(state, end_tok):
                             Core.Parser.Utils.set_error(
                                 state,
                                 Elixir.Enum.join(["Expected ',' or '", end_tok, "'"]),
-                                Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_start"),
-                                Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_end")
+                                state["current_tok"]["pos_start"],
+                                state["current_tok"]["pos_end"]
                             )
 
                 False -> Core.Parser.Utils.set_error(
                     state,
                     "Expected identifier",
-                    Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_start"),
-                    Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_end")
+                    state["current_tok"]["pos_start"],
+                    state["current_tok"]["pos_end"]
                 )
     )
 
     arg_name_toks = Elixir.Map.get(state, '_arg_name_toks', [])
 
-    case (Elixir.Map.get(state, 'current_tok') |> Elixir.Map.get('type')) == end_tok:
+    case (state['current_tok']['type']) == end_tok:
         True ->
             [state |> Elixir.Map.delete('_arg_name_toks'), arg_name_toks]
         False ->
             state = Core.Parser.Utils.set_error(
                 state,
                 Elixir.Enum.join(["Expected ", "':'" if end_tok == 'DO' else "')'"]),
-                Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_start"),
-                Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_end")
+                state["current_tok"]["pos_start"],
+                state["current_tok"]["pos_end"]
             )
 
             state = state |> Elixir.Map.delete('_arg_name_toks')
             [state, None]
 
-def is_keyword(state):
-    (Elixir.Map.get(state, 'current_tok') |> Elixir.Map.get('type')) == 'IDENTIFIER' and (Elixir.Map.get(advance(state), 'current_tok') |> Elixir.Map.get('type')) == 'EQ'
+def is_func_keyword(state):
+    state['current_tok']['type'] == 'IDENTIFIER' and advance(state)['current_tok']['type'] == 'EQ'
 
 def call_func_expr(state, atom):
-    pos_start = Elixir.Map.get(state, 'pos_start')
+    pos_start = state["current_tok"]["pos_start"]
 
     state = advance(state)
 
-    state = case (Elixir.Map.get(state, 'current_tok') |> Elixir.Map.get('type')) == 'RPAREN':
+    state = case (state['current_tok']['type']) == 'RPAREN':
         True ->
             state |> Elixir.Map.put('_arg_nodes', []) |> Elixir.Map.put('_keywords', {})
         False ->
@@ -869,9 +866,9 @@ def call_func_expr(state, atom):
                 state,
                 lambda state, ct:
                     case:
-                        Elixir.Map.get(ct, "type") == "EOF" -> False
-                        Elixir.Map.get(ct, "type") == "RPAREN" -> False
-                        Elixir.Map.get(state, "error") != None -> False
+                        ct["type"] == "EOF" -> False
+                        ct["type"] == "RPAREN" -> False
+                        state["error"] != None -> False
                         True -> True
                 ,
                 lambda state, ct:
@@ -881,17 +878,17 @@ def call_func_expr(state, atom):
                     state = Elixir.Map.delete(state, '_arg_nodes') |> Elixir.Map.delete('_keywords')
 
                     case:
-                        not is_keyword(state) and keywords != {} ->
+                        not is_func_keyword(state) and keywords != {} ->
                             Core.Parser.Utils.set_error(
                                 state,
                                 "Non keyword arguments must be placed before any keyword argument",
-                                Elixir.Map.get(state, Elixir.Map.get('current_tok'), "pos_start"),
-                                Elixir.Map.get(state, Elixir.Map.get('current_tok'), "pos_end")
+                                state['current_tok']["pos_start"],
+                                state['current_tok']["pos_end"]
                             )
                         True ->
-                            updated_fields = case is_keyword(state):
+                            updated_fields = case is_func_keyword(state):
                                 True ->
-                                    _key = Elixir.Map.get(state, 'current_tok')
+                                    _key = state['current_tok']
                                     key_value = _key |> Elixir.Map.get('value')
 
                                     state = state |> advance() |> advance()
@@ -901,8 +898,8 @@ def call_func_expr(state, atom):
                                             Core.Parser.Utils.set_error(
                                                 state,
                                                 "Duplicated keyword",
-                                                Elixir.Map.get(_key, "pos_start"),
-                                                Elixir.Map.get(Elixir.Map.get(state, 'current_tok'), "pos_start")
+                                                _key["pos_start"],
+                                                state['current_tok']["pos_start"]
                                             )
                                         False -> state
 
@@ -918,7 +915,7 @@ def call_func_expr(state, atom):
                             arg_nodes = Elixir.Enum.at(updated_fields, 1)
                             keywords = Elixir.Enum.at(updated_fields, 2)
 
-                            case Elixir.Map.get(state, 'current_tok') |> Elixir.Map.get('type'):
+                            case state['current_tok']['type']:
                                 'COMMA' ->
                                     state
                                         |> advance()
@@ -933,8 +930,8 @@ def call_func_expr(state, atom):
                                     Core.Parser.Utils.set_error(
                                         state,
                                         "Expected ')', keyword or ','",
-                                        Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_start"),
-                                        Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_end")
+                                        state["current_tok"]["pos_start"],
+                                        state["current_tok"]["pos_end"]
                                     )
             )
 
@@ -943,18 +940,18 @@ def call_func_expr(state, atom):
 
     state = state |> Elixir.Map.delete('_arg_nodes') |> Elixir.Map.delete('_keywords')
 
-    state = case (Elixir.Map.get(state, 'current_tok') |> Elixir.Map.get('type')) == 'RPAREN':
+    state = case (state['current_tok']['type']) == 'RPAREN':
         True -> state
         False -> Core.Parser.Utils.set_error(
             state,
             "Expected ')'",
-            Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_start"),
-            Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_end")
+            state["current_tok"]["pos_start"],
+            state["current_tok"]["pos_end"]
         )
 
-    case Elixir.Map.get(state, 'error'):
+    case state['error']:
         None ->
-            pos_end = Elixir.Map.get(state, 'current_tok') |> Elixir.Map.get('pos_end')
+            pos_end = state['current_tok'] |> Elixir.Map.get('pos_end')
 
             state = advance(state)
 
@@ -965,25 +962,25 @@ def call_func_expr(state, atom):
             [state, None]
 
 def lambda_expr(state):
-    pos_start = Elixir.Map.get(state, 'current_tok') |> Elixir.Map.get('pos_start')
-    lambda_token_ln = pos_start |> Elixir.Map.get('ln')
-    lambda_token_ident = Elixir.Map.get(state, "current_tok") |> Elixir.Map.get('ident')
+    pos_start = state['current_tok']['pos_start']
+    lambda_token_ln = pos_start['ln']
+    lambda_token_ident = state["current_tok"]['ident']
 
     state = advance(state)
 
     [state, arg_name_toks] = resolve_params(state, 'DO')
 
-    state = case (Elixir.Map.get(state, 'current_tok') |> Elixir.Map.get('type')) == 'DO':
+    state = case (state['current_tok']['type']) == 'DO':
         True -> advance(state)
         False -> Core.Parser.Utils.set_error(
             state,
             "Expected ':'",
-            Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_start"),
-            Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_end")
+            state["current_tok"]["pos_start"],
+            state["current_tok"]["pos_end"]
         )
 
 
-    [state, body] = case (Elixir.Map.get(state, 'current_tok') |> Elixir.Map.get('pos_start') |> Elixir.Map.get('ln')) == lambda_token_ln:
+    [state, body] = case (state['current_tok']['pos_start']['ln']) == lambda_token_ln:
         True -> expr(state)
         False -> statements(state, lambda_token_ident + 4)
 
@@ -1010,9 +1007,9 @@ def tuple_expr(state, pos_start, first_expr):
         state,
         lambda state, ct:
             case:
-                Elixir.Map.get(ct, "type") == "EOF" -> False
-                Elixir.Map.get(ct, "type") == "RPAREN" -> False
-                Elixir.Map.get(state, "error") != None -> False
+                ct["type"] == "EOF" -> False
+                ct["type"] == "RPAREN" -> False
+                state["error"] != None -> False
                 True -> True
         ,
         lambda state, ct:
@@ -1023,7 +1020,7 @@ def tuple_expr(state, pos_start, first_expr):
 
             exprs = Elixir.List.insert_at(exprs, -1, _expr)
 
-            case Elixir.Map.get(state, 'current_tok') |> Elixir.Map.get('type'):
+            case state['current_tok']['type']:
                 'COMMA' ->
                     state
                         |> advance()
@@ -1036,8 +1033,8 @@ def tuple_expr(state, pos_start, first_expr):
                     Core.Parser.Utils.set_error(
                         state,
                         "Expected ',' or ')'",
-                        Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_start"),
-                        Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_end")
+                        state["current_tok"]["pos_start"],
+                        state["current_tok"]["pos_end"]
                     )
     )
 
@@ -1050,18 +1047,18 @@ def tuple_expr(state, pos_start, first_expr):
 
     state = state |> Elixir.Map.delete('_element_nodes')
 
-    state = case (Elixir.Map.get(state, 'current_tok') |> Elixir.Map.get('type')) == 'RPAREN':
+    state = case (state['current_tok']['type']) == 'RPAREN':
         True -> state
         False -> Core.Parser.Utils.set_error(
             state,
             "Expected ')'",
-            Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_start"),
-            Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_end")
+            state["current_tok"]["pos_start"],
+            state["current_tok"]["pos_end"]
         )
 
-    case Elixir.Map.get(state, 'error'):
+    case state['error']:
         None ->
-            pos_end = Elixir.Map.get(state, 'current_tok') |> Elixir.Map.get('pos_end')
+            pos_end = state['current_tok']['pos_end']
 
             state = advance(state)
 
@@ -1077,19 +1074,19 @@ def pattern_match(state, left_node, pos_start):
     valid_left_node = Elixir.Kernel.is_map(left_node) and Elixir.Map.get(left_node, "NodeType") in Core.Parser.Nodes.node_types_accept_pattern()
 
     case:
-        Elixir.Map.get(state, 'error') -> [state, None]
+        state['error'] -> [state, None]
         valid_left_node == False ->
             state = Core.Parser.Utils.set_error(
                 state,
                 "Invalid pattern",
                 pos_start,
-                Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_end")
+                state["current_tok"]["pos_end"]
             )
             [state, None]
         valid_left_node == True ->
             [state, right_node] = expr(state)
 
-            pos_end = Elixir.Map.get(state, 'current_tok') |> Elixir.Map.get('pos_start')
+            pos_end = state['current_tok']['pos_start']
 
             node = Core.Parser.Nodes.make_patternmatch_node(
                 left_node, right_node, pos_start, pos_end
@@ -1102,22 +1099,129 @@ def static_access_expr(state, left_node):
 
     [state, node_value] = expr(state)
 
-    state = case Elixir.Map.get(state, 'current_tok') |> Elixir.Map.get('type'):
+    state = case state['current_tok']['type']:
         'RSQUARE' -> state
         _ ->
             Core.Parser.Utils.set_error(
                 state,
                 "Expected ]",
-                Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_start"),
-                Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_end")
+                state["current_tok"]["pos_start"],
+                state["current_tok"]["pos_end"]
             )
 
-    case Elixir.Map.get(state, 'error'):
+    case state['error']:
         None ->
-            pos_end = Elixir.Map.get(state, 'current_tok') |> Elixir.Map.get('pos_end')
+            pos_end = state['current_tok']['pos_end']
             node = Core.Parser.Nodes.make_staticaccess_node(left_node, node_value, pos_end)
 
             state = advance(state)
 
             [state, node]
         _ -> [state, None]
+
+
+def handle_do_new_line(state, base_line):
+    # helper to set error in state if theres no DO or
+    # ift dont have a new line, correctly idented, after a DO
+
+    state = case state['current_tok']['type']:
+        'DO' -> advance(state)
+        _ ->
+            Core.Parser.Utils.set_error(
+                state, "Expected ':'",
+                state["current_tok"]["pos_start"],
+                state["current_tok"]["pos_end"]
+            )
+
+    state = case state['current_tok']['pos_start']['ln'] > base_line:
+        True -> state
+        False -> Core.Parser.Utils.set_error(
+            state,
+            "Expected a new line after ':'",
+            state["current_tok"]["pos_start"],
+            state["current_tok"]["pos_end"]
+        )
+
+    state
+
+
+def handle_except_blocks(state, base_ident, base_line, prev_blocks):
+    (state, except_expr) = case state['current_tok']['type'] != 'IDENTIFIER':
+        True ->
+            state = Core.Parser.Utils.set_error(
+                state, "Expected identifier",
+                state["current_tok"]["pos_start"],
+                state["current_tok"]["pos_end"]
+            )
+            (state, None)
+        False ->
+            (advance(state), state['current_tok']['value'])
+
+    (state, alias) = case Core.Parser.Utils.tok_matchs(state['current_tok'], 'KEYWORD', 'as'):
+        True ->
+            state = advance(state)
+
+            case state['current_tok']['type'] != 'IDENTIFIER':
+                True ->
+                    state = Core.Parser.Utils.set_error(
+                        state, "Expected identifier",
+                        state["current_tok"]["pos_start"],
+                        state["current_tok"]["pos_end"]
+                    )
+                    (state, None)
+                False ->
+                    (advance(state), state['current_tok']['value'])
+        False -> (state, None)
+
+    state = handle_do_new_line(state, base_line)
+
+    [state, block] = statements(state, base_ident + 4)
+
+    new_list_blocks = Elixir.List.insert_at(prev_blocks, -1, (except_expr, alias, block))
+
+    ct_is_except = Core.Parser.Utils.tok_matchs(state['current_tok'], 'KEYWORD', 'except')
+
+    case ct_is_except and state['current_tok']['ident'] >= base_ident:
+        True ->
+            advance(state) |> handle_except_blocks(base_ident, base_line, new_list_blocks)
+        False ->
+            [state, new_list_blocks]
+
+
+def try_except_expr(state):
+    pos_start = state['current_tok']['pos_start']
+    base_line = pos_start['ln']
+    try_token_ident = state['current_tok']['ident']
+
+    state = advance(state)
+
+    ## TRY BLOCK #################################
+
+    state = handle_do_new_line(state, base_line)
+
+    [state, try_statements] = statements(state, try_token_ident + 4)
+
+    ## EXCEPT BLOCK #################################
+
+    state = case Core.Parser.Utils.tok_matchs(state['current_tok'], 'KEYWORD', 'except'):
+        True -> advance(state)
+        False ->
+            Core.Parser.Utils.set_error(
+                state, "Expected 'except' keyword",
+                state["current_tok"]["pos_start"],
+                state["current_tok"]["pos_end"]
+            )
+
+    [state, except_blocks] = handle_except_blocks(state, try_token_ident, base_line, [])
+
+    ## FINALLY BLOCK #################################
+
+    (state, finally_block) = case Core.Parser.Utils.tok_matchs(state['current_tok'], 'KEYWORD', 'finally'):
+        True -> statements(state, try_token_ident + 4)
+        False -> (state, None)
+
+    pos_end = state['current_tok']['pos_start']
+
+    node = Core.Parser.Nodes.make_try_node(try_statements, except_blocks, finally_block, pos_start, pos_end)
+
+    [state, node]

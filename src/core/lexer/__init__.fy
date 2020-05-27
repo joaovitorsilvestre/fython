@@ -1,7 +1,7 @@
 def execute(text):
     state = {
-        "text": text,
-        "position": position(-1, 0, -1),
+        "text": None,
+        "position": None,
         "prev_position": None,
         "current_ident_level": 0,
         "error": None,
@@ -9,20 +9,63 @@ def execute(text):
         "tokens": []
     }
 
-    result = state |> advance() |> parse() |> Core.Lexer.Tokens.add_eof_token()
+    lines = text |> Elixir.String.split("\n")
 
-    result
+    all_lines_parsed = lines
+        |> Elixir.Enum.with_index()
+        |> Elixir.Enum.map(lambda line_n_number:
+            (text, ln) = line_n_number
+
+            idx = case ln:
+                0 -> 0
+                _ ->
+                    lines
+                        |> Elixir.Enum.slice(Elixir.Range.new(0, ln - 1))
+                        |> Elixir.Enum.reduce(0, lambda i, acc: Elixir.String.length(i) + acc)
+
+            state
+                |> Elixir.Map.put("text", text)
+                |> Elixir.Map.put("position", position(-1, ln, -1))
+                |> advance()
+        )
+        |> parallel_map(&parse/1)
+
+    first_error = Elixir.Enum.find(all_lines_parsed, lambda i: i['error'] != None)
+
+    tokens = all_lines_parsed
+        |> Elixir.Enum.reduce(
+            [],
+            lambda i, acc:
+                Elixir.List.flatten([acc, i['tokens']])
+        )
+
+    last_position = position(
+        Elixir.String.length(text) - 1,
+        (Elixir.String.split(text, "\n") |> Elixir.Enum.count()) - 1,
+        (Elixir.String.split(text, "\n") |> Elixir.List.last() |> Elixir.String.length()) -1
+    )
+
+    state
+        |> Elixir.Map.put("error", first_error)
+        |> Elixir.Map.put("tokens", tokens)
+        |> Elixir.Map.put("position", last_position)
+        |> Core.Lexer.Tokens.add_eof_token()
+
+def parallel_map(collection, func):
+    collection
+        |> Elixir.Enum.map(lambda i: Elixir.Task.async(lambda: func(i)))
+        |> Elixir.Enum.map(lambda i: Elixir.Task.await(i, :infinity))
 
 def position(idx, ln, col):
     {"idx": idx, "ln": ln, "col": col}
 
 def advance(state):
-    idx = state |> Elixir.Map.get("position") |> Elixir.Map.get("idx")
-    ln = state |> Elixir.Map.get("position") |> Elixir.Map.get("ln")
-    col = state |> Elixir.Map.get("position") |> Elixir.Map.get("col")
-    text = state |> Elixir.Map.get("text")
+    idx = state["position"]["idx"]
+    ln = state["position"]["ln"]
+    col = state["position"]["col"]
+    text = state["text"]
 
-    prev_position = Elixir.Map.get(state, 'position')
+    prev_position = state['position']
 
     idx = idx + 1
     current_char = text |> Elixir.String.at(idx)
@@ -45,21 +88,21 @@ def set_error(state, error):
         "error",
         {
             "msg": error,
-            "pos_start": Elixir.Map.get(state, 'position'),
-            "pos_end": Elixir.Map.get(state, 'position')
+            "pos_start": state['position'],
+            "pos_end": state['position']
         }
     )
 
 def parse(state):
-    case Elixir.Map.get(state, "error"):
+    case state["error"]:
         None ->
-            cc = state |> Elixir.Map.get("current_char")
-            pos = state |> Elixir.Map.get("position")
+            cc = state["current_char"]
+            pos = state["position"]
 
             case:
                 cc == None -> state
                 cc == "#" -> parse(skip_comment(state))
-                cc == " " and Elixir.Map.get(pos, "col") == 0 -> parse(make_ident(state))
+                cc == " " and pos["col"] == 0 -> parse(make_ident(state))
                 cc == " " or cc == '\t' -> parse(advance(state))
                 cc == "\n" ->
                     state
@@ -67,7 +110,7 @@ def parse(state):
                         |> Core.Lexer.Tokens.add_token("NEWLINE")
                         |> advance()
                         |> parse()
-                cc == ':' -> parse(make_do_or_token(state))
+                cc == ':' -> parse(make_do_or_atom(state))
                 cc == "'" or cc == '"' -> parse(make_string(state))
                 Elixir.String.contains?(Core.Lexer.Consts.identifier_chars(True), cc) ->
                     state |> make_identifier() |> parse()
@@ -100,8 +143,8 @@ def simple_maker(st, type):
         |> parse()
 
 def double_maker(st, type_1, second_char, type_2):
-    st = st |> advance()
-    cc = Elixir.Map.get(st, "current_char")
+    st = advance(st)
+    cc = st["current_char"]
 
     case:
         cc == second_char -> st |> Core.Lexer.Tokens.add_token(type_2) |> advance() |> parse()
@@ -109,15 +152,15 @@ def double_maker(st, type_1, second_char, type_2):
 
 
 def expected_double_maker(st, first, type, expected):
-    st = st |> advance()
-    cc = Elixir.Map.get(st, "current_char")
+    st = advance(st)
+    cc = st["current_char"]
 
     case:
         cc == expected -> st |> Core.Lexer.Tokens.add_token(type) |> advance() |> parse()
         True -> st |> set_error(Elixir.Enum.join(["Expected '", expected, "' after '", first, "'"]))
 
 def make_ident(state):
-    first_char = Elixir.Map.get(state, "current_char")
+    first_char = state["current_char"]
 
     state = loop_while(state, lambda cc:
         cc != None and cc == " "
@@ -133,7 +176,7 @@ def make_ident(state):
 
 def loop_while(st, func):
     st = advance(st)
-    cc = Elixir.Map.get(st, "current_char")
+    cc = st["current_char"]
     result = Elixir.Map.get(st, "result")
 
     valid = func(cc)
@@ -145,9 +188,9 @@ def loop_while(st, func):
 
 def loop_until_sequence(state, expected_seq):
     state = advance(state)
-    idx = state |> Elixir.Map.get("position") |> Elixir.Map.get("idx")
-    text = Elixir.Map.get(state, 'text')
-    cc = Elixir.Map.get(state, "current_char")
+    idx = state["position"]["idx"]
+    text = state['text']
+    cc = state["current_char"]
 
     result = Elixir.Enum.join([Elixir.Map.get(state, "result", ""), cc])
 
@@ -172,19 +215,29 @@ def loop_until_sequence(state, expected_seq):
 
     state
 
-def make_do_or_token(state):
-    pos_start = Elixir.Map.get(state, "position")
+def make_do_or_atom(state):
+    pos_start = state["position"]
     state = advance(state)
 
-    first_char = Elixir.Map.get(state, "current_char")
+    first_char = state["current_char"]
 
-    case first_char != None and Elixir.String.contains?(Core.Lexer.Consts.letters(), first_char):
-        True ->
+    valid_letter = not (first_char in ["'", '"', None]) and Elixir.String.contains?(Core.Lexer.Consts.letters(), first_char)
+    is_atom_of_string = Elixir.Enum.member?(['"', "'"], first_char)
+
+    case:
+        valid_letter or is_atom_of_string ->
+            state = advance(state) if is_atom_of_string else state
+
             state = state
-                |> Elixir.Map.put("result",  Elixir.Map.get(state, "current_char"))
+                |> Elixir.Map.put("result",  state["current_char"])
                 |> loop_while(lambda cc:
-                    cc != None and Elixir.String.contains?(Core.Lexer.Consts.letters_digits(), cc)
+                    case is_atom_of_string:
+                        True -> cc != first_char
+                        False -> cc != None and Elixir.String.contains?(Core.Lexer.Consts.letters_digits(), cc)
                 )
+
+            state = advance(state) if is_atom_of_string else state
+
             state = state
                 |> Core.Lexer.Tokens.add_token(
                     "ATOM", Elixir.Map.get(state, "result"), pos_start
@@ -192,17 +245,17 @@ def make_do_or_token(state):
                 |> Elixir.Map.delete("result")
 
             state
-        False ->
+        True ->
             state
                 |> advance()
                 |> Core.Lexer.Tokens.add_token("DO")
 
 
 def make_string(state):
-    pos_start = Elixir.Map.get(state, "position")
-    string_char_type = Elixir.Map.get(state, "current_char") # ' or "
+    pos_start = state["position"]
+    string_char_type = state["current_char"] # ' or "
 
-    next_char = advance(state) |> Map.get('current_char')
+    next_char = advance(state)['current_char']
     next_next_char = advance(state) |> advance() |> Map.get('current_char')
 
     case Elixir.Enum.join([string_char_type, next_char, next_next_char]) == '"""':
@@ -244,13 +297,13 @@ def skip_comment(state):
     state = advance(state)
 
     state = loop_while(state, lambda cc:
-        cc != '\n'
+        cc != '\n' and cc != None
     )
     Elixir.Map.delete(state, "result")
 
 def make_number(state):
-    pos_start = Elixir.Map.get(state, "position")
-    first_number = Elixir.Map.get(state, "current_char")
+    pos_start = state["position"]
+    first_number = state["current_char"]
 
     state = loop_while(state, lambda cc:
         cc != None and Elixir.String.contains?(Elixir.Enum.join([Core.Lexer.Consts.digists(), '._']), cc)
@@ -274,8 +327,8 @@ def make_number(state):
     state |> Elixir.Map.delete("result")
 
 def make_identifier(state):
-    pos_start = Elixir.Map.get(state, "position")
-    first_char = Elixir.Map.get(state, "current_char")
+    pos_start = state["position"]
+    first_char = state["current_char"]
 
     state = loop_while(state, lambda cc:
         cc != None and Elixir.String.contains?(Core.Lexer.Consts.identifier_chars(False), cc)
