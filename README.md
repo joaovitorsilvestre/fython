@@ -139,7 +139,7 @@ all call local calls, but call of modules like Map.get(...)
 - [ ] Use real tuples in conversor instead of strings
 - [x] Define atoms using strings: `:"oii"`. Must work with single and double quotes.
 - [ ] Support to range syntax
-- [ ] Support to try catch. Finally too?
+- [x] Support to try catch
 - [ ] Support to multiline if with elif and else
 - [x] Support to tuples
 - [x] Support to pattern match in variable assign
