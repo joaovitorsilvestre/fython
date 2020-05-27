@@ -152,6 +152,7 @@ a = lambda:
     lambda : ""
 a()()
 ```
+- [ ] Support to struct
 - [ ] PosParser -> Add logic to check imports, undefined vars, etc.
 - [x] PosParser -> support for the pin variable in pattern matching: `e = "a""; {^e: 1} = {"a": 1}`
 - [x] Support to dict access: ```a["key"]["nesteddict_key""]```

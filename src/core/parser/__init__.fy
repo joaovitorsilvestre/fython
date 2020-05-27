@@ -1145,7 +1145,7 @@ def handle_do_new_line(state, base_line):
     state
 
 
-def handle_except_blocks(state, base_line, prev_blocks):
+def handle_except_blocks(state, base_ident, base_line, prev_blocks):
     (state, except_expr) = case state['current_tok']['type'] != 'IDENTIFIER':
         True ->
             state = Core.Parser.Utils.set_error(
@@ -1175,27 +1175,29 @@ def handle_except_blocks(state, base_line, prev_blocks):
 
     state = handle_do_new_line(state, base_line)
 
-    [state, block] = statements(state)
+    [state, block] = statements(state, base_ident + 4)
 
     new_list_blocks = Elixir.List.insert_at(prev_blocks, -1, (except_expr, alias, block))
 
-    case Core.Parser.Utils.tok_matchs(state['current_tok'], 'KEYWORD', 'except'):
+    ct_is_except = Core.Parser.Utils.tok_matchs(state['current_tok'], 'KEYWORD', 'except')
+
+    case ct_is_except and state['current_tok']['ident'] >= base_ident:
         True ->
-            advance(state) |> handle_except_blocks(base_line, new_list_blocks)
+            advance(state) |> handle_except_blocks(base_ident, base_line, new_list_blocks)
         False ->
             [state, new_list_blocks]
 
 
 def try_except_expr(state):
     pos_start = state['current_tok']['pos_start']
-    try_token_ln = pos_start['ln']
+    base_line = pos_start['ln']
     try_token_ident = state['current_tok']['ident']
 
     state = advance(state)
 
     ## TRY BLOCK #################################
 
-    state = handle_do_new_line(state, try_token_ln)
+    state = handle_do_new_line(state, base_line)
 
     [state, try_statements] = statements(state, try_token_ident + 4)
 
@@ -1210,7 +1212,7 @@ def try_except_expr(state):
                 state["current_tok"]["pos_end"]
             )
 
-    [state, except_blocks] = handle_except_blocks(state, try_token_ln, [])
+    [state, except_blocks] = handle_except_blocks(state, try_token_ident, base_line, [])
 
     ## FINALLY BLOCK #################################
 

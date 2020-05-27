@@ -90,7 +90,7 @@ def compile_project_to_binary(directory_path, compiled_folder, bootstrap):
                     # to ensure that our module binary will not have
                     # Elixir. in the begin of the module name
                     (_, _, binary, _) = Elixir.Module.create(
-                        Elixir.String.to_atom(module_name), quoted, Elixir.Macro.Env.location(__ENV__)
+                        Elixir.String.to_atom(module_name), quoted, [(:file, full_path), (:line, 0)]
                     )
 
                     Elixir.File.write(
