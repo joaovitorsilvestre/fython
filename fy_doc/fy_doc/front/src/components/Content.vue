@@ -1,7 +1,6 @@
 <template lang="pug">
   .content-wrapper
-    h1 oii
-
+    | {{ page.text }}
 </template>
 
 <script>
@@ -10,10 +9,7 @@ import { findInDocsByRef } from '../utils'
 
 export default {
   computed: {
-    rr () {
-      return this.$route.name
-    },
-    content () {
+    page () {
       return findInDocsByRef(docs, this.$route.name)
     }
   }

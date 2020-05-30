@@ -1,4 +1,10 @@
-html, body {margin:0; height: 100%;}
+@import url('https://fonts.googleapis.com/css?family=Source+Sans+Pro');
+
+html, body {
+  margin:0; 
+  height: 100%;
+  font-family: Source Sans Pro;
+}
 
 @font-face {
   font-family: "Source Sans Pro Bold";

@@ -9,7 +9,7 @@
 
 <script>
 import RightBar from '../components/RightBar'
-import LeftBar from '../components/LeftBar'
+import LeftBar from '../components/LeftBar/LeftBar'
 import Content from '../components/Content'
 
 export default {
