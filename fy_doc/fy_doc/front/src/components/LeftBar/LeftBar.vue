@@ -31,6 +31,7 @@ export default {
   color: var(--light-blue-font);
   padding: 40px 15% 50px 15%;
   text-align: left;
+  position: static;
 
   a {
     text-decoration: none;
