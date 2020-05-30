@@ -21,6 +21,6 @@ html, body {margin:0; height: 100%;}
 }
 
 @font-face {
-  font-family: "Source Sans Pro SemiBold";
+  font-family: "Source Sans Pro Italic";
   src: url('./fonts/SourceSansPro-Italic.ttf');
 }
