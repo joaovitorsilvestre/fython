@@ -8,9 +8,9 @@
 </template>
 
 <script>
-import RightBar from '../components/RightBar'
-import LeftBar from '../components/LeftBar'
-import Content from '../components/Content'
+import RightBar from './RightBar'
+import LeftBar from './LeftBar'
+import Content from './Content'
 
 export default {
   name: 'HelloWorld',
