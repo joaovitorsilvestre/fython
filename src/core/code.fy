@@ -50,12 +50,11 @@ def lexer_parse_convert_file(module_name, text):
         _ ->
             lexed
 
-
-    ast = Elixir.Map.get(state, 'node')
-
     # 2º Convert each node from json to Fython format
     case Elixir.Map.get(state, 'error'):
-        None -> [state, Core.Generator.Conversor.convert(ast)]
+        None ->
+            ast = Elixir.Map.get(state, 'node')
+            [state, Core.Generator.Conversor.convert(ast)]
         _ -> [state, None]
 
 
