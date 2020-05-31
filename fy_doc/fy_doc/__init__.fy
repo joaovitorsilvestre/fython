@@ -1,16 +1,34 @@
 def create_doc(project_root):
     # 1º get lexed and parsed ast
 
-    get_fython_files_in_path(project_root)
+    docs = get_fython_files_in_path(project_root)
         |> Elixir.Enum.map(lambda module_name_n_full_path:
             (module_name, file_full_path) = module_name_n_full_path
+            module_name = Elixir.String.replace_leading(module_name, "Fython.", '')
 
             (:ok, text) = Elixir.File.read(file_full_path)
             ast = lexer_and_parser(text)
 
-            get_doc_strings(ast)
+            (module_name, get_doc_strings(ast), file_full_path)
         )
+        |> Elixir.Enum.sort_by(lambda i:
+            (module_name, _, _) = i
+            Elixir.String.split(module_name, ".") |> Elixir.Enum.count()
+        )
+        |> Elixir.Enum.reduce(
+            {},
+            lambda x, acc:
+                (module_name, docs, file_full_path) = x
+                modules = Elixir.String.split(module_name, '.')
 
+                # TODO This could be a builting function in fython
+                # Add a value in nested dict and create the key if doesnt exist
+                Elixir.Kernel.put_in(
+                    acc,
+                    Elixir.Enum.map(modules, lambda i: Elixir.Access.key(i, {})),
+                    (docs, file_full_path)
+                )
+        )
 
 def get_fython_files_in_path(project_root):
     # TODO this functon must be in the language itself
@@ -44,7 +62,7 @@ def get_doc_strings(node_ast):
                 "/",
                 Elixir.Enum.count(func_def_node['arg_name_toks'])
             ])
-            docstring = func_def_node["docstring"] |> Map.get("value")
+            docstring = func_def_node["docstring"]['value'] if func_def_node["docstring"] else None
 
             (func_name, docstring)
         )
