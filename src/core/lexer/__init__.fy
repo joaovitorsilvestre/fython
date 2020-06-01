@@ -26,7 +26,7 @@ def execute(text):
 
                 merge_last = lambda acc, line:
                     last_line = Elixir.Enum.at(acc['lines'], -1)
-                    line = Elixir.Enum.join([last_line, line])
+                    line = Elixir.Enum.join([last_line, '\n',  line])
 
                     lines = Elixir.List.replace_at(acc['lines'], -1, line)
                     Elixir.Map.put(acc, 'lines', lines)
@@ -50,15 +50,23 @@ def execute(text):
     all_lines_parsed = lines
         |> Elixir.Enum.with_index()
         |> Elixir.Enum.map(lambda line_n_number:
-            (text, ln) = line_n_number
+            (text, index) = line_n_number
 
-            idx = case ln:
-                0 -> 0
+            (idx, ln) = case index:
+                0 -> (0, 0)
                 _ ->
-                    lines
-                        |> Elixir.Enum.slice(Elixir.Range.new(0, ln - 1))
+                    prev_lines = lines
+                        |> Elixir.Enum.slice(Elixir.Range.new(0, index - 1))
+
+                    ln = prev_lines
+                        |> Elixir.Enum.map(lambda i: Elixir.String.split(i, '\n'))
+                        |> Elixir.List.flatten()
+                        |> Elixir.Enum.count()
+
+                    idx = prev_lines
                         |> Elixir.Enum.reduce(0, lambda i, acc: Elixir.String.length(i) + acc)
 
+                    (idx, ln)
             state
                 |> Elixir.Map.put("text", text)
                 |> Elixir.Map.put("position", position(-1, ln, -1))
