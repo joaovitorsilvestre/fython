@@ -9,20 +9,64 @@ def execute(text):
         "tokens": []
     }
 
-    lines = text |> Elixir.String.split("\n")
+    # Theres tokens that are multiline, like multiline string
+    # We can parallelize by line and let each part of the token
+    # in separated lines to be processed
+    # This bloc of code merges all multiline tokens into a single
+    # line to ensure that they are processed in same parser
+
+    tokens_that_are_multiline = ['"""']
+
+    lines = text
+        |> Elixir.String.split("\n")
+        |> Elixir.Enum.reduce(
+            {"lines": [], "open_multiline": False},
+            lambda line, acc:
+                has_multiline_token = Elixir.String.contains?(line, tokens_that_are_multiline)
+
+                merge_last = lambda acc, line:
+                    last_line = Elixir.Enum.at(acc['lines'], -1)
+                    line = Elixir.Enum.join([last_line, '\n',  line])
+
+                    lines = Elixir.List.replace_at(acc['lines'], -1, line)
+                    Elixir.Map.put(acc, 'lines', lines)
+
+                acc = case (acc['open_multiline'], has_multiline_token):
+                    (False, False) ->
+                        Elixir.Map.put(acc, "lines", Elixir.List.insert_at(acc['lines'], -1, line))
+                    (False, True) ->
+                        acc
+                            |> Elixir.Map.put('open_multiline', True)
+                            |> Elixir.Map.put("lines", Elixir.List.insert_at(acc['lines'], -1, line))
+                    (True, True) ->
+                        acc
+                            |> merge_last(line)
+                            |> Elixir.Map.put('open_multiline', False)
+                    (True, False) ->
+                        acc |> merge_last(line)
+        )
+        |> Elixir.Map.get("lines")
 
     all_lines_parsed = lines
         |> Elixir.Enum.with_index()
         |> Elixir.Enum.map(lambda line_n_number:
-            (text, ln) = line_n_number
+            (text, index) = line_n_number
 
-            idx = case ln:
-                0 -> 0
+            (idx, ln) = case index:
+                0 -> (0, 0)
                 _ ->
-                    lines
-                        |> Elixir.Enum.slice(Elixir.Range.new(0, ln - 1))
+                    prev_lines = lines
+                        |> Elixir.Enum.slice(Elixir.Range.new(0, index - 1))
+
+                    ln = prev_lines
+                        |> Elixir.Enum.map(lambda i: Elixir.String.split(i, '\n'))
+                        |> Elixir.List.flatten()
+                        |> Elixir.Enum.count()
+
+                    idx = prev_lines
                         |> Elixir.Enum.reduce(0, lambda i, acc: Elixir.String.length(i) + acc)
 
+                    (idx, ln)
             state
                 |> Elixir.Map.put("text", text)
                 |> Elixir.Map.put("position", position(-1, ln, -1))
@@ -30,7 +74,7 @@ def execute(text):
         )
         |> parallel_map(&parse/1)
 
-    first_error = Elixir.Enum.find(all_lines_parsed, lambda i: i['error'] != None)
+    first_with_error = Elixir.Enum.find(all_lines_parsed, lambda i: i['error'] != None)
 
     tokens = all_lines_parsed
         |> Elixir.Enum.reduce(
@@ -46,7 +90,7 @@ def execute(text):
     )
 
     state
-        |> Elixir.Map.put("error", first_error)
+        |> Elixir.Map.put("error", first_with_error['error'] if first_with_error else None)
         |> Elixir.Map.put("tokens", tokens)
         |> Elixir.Map.put("position", last_position)
         |> Core.Lexer.Tokens.add_eof_token()
@@ -198,8 +242,6 @@ def loop_until_sequence(state, expected_seq):
 
     this_seq = Elixir.String.slice(text, Elixir.Range.new(idx, idx + exp_seq_size - 1))
 
-    state = Elixir.Map.put(state, "result", result)
-
     state = case:
         this_seq == expected_seq ->
             # skip the expected_seq
@@ -211,7 +253,9 @@ def loop_until_sequence(state, expected_seq):
 
             state
         cc == None -> set_error(state, Elixir.Enum.join(["expected: ", expected_seq]))
-        True -> loop_until_sequence(state, expected_seq)
+        True ->
+            state = Elixir.Map.put(state, "result", result)
+            loop_until_sequence(state, expected_seq)
 
     state
 

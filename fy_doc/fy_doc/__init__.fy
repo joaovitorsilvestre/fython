@@ -1,15 +1,41 @@
 def create_doc(project_root):
     # 1º get lexed and parsed ast
 
-    get_fython_files_in_path(project_root)
+    docs = get_fython_files_in_path(project_root)
         |> Elixir.Enum.map(lambda module_name_n_full_path:
             (module_name, file_full_path) = module_name_n_full_path
+            module_name = Elixir.String.replace_leading(module_name, "Fython.", '')
 
             (:ok, text) = Elixir.File.read(file_full_path)
             ast = lexer_and_parser(text)
 
-            get_doc_strings(ast)
+            (module_name, get_doc_strings(ast), file_full_path)
         )
+        |> Elixir.Enum.sort_by(lambda i: Elixir.Kernel.elem(i, 0))
+        |> Elixir.Enum.reduce(
+            [],
+            lambda x, acc:
+                (module_name, docs, file_full_path) = x
+                modules = Elixir.String.split(module_name, '.')
+
+                data = {
+                    'name': modules, 'text': '',
+                    'functions': Elixir.Enum.map(
+                        docs,
+                        lambda i:
+                            (func_name, docstring) = i
+                            {'name': func_name, 'docstring': docstring}
+                    )
+                }
+
+                Elixir.List.insert_at(acc, -1, data)
+        )
+        |> Elixir.Jason.encode!()
+
+    Elixir.File.write!(
+        "/home/joao/fython/fy_doc/fy_doc/front/public/docs.json",
+        docs
+    )
 
 
 def get_fython_files_in_path(project_root):
@@ -37,6 +63,8 @@ def lexer_and_parser(text):
 def get_doc_strings(node_ast):
     # receives a StatementsNode
 
+    (:ok, regex_remove_trailing) = Elixir.Regex.compile("^\s\s\s\s")
+
     node_ast['statement_nodes']
         |> Elixir.Enum.map(lambda func_def_node:
             func_name = Elixir.Enum.join([
@@ -44,7 +72,18 @@ def get_doc_strings(node_ast):
                 "/",
                 Elixir.Enum.count(func_def_node['arg_name_toks'])
             ])
-            docstring = func_def_node["docstring"] |> Map.get("value")
+
+            docstring = case func_def_node["docstring"]:
+                None -> None
+                _ ->
+                    # remove indent of function
+
+                    func_def_node["docstring"]['value']
+                        |> Elixir.String.split('\n')
+                        |> Elixir.Enum.map(lambda i:
+                            Elixir.Regex.replace(regex_remove_trailing, i, "")
+                        )
+                        |> Elixir.Enum.join('\n')
 
             (func_name, docstring)
         )
