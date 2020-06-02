@@ -1,26 +1,25 @@
 <template lang="pug">
   .left-bar-wrapper
-    .topic(v-for="topic in docs.topics")
-      router-link.topic-link(:to="{name: docRefToRouteName(topic.ref)}") {{ topic.name }}
-      SubPageLink(:parent="topic")
+    ol
+      li(
+        v-for="(topic, index) in docs"
+        :style="{'text-indent': (topic.name.length - 1) + 'em'}"
+      )
+        router-link(
+          :key="index"
+          :to="{name: topic.name.join('/')}"
+        )
+          | {{ topic.name[topic.name.length - 1] }}
+
 </template>
 
 <script>
-import docs from '../../../public/docs.js'
-import { docRefToRouteName } from '../../utils'
-import SubPageLink from './SubPageLink'
+import { getDocs } from '../../utils'
 
 export default {
   data () {
-    return { docs }
-  },
-  methods: {
-    docRefToRouteName,
-    goto (ref) {
-      this.$router.push({ name: ref })
-    }
-  },
-  components: { SubPageLink }
+    return { docs: getDocs() }
+  }
 }
 </script>
 
@@ -29,28 +28,20 @@ export default {
   background-color: var(--light-blue);
   box-shadow: 1px 0px 4px rgba(0, 0, 0, 0.25);
   color: var(--light-blue-font);
-  padding: 40px 15% 50px 15%;
+  padding: 20px 15% 50px 20px;
   text-align: left;
   position: static;
 
-  a {
-    text-decoration: none;
-    color: var(--light-blue-font);
-    font-size: 22px;
+  ol li {
+    list-style-type: none;
 
-    &.router-link-exact-active {
-      color: var(--dark-blue-font);
-    }
-  }
+    a {
+      text-decoration: captalize;
+      color: var(--light-blue-font);
+      font-size: 18px;
 
-  .topic {
-    text-transform: capitalize;
-    margin-bottom: 40px;
-
-    .subpage {
-      padding-left: 14px;
-      .page-link {
-        font-size: 16px;
+      &.router-link-exact-active {
+        color: var(--dark-blue-font);
       }
     }
   }

@@ -1,27 +1,22 @@
 import Vue from 'vue'
 import VueRouter from 'vue-router'
 import Home from '../views/Home.vue'
-import docs from '../../public/docs'
-import { docRefToRouteName } from '../utils'
+import { getDocs } from '../utils'
+
+const docs = getDocs()
 
 Vue.use(VueRouter)
 
-function formatPages (acc, value) {
-  const path = value.ref.split('.').map(encodeURIComponent).join('/')
-  return [
-    ...acc,
-    ...(value.pages.length > 0 ? value.pages.reduce(formatPages, []) : []),
-    {
-      name: docRefToRouteName(value.ref),
-      path: `/${path}`,
+const routes = [
+  ...docs.map(topic => {
+    return {
+      path: '/' + topic.name.map(encodeURIComponent).join('/'),
+      name: topic.name.join('/'),
       component: Home
     }
-  ]
-}
-
-const routes = docs.topics.reduce(formatPages, [])
-
-console.log(routes)
+  }),
+  { path: '*', redirect: `/${docs[0].name.join('/')}` }
+]
 
 const router = new VueRouter({
   base: process.env.BASE_URL,

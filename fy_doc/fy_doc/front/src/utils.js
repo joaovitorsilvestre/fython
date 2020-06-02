@@ -1,19 +1,5 @@
-export function docRefToRouteName (ref) {
-  return encodeURIComponent(ref)
-}
+import docs from '../public/docs.json'
 
-export function findInDocsByRef (docs, ref) {
-  let page = null
-
-  function findPage (cPage) {
-    if (cPage.ref === ref) {
-      page = cPage
-    } else {
-      cPage.pages.forEach(findPage)
-    }
-  }
-
-  docs.topics.forEach(findPage)
-
-  return page
+export function getDocs () {
+  return docs
 }

@@ -11,24 +11,32 @@ def create_doc(project_root):
 
             (module_name, get_doc_strings(ast), file_full_path)
         )
-        |> Elixir.Enum.sort_by(lambda i:
-            (module_name, _, _) = i
-            Elixir.String.split(module_name, ".") |> Elixir.Enum.count()
-        )
+        |> Elixir.Enum.sort_by(lambda i: Elixir.Kernel.elem(i, 0))
         |> Elixir.Enum.reduce(
-            {},
+            [],
             lambda x, acc:
                 (module_name, docs, file_full_path) = x
                 modules = Elixir.String.split(module_name, '.')
 
-                # TODO This could be a builting function in fython
-                # Add a value in nested dict and create the key if doesnt exist
-                Elixir.Kernel.put_in(
-                    acc,
-                    Elixir.Enum.map(modules, lambda i: Elixir.Access.key(i, {})),
-                    (docs, file_full_path)
-                )
+                data = {
+                    'name': modules, 'text': '',
+                    'functions': Elixir.Enum.map(
+                        docs,
+                        lambda i:
+                            (func_name, docstring) = i
+                            {'func_name': func_name, 'docstring': docstring}
+                    )
+                }
+
+                Elixir.List.insert_at(acc, -1, data)
         )
+        |> Elixir.Jason.encode!()
+
+    Elixir.File.write!(
+        "/home/joao/fython/fy_doc/fy_doc/front/public/docs.json",
+        docs
+    )
+
 
 def get_fython_files_in_path(project_root):
     # TODO this functon must be in the language itself

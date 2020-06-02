@@ -6,18 +6,18 @@
 </template>
 
 <script>
-import docs from '../../public/docs.js'
-import { findInDocsByRef } from '../utils'
+import { getDocs } from '../utils'
 import marked from 'marked'
 import RightBar from '../components/RightBar'
 
+const docs = getDocs()
+
 export default {
   computed: {
-    page () {
-      return findInDocsByRef(docs, this.$route.name)
-    },
     compiledMarkdown () {
-      let lines = this.page.text.split('\n')
+      const doc = docs.find(i => i.name.join('/') === this.$route.name)
+
+      let lines = doc.text.split('\n')
 
       lines = lines.map(line => {
         if (line.slice(0, 4) === '    ') {
@@ -26,8 +26,6 @@ export default {
           return line
         }
       })
-
-      console.log('lines', lines)
 
       return marked(lines.join('\n'))
     }
