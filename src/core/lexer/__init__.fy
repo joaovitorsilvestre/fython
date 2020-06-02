@@ -242,8 +242,6 @@ def loop_until_sequence(state, expected_seq):
 
     this_seq = Elixir.String.slice(text, Elixir.Range.new(idx, idx + exp_seq_size - 1))
 
-    state = Elixir.Map.put(state, "result", result)
-
     state = case:
         this_seq == expected_seq ->
             # skip the expected_seq
@@ -255,7 +253,9 @@ def loop_until_sequence(state, expected_seq):
 
             state
         cc == None -> set_error(state, Elixir.Enum.join(["expected: ", expected_seq]))
-        True -> loop_until_sequence(state, expected_seq)
+        True ->
+            state = Elixir.Map.put(state, "result", result)
+            loop_until_sequence(state, expected_seq)
 
     state
 

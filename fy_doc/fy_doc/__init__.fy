@@ -24,7 +24,7 @@ def create_doc(project_root):
                         docs,
                         lambda i:
                             (func_name, docstring) = i
-                            {'func_name': func_name, 'docstring': docstring}
+                            {'name': func_name, 'docstring': docstring}
                     )
                 }
 
@@ -63,6 +63,8 @@ def lexer_and_parser(text):
 def get_doc_strings(node_ast):
     # receives a StatementsNode
 
+    (:ok, regex_remove_trailing) = Elixir.Regex.compile("^\s\s\s\s")
+
     node_ast['statement_nodes']
         |> Elixir.Enum.map(lambda func_def_node:
             func_name = Elixir.Enum.join([
@@ -70,7 +72,18 @@ def get_doc_strings(node_ast):
                 "/",
                 Elixir.Enum.count(func_def_node['arg_name_toks'])
             ])
-            docstring = func_def_node["docstring"]['value'] if func_def_node["docstring"] else None
+
+            docstring = case func_def_node["docstring"]:
+                None -> None
+                _ ->
+                    # remove indent of function
+
+                    func_def_node["docstring"]['value']
+                        |> Elixir.String.split('\n')
+                        |> Elixir.Enum.map(lambda i:
+                            Elixir.Regex.replace(regex_remove_trailing, i, "")
+                        )
+                        |> Elixir.Enum.join('\n')
 
             (func_name, docstring)
         )

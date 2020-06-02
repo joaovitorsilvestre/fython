@@ -1,6 +1,13 @@
 <template lang="pug">
   .content-wrapper
-    span(v-html="compiledMarkdown")
+    .content
+      h1 {{ doc.name[doc.name.length - 1] }}
+
+      span(v-html="moduleText")
+
+      .function(v-for="(func, index) in functions" :key="index")
+        .name {{ func.name }}
+        span.docstring(v-html="func.docstring")
 
     RightBar.right-bar
 </template>
@@ -14,20 +21,43 @@ const docs = getDocs()
 
 export default {
   computed: {
-    compiledMarkdown () {
-      const doc = docs.find(i => i.name.join('/') === this.$route.name)
+    doc () {
+      return docs.find(i => i.name.join('/') === this.$route.name)
+    },
+    moduleText () {
+      return this.toMarkDown(this.doc.text)
+    },
+    functions () {
+      return this.doc.functions
+        .map(({ name, docstring }) => {
+          return { name, docstring: this.toMarkDown(docstring) }
+        })
+    }
+  },
+  methods: {
+    toMarkDown (text) {
+      let inCodeBlock = false
+      let newText = ''
 
-      let lines = doc.text.split('\n')
+      text
+        .split('\n')
+        .forEach((line, index) => {
+          const idented = line.startsWith('    ')
 
-      lines = lines.map(line => {
-        if (line.slice(0, 4) === '    ') {
-          return '```js\n' + line + '\n```'
-        } else {
-          return line
-        }
-      })
+          if (idented && !inCodeBlock) {
+            inCodeBlock = true
+            newText = newText + '```python\n'
+          }
 
-      return marked(lines.join('\n'))
+          newText = `${newText}${line}\n`
+
+          if (!idented && inCodeBlock) {
+            inCodeBlock = false
+            newText = newText + '```\n'
+          }
+        })
+
+      return marked(newText)
     }
   },
   components: { RightBar }
@@ -40,11 +70,22 @@ export default {
   position: relative;
   margin: 10px 10px 10px 0;
 
-  span {
+  .content {
     float: left;
     width: 50%;
     text-align: left;
     padding: 5ex 15ex 5ex 15ex;
+
+    .function {
+      .name {
+        background-color: var(--light-blue);
+        padding: 10px;
+        border-radius: 3px;
+      }
+      .docstring {
+        padding: 10px;
+      }
+    }
   }
 
   .right-bar {
