@@ -81,14 +81,8 @@ def convert_if_node(node):
 
 def convert_lambda_node(node):
     params = node
-        |> Elixir.Map.get("arg_name_toks")
-        |> Elixir.Enum.map(lambda param:
-            Elixir.Enum.join([
-                "{:",
-                param |> Elixir.Map.get('value'),
-                ", ", meta(node), ", Elixir}"
-            ])
-        )
+        |> Elixir.Map.get("arg_nodes")
+        |> Elixir.Enum.map(&convert/1)
         |> Elixir.Enum.join(", ")
 
     params = ['[', params, ']'] |> Elixir.Enum.join('')
@@ -135,10 +129,8 @@ def convert_deffunc_node(node):
     statements_node = node |> Elixir.Map.get("body_node")
 
     arguments = node
-        |> Elixir.Map.get("arg_name_toks")
-        |> Elixir.Enum.map(lambda argument:
-            Elixir.Enum.join(["{:", Elixir.Map.get(argument, "value"), ", ",meta(node),", Elixir}"])
-        )
+        |> Elixir.Map.get("arg_nodes")
+        |> Elixir.Enum.map(&convert/1)
         |> Elixir.Enum.join(', ')
 
     Elixir.Enum.join([

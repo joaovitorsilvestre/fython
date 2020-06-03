@@ -163,18 +163,18 @@ def parse(state):
                 cc == "^" -> simple_maker(state, "PIN")
                 cc == "," -> simple_maker(state, "COMMA")
                 cc == "+" -> simple_maker(state, "PLUS")
-                cc == '-' -> double_maker(state, "MINUS", ">", "ARROW")
-                cc == '*' -> double_maker(state, "MUL", "*", "POW")
                 cc == "/" -> simple_maker(state, "DIV")
-                cc == '>' -> double_maker(state, "GT", "=", "GTE")
-                cc == '<' -> double_maker(state, "LT", "=", "LTE")
                 cc == '(' -> simple_maker(state, 'LPAREN')
                 cc == ')' -> simple_maker(state, 'RPAREN')
                 cc == '[' -> simple_maker(state, 'LSQUARE')
                 cc == ']' -> simple_maker(state, 'RSQUARE')
                 cc == '{' -> simple_maker(state, 'LCURLY')
                 cc == '}' -> simple_maker(state, 'RCURLY')
-                cc == '=' -> double_maker(state, "EQ", "=", "EE")
+                cc == '-' -> double_maker(state, "MINUS", [(">", "ARROW")])
+                cc == '*' -> double_maker(state, "MUL", [("*", "POW")])
+                cc == '>' -> double_maker(state, "GT", [("=", "GTE")])
+                cc == '<' -> double_maker(state, "LT", [("=", "LTE"), ('-', 'LARROW')])
+                cc == '=' -> double_maker(state, "EQ", [("=", "EE")])
                 cc == '!' -> expected_double_maker(state, "!", "NE", "=")
                 cc == '|' -> expected_double_maker(state, "|", "PIPE", ">")
                 True -> set_error(state, Elixir.Enum.join(["IllegalCharError: ", cc]))
@@ -186,13 +186,18 @@ def simple_maker(st, type):
         |> advance()
         |> parse()
 
-def double_maker(st, type_1, second_char, type_2):
+def double_maker(st, type, sub_types):
     st = advance(st)
     cc = st["current_char"]
 
-    case:
-        cc == second_char -> st |> Core.Lexer.Tokens.add_token(type_2) |> advance() |> parse()
-        True -> st |> Core.Lexer.Tokens.add_token(type_1) |> parse()
+    sub_type = Elixir.Enum.find(sub_types, lambda i: Elixir.Kernel.elem(i, 0) == cc)
+
+    case sub_type:
+        None ->
+            st |> Core.Lexer.Tokens.add_token(type) |> parse()
+        _ ->
+            (_symbol, tok_type) = sub_type
+            st |> Core.Lexer.Tokens.add_token(tok_type) |> advance() |> parse()
 
 
 def expected_double_maker(st, first, type, expected):

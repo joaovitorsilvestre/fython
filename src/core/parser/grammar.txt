@@ -22,9 +22,9 @@ expr                : IDENTIFIER EQ expr
                     : pipe-expr
                     : static-access-expr
 
-pattern-match       : map-expr EQ expr
-                    | list-expr EQ expr
-                    | tuple-expr EQ expr
+pattern-match       : matchable EQ expr
+
+matchable           : IDENTIFIER | map-expr | list-expr | tuple-expr
 
 static-access-expr  : expr LSQUARE expr RSQUARE
 
@@ -75,7 +75,7 @@ case-def            : KEYWORD:case expr? DO NEWLINE
 pipe-expr           : expr (PIPE expr)+
 
 func-def            : KEYWORD:def IDENTIFIER
-                    LPAREN (IDENTIFIER (COMMA IDENTIFIER)*)? RPAREN DO
+                    LPAREN (matchable (COMMA matchable)*)? RPAREN DO
                     (NEWLINE statements)+
 
 lambda-def          : KEYWORD:lambda (IDENTIFIER (COMMA IDENTIFIER)*)?

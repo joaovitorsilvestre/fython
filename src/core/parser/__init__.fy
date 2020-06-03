@@ -137,7 +137,7 @@ def statement(state):
 
     [state, node] = case:
         Core.Parser.Utils.tok_matchs(ct, "KEYWORD", "def") ->
-            func_def_expr(state)
+            Core.Parser.Functions.func_def_expr(state)
         Core.Parser.Utils.tok_matchs(ct, 'KEYWORD', 'raise') ->
             [state, _expr] = state |> advance() |> expr()
 
@@ -321,7 +321,7 @@ def atom(state):
         Core.Parser.Utils.tok_matchs(ct, "KEYWORD", "case") ->
             case_expr(state)
         Core.Parser.Utils.tok_matchs(ct, "KEYWORD", "lambda") ->
-            lambda_expr(state)
+            Core.Parser.Functions.lambda_expr(state)
         Core.Parser.Utils.tok_matchs(ct, 'KEYWORD', 'try') ->
             try_except_expr(state)
         True ->
@@ -702,154 +702,6 @@ def case_expr(state):
 
             [state, node]
 
-
-def func_def_expr(state):
-    state = case state["current_tok"]['ident'] != 0:
-        True -> Core.Parser.Utils.set_error(
-            state,
-            "'def' is only allowed in modules scope. TO define functions inside functions use 'lambda' instead.",
-            state["current_tok"]["pos_start"],
-            state["current_tok"]["pos_end"]
-        )
-        False -> state
-
-    pos_start = state['current_tok']['pos_start']
-    def_token_ln = pos_start['ln']
-
-    state = advance(state)
-
-    state = case state["current_tok"]['type'] != 'IDENTIFIER':
-        True -> Core.Parser.Utils.set_error(
-            state,
-            "Expected a identifier after 'def'.",
-            Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_start"),
-            Elixir.Map.get(Elixir.Map.get(state, "current_tok"), "pos_end")
-        )
-        False -> state
-
-    var_name_tok = state['current_tok']
-
-    state = advance(state)
-
-    state = case (state["current_tok"]['type']) != 'LPAREN':
-        True -> Core.Parser.Utils.set_error(
-            state,
-            "Expected '('",
-            state["current_tok"]["pos_start"],
-            state["current_tok"]["pos_end"]
-        )
-        False -> state
-
-    state = advance(state)
-
-    [state, arg_name_toks] = resolve_params(state, "RPAREN")
-
-    state = advance(state)
-
-    state = case (state['current_tok']['type']) == 'DO':
-        True -> advance(state)
-        False -> Core.Parser.Utils.set_error(
-            state,
-            "Expected ':'",
-            state["current_tok"]["pos_start"],
-            state["current_tok"]["pos_end"]
-        )
-
-    state = case (state['current_tok']['pos_start']['ln']) > def_token_ln:
-        True -> state
-        False -> Core.Parser.Utils.set_error(
-            state,
-            "Expected a new line after ':'",
-            state["current_tok"]["pos_start"],
-            state["current_tok"]["pos_end"]
-        )
-
-    # Here we check if a doc string exists
-    # but we only consider the MULLINESTRING Token as a docstring
-    # if there's any other statements in the function
-    # otherwise this token is just the return of the function
-
-    ct_type = state["current_tok"]['type']
-
-    (state, docstring) = case ct_type == 'MULLINESTRING' and advance(state)['current_tok']['ident'] > def_token_ln:
-        True -> (advance(state), state["current_tok"])
-        False -> (state, None)
-
-    # evaluates body of function
-    [state, body] = statements(state, 4)
-
-    case [arg_name_toks, body]:
-        [_, None] ->    [state, None]
-        [None, _] ->    [state, None]
-        [None, None] -> [state, None]
-        _ ->
-            node = Core.Parser.Nodes.make_funcdef_node(
-                var_name_tok, arg_name_toks, body, docstring, pos_start
-            )
-
-            [state, node]
-
-
-def resolve_params(state, end_tok):
-    state = loop_while(
-        state,
-        lambda state, ct:
-            case:
-                ct["type"] == "EOF" -> False
-                ct["type"] == end_tok -> False
-                state["error"] != None -> False
-                True -> True
-        ,
-        lambda state, ct:
-            arg_name_toks = Elixir.Map.get(state, '_arg_name_toks', [])
-            state = Elixir.Map.delete(state, "_arg_name_toks")
-
-            case ct['type'] == 'IDENTIFIER':
-                True ->
-                    arg_name_toks = Elixir.List.insert_at(arg_name_toks, -1, ct)
-
-                    state = advance(state)
-
-                    ct_type = state['current_tok']['type']
-
-                    case:
-                        ct_type == 'COMMA' ->
-                            state = advance(state)
-                            Elixir.Map.put(state, '_arg_name_toks', arg_name_toks)
-                        ct_type == end_tok ->
-                            Elixir.Map.put(state, '_arg_name_toks', arg_name_toks)
-                        True ->
-                            Core.Parser.Utils.set_error(
-                                state,
-                                Elixir.Enum.join(["Expected ',' or '", end_tok, "'"]),
-                                state["current_tok"]["pos_start"],
-                                state["current_tok"]["pos_end"]
-                            )
-
-                False -> Core.Parser.Utils.set_error(
-                    state,
-                    "Expected identifier",
-                    state["current_tok"]["pos_start"],
-                    state["current_tok"]["pos_end"]
-                )
-    )
-
-    arg_name_toks = Elixir.Map.get(state, '_arg_name_toks', [])
-
-    case (state['current_tok']['type']) == end_tok:
-        True ->
-            [state |> Elixir.Map.delete('_arg_name_toks'), arg_name_toks]
-        False ->
-            state = Core.Parser.Utils.set_error(
-                state,
-                Elixir.Enum.join(["Expected ", "':'" if end_tok == 'DO' else "')'"]),
-                state["current_tok"]["pos_start"],
-                state["current_tok"]["pos_end"]
-            )
-
-            state = state |> Elixir.Map.delete('_arg_name_toks')
-            [state, None]
-
 def is_func_keyword(state):
     state['current_tok']['type'] == 'IDENTIFIER' and advance(state)['current_tok']['type'] == 'EQ'
 
@@ -960,41 +812,6 @@ def call_func_expr(state, atom):
             [state, node]
         _ ->
             [state, None]
-
-def lambda_expr(state):
-    pos_start = state['current_tok']['pos_start']
-    lambda_token_ln = pos_start['ln']
-    lambda_token_ident = state["current_tok"]['ident']
-
-    state = advance(state)
-
-    [state, arg_name_toks] = resolve_params(state, 'DO')
-
-    state = case (state['current_tok']['type']) == 'DO':
-        True -> advance(state)
-        False -> Core.Parser.Utils.set_error(
-            state,
-            "Expected ':'",
-            state["current_tok"]["pos_start"],
-            state["current_tok"]["pos_end"]
-        )
-
-
-    [state, body] = case (state['current_tok']['pos_start']['ln']) == lambda_token_ln:
-        True -> expr(state)
-        False -> statements(state, lambda_token_ident + 4)
-
-    case [arg_name_toks, body]:
-        [_, None] ->    [state, None]
-        [None, _] ->    [state, None]
-        [None, None] -> [state, None]
-        _ ->
-            node = Core.Parser.Nodes.make_lambda_node(
-                None, arg_name_toks, body, pos_start
-            )
-
-            [state, node]
-
 
 def tuple_expr(state, pos_start, first_expr):
     # if the first_expr is None it means
