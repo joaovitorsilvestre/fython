@@ -48,11 +48,13 @@ def get_variables_bound_in_pattern(node):
                 |> Elixir.List.flatten()
                 |> Elixir.Enum.filter(filter_types)
                 |> Elixir.Enum.map(&get_variables_bound_in_pattern/1)
+                |> Elixir.List.flatten()
         node_type in ['TupleNode', 'ListNode'] ->
             node
                 |> Elixir.Map.get('element_nodes')
                 |> Elixir.Enum.filter(filter_types)
                 |> Elixir.Enum.map(&get_variables_bound_in_pattern/1)
+                |> Elixir.List.flatten()
         "VarAccessNode" ->
             Elixir.Map.get(node, "var_name_tok") |> Elixir.Map.get("value")
         True ->
@@ -70,7 +72,6 @@ def resolve_statements(node, var_names_avaliable):
             # only the left node can assign any variable
             get_variables_bound_in_pattern(Elixir.Map.get(i, 'left_node'))
         )
-        |> Elixir.List.flatten()
 
     var_names_avaliable = Elixir.List.flatten([var_names_avaliable, defined_vars_this_level])
 
@@ -95,10 +96,11 @@ def resolve_pattern(node, var_names_avaliable):
 
 def resolve_func_or_lambda(func_def_node, var_names_avaliable):
     func_arguments = func_def_node
-        |> Elixir.Map.get('arg_name_toks')
-        |> Elixir.Enum.map(lambda i:
-            Elixir.Map.get(i, 'value')
+        |> Elixir.Map.get('arg_nodes')
+        |> Elixir.Enum.filter(lambda i:
+            i['NodeType'] in Core.Parser.Nodes.node_types_accept_pattern()
         )
+        |> Elixir.Enum.map(&get_variables_bound_in_pattern/1)
 
     body_node = Elixir.Map.get(func_def_node, 'body_node')
         |> convert_local_function_calls(

@@ -3,6 +3,7 @@ def valid_token_type?(type):
         "INT",
         "STRING",
         "ARROW",
+        "LARROW",
         "KEYWORD",
         "IDENTIFIER",
         "ECOM",
