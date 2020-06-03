@@ -178,7 +178,7 @@ def resolve_one_param(state):
 
     [state, node] = Core.Parser.expr(state)
 
-    case node['NodeType'] in Core.Parser.Nodes.node_types_accept_pattern():
+    case node['NodeType'] in Core.Parser.Nodes.node_types_accept_pattern_in_function_argument():
         True -> (state, node)
         False ->
             state = Core.Parser.Utils.set_error(

@@ -1,6 +1,12 @@
 def node_types_accept_pattern():
     ['ListNode', 'MapNode', 'TupleNode', 'VarAccessNode']
 
+def node_types_accept_pattern_in_function_argument():
+    Elixir.List.flatten(
+        node_types_accept_pattern(),
+        ['NumberNode', 'StringNode', 'AtomNode']
+    )
+
 def make_number_node(tok):
     {
         "NodeType": "NumberNode",

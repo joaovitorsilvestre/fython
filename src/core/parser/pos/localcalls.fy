@@ -97,6 +97,9 @@ def resolve_pattern(node, var_names_avaliable):
 def resolve_func_or_lambda(func_def_node, var_names_avaliable):
     func_arguments = func_def_node
         |> Elixir.Map.get('arg_nodes')
+        |> Elixir.Enum.filter(lambda i:
+            i['NodeType'] in Core.Parser.Nodes.node_types_accept_pattern()
+        )
         |> Elixir.Enum.map(&get_variables_bound_in_pattern/1)
 
     body_node = Elixir.Map.get(func_def_node, 'body_node')

@@ -270,7 +270,7 @@ def make_do_or_atom(state):
 
     first_char = state["current_char"]
 
-    valid_letter = not (first_char in ["'", '"', None]) and Elixir.String.contains?(Core.Lexer.Consts.letters(), first_char)
+    valid_letter = not (first_char in ["'", '"', None]) and Elixir.String.contains?(Core.Lexer.Consts.atom_chars(True), first_char)
     is_atom_of_string = Elixir.Enum.member?(['"', "'"], first_char)
 
     case:
@@ -282,7 +282,7 @@ def make_do_or_atom(state):
                 |> loop_while(lambda cc:
                     case is_atom_of_string:
                         True -> cc != first_char
-                        False -> cc != None and Elixir.String.contains?(Core.Lexer.Consts.letters_digits(), cc)
+                        False -> cc != None and Elixir.String.contains?(Core.Lexer.Consts.atom_chars(False), cc)
                 )
 
             state = advance(state) if is_atom_of_string else state
