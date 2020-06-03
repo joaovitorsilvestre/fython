@@ -178,7 +178,40 @@ def resolve_one_param(state):
 
     [state, node] = Core.Parser.expr(state)
 
-    case node['NodeType'] in Core.Parser.Nodes.node_types_accept_pattern_in_function_argument():
+    # This block is to handle pattern match and get full result of param
+    # Eg:
+    # def add(a <- {"a": b}):
+    #    ...
+    # Both a and b will be defined in function scope. b will be the value and
+    # a will be the full map matched
+
+    (state, node) = case node != None and state['current_tok']['type'] == 'LARROW':
+        False -> (state, node)
+        True ->
+            case node['NodeType'] == 'VarAccessNode':
+                True ->
+                    state = advance(state)
+                    [state, right_node] = Core.Parser.expr(state)
+
+                    node = Core.Parser.Nodes.make_patternmatch_node(
+                        node, right_node, pos_start, state['current_tok']['pos_start']
+                    )
+                    (state, node)
+                False ->
+                    state = Core.Parser.Utils.set_error(
+                        state,
+                        "Expected an identifier",
+                        pos_start,
+                        node["pos_end"]
+                    )
+                    (state, node)
+
+    accepted_nodes = Elixir.List.flatten([
+        Core.Parser.Nodes.node_types_accept_pattern_in_function_argument(),
+        "PatternMatchNode"
+    ])
+
+    case node['NodeType'] in accepted_nodes:
         True -> (state, node)
         False ->
             state = Core.Parser.Utils.set_error(
