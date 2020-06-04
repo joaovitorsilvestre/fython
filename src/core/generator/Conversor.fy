@@ -4,18 +4,14 @@ def convert(node):
         None ->
             case Elixir.Map.get(node, "NodeType"):
                 "StatementsNode"    -> convert_statements_node(node)
-                "NumberNode"        -> convert_number_node(node)
-                "AtomNode"          -> convert_atom_node(node)
                 "ListNode"          -> convert_list_node(node)
                 "PatternMatchNode"  -> convert_patternmatch_node(node)
                 "IfNode"            -> convert_if_node(node)
-                "VarAccessNode"     -> convert_varaccess_node(node)
                 "UnaryOpNode"       -> convert_unaryop_node(node)
                 "BinOpNode"         -> convert_binop_node(node)
                 "FuncDefNode"       -> convert_deffunc_node(node)
                 "LambdaNode"        -> convert_lambda_node(node)
                 "CallNode"          -> convert_call_node(node)
-                "StringNode"        -> convert_string_node(node)
                 "PipeNode"          -> convert_pipe_node(node)
                 "MapNode"           -> convert_map_node(node)
                 "ImportNode"        -> convert_import_node(node)
@@ -29,34 +25,8 @@ def convert(node):
         _ ->
             Core.Generator.Newconversor.convert(node['_new'])
 
-def convert_number_node(node):
-    node |> Elixir.Map.get("tok") |> Elixir.Map.get("value") |> Elixir.Kernel.to_string()
-
-def convert_atom_node(node):
-    Elixir.Enum.join([":", node |> Elixir.Map.get("tok") |> Elixir.Map.get("value")])
-
 def meta(node):
     Elixir.Enum.join(['[line: ', node['pos_start']['ln'], "]"])
-
-def convert_string_node(node):
-    value = node
-        |> Elixir.Map.get("tok")
-        |> Elixir.Map.get("value")
-
-    Elixir.Enum.join(['{:<<>>, ', meta(node), ', ["', value, '"]}'])
-
-def convert_varaccess_node(node):
-    tok_value = node |> Elixir.Map.get("var_name_tok") |> Elixir.Map.get("value")
-
-    pinned = Elixir.Map.get(node, "pinned")
-
-    pin_node = lambda i: Elixir.Enum.join(["{:^, ", meta(node), ", [", i, "]}"]) if pinned else i
-
-    case:
-        tok_value == "True" -> "true"
-        tok_value == "False" -> "false"
-        tok_value == "None" -> "nil"
-        True -> Elixir.Enum.join(["{:", tok_value, ",", meta(node), ", Elixir}"]) |> pin_node()
 
 def convert_patternmatch_node(node):
     left = Elixir.Map.get(node, 'left_node') |> convert()

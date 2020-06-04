@@ -2,6 +2,9 @@ def convert_meta(_):
     # TODO
     '[]'
 
+def old_convert(node):
+    Core.Generator.Conversor.convert(node)
+
 def convert((:number, _, [value])):
     Elixir.Kernel.to_string(value)
 
@@ -23,3 +26,21 @@ def convert((:var, meta, [True, value])):
 
 def convert((:var, meta, [False, value])):
     Elixir.Enum.join(["{:", value, ",", convert_meta(meta), ", Elixir}"])
+
+def convert((:string, meta, [value])):
+    Elixir.Enum.join(['{:<<>>, ', convert_meta(meta), ', ["', value, '"]}'])
+
+def convert((:unary, meta, [:minus, node])):
+    Elixir.Enum.join([
+        "{:-, ", convert_meta(meta), ", [", old_convert(node), "]}"
+    ])
+
+def convert((:unary, meta, [:plus, node])):
+    Elixir.Enum.join([
+        "{:+, ", convert_meta(meta), ", [", old_convert(node), "]}"
+    ])
+
+def convert((:unary, meta, [:not, node])):
+    Elixir.Enum.join([
+        "{:__block__, ", convert_meta(meta), ", [{:!, ", convert_meta(meta), ", [", old_convert(node), "]}]}"
+    ])

@@ -34,8 +34,7 @@ def convert_local_function_calls(node, var_names_avaliable):
                 'MapNode' -> resolve_map_node(node, var_names_avaliable)
                 'RaiseNode' -> resolve_raise_node(node, var_names_avaliable)
                 'StaticAccessNode' -> resolve_staticaccess_node(node, var_names_avaliable)
-                'UnaryOpNode' -> resolve_unary_node(node, var_names_avaliable)
-                'BinOpNode' -> resolve_unary_node(node, var_names_avaliable)
+                'BinOpNode' -> resolve_binop_node(node, var_names_avaliable)
                 _ -> node
         _ ->
             new_resolver(node, var_names_avaliable)
@@ -248,17 +247,7 @@ def resolve_raise_node(node, var_names_avaliable):
         }
     )
 
-def resolve_unary_node(node, var_names_avaliable):
-    Elixir.Map.merge(
-        node,
-        {
-            "node": convert_local_function_calls(
-                Elixir.Map.get(node, "node"), var_names_avaliable
-            )
-        }
-    )
-
-def resolve_unary_node(node, var_names_avaliable):
+def resolve_binop_node(node, var_names_avaliable):
     Elixir.Map.merge(
         node,
         {
@@ -292,3 +281,14 @@ def new_resolver(node <- {"_new": (:atom, _, _)}, _):
 
 def new_resolver(node <- {"_new": (:var, _, _)}, _):
     node
+
+def new_resolver(node <- {"_new": (:string, _, _)}, _):
+    node
+
+def new_resolver(node <- {"_new": (:unary, meta, [op, op_node])}, var_names_avaliable):
+    Elixir.Map.merge(
+        node,
+        {
+            "_new": (:unary, meta, [op, convert_local_function_calls(op_node, var_names_avaliable)])
+        }
+    )

@@ -31,7 +31,12 @@ def make_string_node(tok):
         "NodeType": "StringNode",
         "tok": tok,
         "pos_start": Elixir.Map.get(tok, "pos_start"),
-        "pos_end": Elixir.Map.get(tok, "pos_end")
+        "pos_end": Elixir.Map.get(tok, "pos_end"),
+        "_new": (
+            :string,
+            gen_meta(tok['pos_start'], tok['pos_end']),
+            [tok['value']]
+        )
     }
 
 def make_varaccess_node(var_name_tok, pinned):
@@ -200,6 +205,11 @@ def make_call_node(node_to_call, arg_nodes, keywords, pos_end):
     }
 
 def make_unary_node(tok, node):
+    operation = case:
+        tok['type'] == "KEYWORD" and tok['value'] == "not" -> :not
+        tok['type'] == "MINUS" -> :minus
+        tok['type'] == "PLUS" -> :plus
+
     case Core.Parser.Utils.valid_node?(node):
         [False, reason] -> raise reason
         [True, _] -> {
@@ -207,14 +217,18 @@ def make_unary_node(tok, node):
             "op_tok": tok,
             "node": node,
             "pos_start": Elixir.Map.get(tok, "pos_start"),
-            "pos_end": Elixir.Map.get(tok, "pos_end")
+            "pos_end": Elixir.Map.get(tok, "pos_end"),
+            "_new": (
+                :unary,
+                gen_meta(tok['pos_start'], tok['pos_end']),
+                [operation, node]
+            )
         }
 
 def make_bin_op_node(left, op_tok, right):
     case Core.Parser.Utils.valid_node?(left):
         [False, reason] -> raise reason
         [True, _] ->
-
             case Core.Parser.Utils.valid_node?(right):
                 [False, reason] -> raise reason
                 [True, _] -> {
