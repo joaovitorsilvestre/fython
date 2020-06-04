@@ -286,3 +286,6 @@ def resolve_staticaccess_node(node, var_names_avaliable):
 
 def new_resolver(node <- {"_new": (:number, _, _)}, _):
     node
+
+def new_resolver(node <- {"_new": (:atom, _, _)}, _):
+    node

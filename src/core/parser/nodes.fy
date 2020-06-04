@@ -111,7 +111,12 @@ def make_atom_node(tok):
         "NodeType": "AtomNode",
         "tok": tok,
         "pos_start": Elixir.Map.get(tok, "pos_start"),
-        "pos_end": Elixir.Map.get(tok, "pos_end")
+        "pos_end": Elixir.Map.get(tok, "pos_end"),
+        "_new": (
+            :atom,
+            gen_meta(tok['pos_start'], tok['pos_end']),
+            [tok['value']]
+        )
     }
 
 def make_list_node(element_nodes, pos_start, pos_end):

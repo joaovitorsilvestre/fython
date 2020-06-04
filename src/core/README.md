@@ -4,7 +4,7 @@
 
 `pos` = (index, line, column)
 
-{"line": int, "file": string, "start": `pos`, "end": `pos`}
+{"file": string, "start": `pos`, "end": `pos`}
 
 <hr>
 ### Nodes
@@ -18,13 +18,13 @@
 
 #### Number
 
-(:number, `meta`, *number*)
+(:number, `meta`, [*number*])
 
 <hr>
 
 #### Atom
 
-(:atom, `meta`, *string*)
+(:atom, `meta`, [*string*])
 
 <hr>
 
@@ -124,7 +124,7 @@ A *global* call
 
 #### String
 
-(:string, `meta`, *string*)
+(:string, `meta`, [*string*])
 
 <hr>
 
