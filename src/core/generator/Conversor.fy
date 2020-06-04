@@ -4,7 +4,6 @@ def convert(node):
         None ->
             case Elixir.Map.get(node, "NodeType"):
                 "StatementsNode"    -> convert_statements_node(node)
-                "ListNode"          -> convert_list_node(node)
                 "PatternMatchNode"  -> convert_patternmatch_node(node)
                 "IfNode"            -> convert_if_node(node)
                 "UnaryOpNode"       -> convert_unaryop_node(node)
@@ -17,7 +16,6 @@ def convert(node):
                 "ImportNode"        -> convert_import_node(node)
                 "CaseNode"          -> convert_case_node(node)
                 "InNode"            -> convert_in_node(node)
-                "TupleNode"         -> convert_tuple_node(node)
                 "RaiseNode"         -> convert_raise_node(node)
                 "StaticAccessNode"  -> convert_staticaccess_node(node)
                 "TryNode"           -> convert_try_node(node)
@@ -68,13 +66,6 @@ def convert_lambda_node(node):
         ", ",
         convert(node |> Elixir.Map.get('body_node')),
         "]}]}"
-    ])
-
-def convert_list_node(node):
-    Elixir.Enum.join([
-        "[",
-        Elixir.Enum.join(Elixir.Enum.map(node |> Elixir.Map.get("element_nodes"), &convert/1), ", "),
-        "]"
     ])
 
 def convert_map_node(node):
@@ -370,15 +361,6 @@ def convert_unaryop_node(node):
         [True, _, _] -> not_case(value)
         [_, True, _] -> plus_case(value)
         [_, _, True] -> minus_case(value)
-
-
-def convert_tuple_node(node):
-    items = node
-        |> Elixir.Map.get("element_nodes")
-        |> Elixir.Enum.map(&convert/1)
-        |> Elixir.Enum.join(", ")
-
-    Elixir.Enum.join(["{:{}, ", meta(node), ", [", items, "]}"])
 
 def convert_staticaccess_node(node):
     to_be_accesed = convert(Elixir.Map.get(node, "node"))

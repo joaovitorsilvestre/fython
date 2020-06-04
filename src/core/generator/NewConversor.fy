@@ -44,3 +44,19 @@ def convert((:unary, meta, [:not, node])):
     Elixir.Enum.join([
         "{:__block__, ", convert_meta(meta), ", [{:!, ", convert_meta(meta), ", [", old_convert(node), "]}]}"
     ])
+
+def convert((:list, meta, elements)):
+    Elixir.Enum.join([
+        "[",
+        Elixir.Enum.join(Elixir.Enum.map(elements, &old_convert/1), ", "),
+        "]"
+    ])
+
+def convert((:tuple, meta, elements)):
+    Elixir.Enum.join([
+        "{:{}, ",
+        convert_meta(meta),
+        ", [",
+        Elixir.Enum.join(Elixir.Enum.map(elements, &old_convert/1), ", "),
+        "]}"
+    ])

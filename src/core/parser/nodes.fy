@@ -134,7 +134,12 @@ def make_list_node(element_nodes, pos_start, pos_end):
         "NodeType": "ListNode",
         "element_nodes": element_nodes,
         "pos_start": pos_start,
-        "pos_end": pos_end
+        "pos_end": pos_end,
+        "_new": (
+            :list,
+            gen_meta(pos_start, pos_end),
+            element_nodes
+        )
     }
 
 def make_map_node(pairs_list, pos_start, pos_end):
@@ -150,7 +155,12 @@ def make_tuple_node(element_nodes, pos_start, pos_end):
         "NodeType": "TupleNode",
         "element_nodes": element_nodes,
         "pos_start": pos_start,
-        "pos_end": pos_end
+        "pos_end": pos_end,
+        "_new": (
+            :tuple,
+            gen_meta(pos_start, pos_end),
+            element_nodes
+        )
     }
 
 
