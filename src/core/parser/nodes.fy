@@ -69,7 +69,12 @@ def make_if_node(comp_expr, true_expr, false_expr):
         "true_case": true_expr,
         "false_case": false_expr,
         "pos_start": Elixir.Map.get(comp_expr, "pos_start"),
-        "pos_end": Elixir.Map.get(false_expr, "pos_end")
+        "pos_end": Elixir.Map.get(false_expr, "pos_end"),
+        "_new": (
+            :if,
+            gen_meta(comp_expr['pos_start'], false_expr['pos_end']),
+            [comp_expr, true_expr, false_expr]
+        )
     }
 
 def make_funcasvariable_node(var_name_tok, arity, pos_start):

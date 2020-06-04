@@ -26,7 +26,6 @@ def convert_local_function_calls(node, var_names_avaliable):
                 'LambdaNode' -> resolve_func_or_lambda(node, var_names_avaliable)
                 'CallNode' -> resolve_call_node(node, var_names_avaliable)
                 'CaseNode' -> resolve_case_node(node, var_names_avaliable)
-                'IfNode' -> resolve_if_node(node, var_names_avaliable)
                 'PipeNode' -> resolve_pipe_node(node, var_names_avaliable)
                 'InNode' -> resolve_in_node(node, var_names_avaliable)
                 'MapNode' -> resolve_map_node(node, var_names_avaliable)
@@ -146,22 +145,6 @@ def resolve_case_node(node, var_names_avaliable):
                     [condition, statements] = i
                     [condition, convert_local_function_calls(statements, var_names_avaliable)]
                 )
-        }
-    )
-
-def resolve_if_node(node, var_names_avaliable):
-    Elixir.Map.merge(
-        node,
-        {
-            "comp_expr": convert_local_function_calls(
-                Elixir.Map.get(node, "comp_expr"), var_names_avaliable
-            ),
-            "true_case": convert_local_function_calls(
-                Elixir.Map.get(node, "true_case"), var_names_avaliable
-            ),
-            "false_case": convert_local_function_calls(
-                Elixir.Map.get(node, "false_case"), var_names_avaliable
-            )
         }
     )
 
@@ -321,6 +304,22 @@ def new_resolver(node <- {"_new": (:pattern, meta, [left, right])}, var_names_av
                 [
                     left,
                     convert_local_function_calls(right, var_names_avaliable)
+                ]
+            )
+        }
+    )
+
+def new_resolver(node <- {"_new": (:if, meta, [comp_expr, true_case, false_case])}, var_names_avaliable):
+    Elixir.Map.merge(
+        node,
+        {
+            "_new": (
+                :if,
+                meta,
+                [
+                    convert_local_function_calls(comp_expr, var_names_avaliable),
+                    convert_local_function_calls(true_case, var_names_avaliable),
+                    convert_local_function_calls(false_case, var_names_avaliable)
                 ]
             )
         }

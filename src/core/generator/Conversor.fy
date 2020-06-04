@@ -4,7 +4,6 @@ def convert(node):
         None ->
             case Elixir.Map.get(node, "NodeType"):
                 "StatementsNode"    -> convert_statements_node(node)
-                "IfNode"            -> convert_if_node(node)
                 "FuncDefNode"       -> convert_deffunc_node(node)
                 "LambdaNode"        -> convert_lambda_node(node)
                 "CallNode"          -> convert_call_node(node)
@@ -21,21 +20,6 @@ def convert(node):
 
 def meta(node):
     Elixir.Enum.join(['[line: ', node['pos_start']['ln'], "]"])
-
-def convert_if_node(node):
-    comp_expr = convert(node |> Elixir.Map.get("comp_expr"))
-    true_case = convert(node |> Elixir.Map.get("true_case"))
-    false_case = convert(node |> Elixir.Map.get("false_case"))
-
-    Elixir.Enum.join([
-        "{:if, ", meta(node), ", [",
-        comp_expr,
-        ", [do: ",
-        true_case,
-        ", else: ",
-        false_case,
-        "]]}"
-    ])
 
 def convert_lambda_node(node):
     params = node

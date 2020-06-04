@@ -98,3 +98,14 @@ def convert((:pattern, meta, [left, right])):
         "[", old_convert(left) , ", ", old_convert(right) , "]",
         "}"
     ])
+
+def convert((:if, meta, [comp_expr, true_case, false_case])):
+    Elixir.Enum.join([
+        "{:if, ", convert_meta(meta), ", [",
+        old_convert(comp_expr),
+        ", [do: ",
+        old_convert(true_case),
+        ", else: ",
+        old_convert(false_case),
+        "]]}"
+    ])
