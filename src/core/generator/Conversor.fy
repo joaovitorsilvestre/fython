@@ -7,7 +7,6 @@ def convert(node):
                 "PatternMatchNode"  -> convert_patternmatch_node(node)
                 "IfNode"            -> convert_if_node(node)
                 "UnaryOpNode"       -> convert_unaryop_node(node)
-                "BinOpNode"         -> convert_binop_node(node)
                 "FuncDefNode"       -> convert_deffunc_node(node)
                 "LambdaNode"        -> convert_lambda_node(node)
                 "CallNode"          -> convert_call_node(node)
@@ -15,7 +14,6 @@ def convert(node):
                 "MapNode"           -> convert_map_node(node)
                 "ImportNode"        -> convert_import_node(node)
                 "CaseNode"          -> convert_case_node(node)
-                "InNode"            -> convert_in_node(node)
                 "RaiseNode"         -> convert_raise_node(node)
                 "StaticAccessNode"  -> convert_staticaccess_node(node)
                 "TryNode"           -> convert_try_node(node)
@@ -127,14 +125,6 @@ def convert_case_node(node):
                 "{:case, ", meta(node), ", [", expr, ", [do: [", arguments, "]]]}"
             ])
 
-def convert_in_node(node):
-    left = Elixir.Map.get(node, "left_expr") |> convert()
-    right = Elixir.Map.get(node, "right_expr") |> convert()
-
-    Elixir.Enum.join([
-        "{:in, ", meta(node), ", [", left, ", ", right, "]}"
-    ])
-
 def convert_raise_node(node):
     expr = Elixir.Map.get(node, "expr") |> convert()
 
@@ -147,54 +137,6 @@ def convert_funcasvariable_node(node):
         "{:&, ", meta(node), ", [{:/, ", meta(node), ", [{:",
         name, ", ", meta(node), ", Elixir}, ", arity, "]}]}"
     ])
-
-def convert_binop_node(node):
-    a = convert(Elixir.Map.get(node, "left_node"))
-    b = convert(Elixir.Map.get(node, "right_node"))
-
-    simple_ops = {
-        "PLUS": '+', "MINUS": '-', "MUL": '*', "DIV": '/',
-        "GT": '>', "GTE": '>=', "LT": '<', "LTE": '<=',
-        "EE": '==', 'NE': '!='
-    }
-
-    tok_type = node |> Elixir.Map.get("op_tok") |> Elixir.Map.get("type")
-    tok_value = node |> Elixir.Map.get("op_tok") |> Elixir.Map.get("value")
-
-    cases = [
-        Elixir.Map.has_key?(simple_ops, tok_type),
-        tok_type == "POW",
-        tok_type == "KEYWORD" and tok_value == "or",
-        tok_type == "KEYWORD" and tok_value == "and"
-    ]
-
-    simple_op_node = lambda simple_ops, node, a, b:
-        op = simple_ops |> Elixir.Map.get(node |> Elixir.Map.get("op_tok") |> Elixir.Map.get("type"))
-        Elixir.Enum.join([
-            "{:", op, ", ", meta(node), ", [", a, ", ", b, "]}"
-        ])
-
-    power_op = lambda a, b:
-        Elixir.Enum.join([
-            "{{:., ", meta(node), ", [:math, :pow]}, ", meta(node), ", [", a, ", ", b, "]}"
-        ])
-
-    or_op = lambda a, b:
-        Elixir.Enum.join([
-            "{:or, ", meta(node), ", [", a, ", ", b, "]}"
-        ])
-
-    and_op = lambda a, b:
-        Elixir.Enum.join([
-            "{:and, ", meta(node), ", [", a, ", ", b, "]}"
-        ])
-
-    case cases:
-        [True, _, _, _] -> simple_op_node(simple_ops, node, a, b)
-        [_, True, _, _] -> power_op(a, b)
-        [_, _,True, _]  -> or_op(a, b)
-        [_, _, _,True]  -> and_op(a, b)
-
 
 def convert_call_node(node):
     args = node

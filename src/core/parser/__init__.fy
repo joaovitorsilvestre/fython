@@ -167,7 +167,12 @@ def expr(state):
     ct = state['current_tok']
     ct_type = ct['type']
 
-    [state, node] = bin_op(state, &comp_expr/1, [['KEYWORD', 'and'], ['KEYWORD', 'or']], None)
+    [state, node] = bin_op(
+        state,
+        &comp_expr/1,
+        [['KEYWORD', 'and'], ['KEYWORD', 'or'], ['KEYWORD', 'in']],
+        None
+    )
 
     ct = state["current_tok"]
 
@@ -176,15 +181,6 @@ def expr(state):
             if_expr(state, node)
         ct['type'] == 'PIPE' ->
             pipe_expr(state, node)
-        Core.Parser.Utils.tok_matchs(ct, 'KEYWORD', 'in') ->
-            state = advance(state)
-
-            [state, right_node] = expr(state)
-
-            node = Core.Parser.Nodes.make_in_node(
-                node, right_node
-            )
-            [state, node]
         True -> [state, node]
 
 

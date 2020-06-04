@@ -78,7 +78,7 @@ First element means if the variable is pinned
 
 (:binop, `meta`, [`node`, :div, `node`])
 
-(:binop, `meta`, [`node`, :power, `node`])
+(:binop, `meta`, [`node`, :pow, `node`])
 
 (:binop, `meta`, [`node`, :eq, `node`])
 
@@ -91,6 +91,10 @@ First element means if the variable is pinned
 (:binop, `meta`, [`node`, :gt, `node`])
 
 (:binop, `meta`, [`node`, :gte, `node`])
+
+(:binop, `meta`, [`node`, :and, `node`])
+
+(:binop, `meta`, [`node`, :or, `node`])
 
 <hr>
 
@@ -153,12 +157,6 @@ normal *case* expression
 *cond* expression
 
 (:case, `meta`, [*None*, [`pair*`]])
-
-<hr>
-
-#### In
-
-(:in, `meta`, [`node`, `node`])
 
 <hr>
 

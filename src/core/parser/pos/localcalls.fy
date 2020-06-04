@@ -306,3 +306,19 @@ def new_resolver(node <- {"_new": (:tuple, meta, elements)}, var_names_avaliable
             )
         }
     )
+
+def new_resolver(node <- {"_new": (:binop, meta, [left, op, right])}, var_names_avaliable):
+    Elixir.Map.merge(
+        node,
+        {
+            "_new": (
+                :binop,
+                meta,
+                [
+                    convert_local_function_calls(left, var_names_avaliable),
+                    op,
+                    convert_local_function_calls(right, var_names_avaliable)
+                ]
+            )
+        }
+    )

@@ -99,15 +99,6 @@ def make_case_node(expr, cases, pos_start, pos_end):
         "pos_end": pos_end
     }
 
-def make_in_node(left_expr, right_expr):
-    {
-        "NodeType": "InNode",
-        "left_expr": left_expr,
-        "right_expr": right_expr,
-        "pos_start": Elixir.Map.get(left_expr, "pos_start"),
-        "pos_end": Elixir.Map.get(right_expr, "pos_end")
-    }
-
 def make_statements_node(statements, pos_start, pos_end):
     {
         "NodeType": "StatementsNode",
@@ -239,6 +230,16 @@ def make_bin_op_node(left, op_tok, right):
     case Core.Parser.Utils.valid_node?(left):
         [False, reason] -> raise reason
         [True, _] ->
+            names = ["PLUS","MINUS","MUL","DIV","GT","GTE","LT","LTE","EE", "NE", "POW", "IN"]
+
+            op = case:
+                op_tok['type'] in names -> Elixir.String.downcase(op_tok['type'])
+                op_tok['type'] == 'KEYWORD' and op_tok['value'] == 'and' -> 'and'
+                op_tok['type'] == 'KEYWORD' and op_tok['value'] == 'or' -> 'or'
+                op_tok['type'] == 'KEYWORD' and op_tok['value'] == 'in' -> 'in'
+
+            op = Elixir.String.to_atom(op)
+
             case Core.Parser.Utils.valid_node?(right):
                 [False, reason] -> raise reason
                 [True, _] -> {
@@ -247,7 +248,12 @@ def make_bin_op_node(left, op_tok, right):
                     "op_tok": op_tok,
                     "right_node": right,
                     "pos_start": Elixir.Map.get(left, "pos_start"),
-                    "pos_end": Elixir.Map.get(right, "pos_end")
+                    "pos_end": Elixir.Map.get(right, "pos_end"),
+                    "_new": (
+                        :binop,
+                        gen_meta(left['pos_start'], right['pos_end']),
+                        [left, op, right]
+                    )
                 }
 
 
