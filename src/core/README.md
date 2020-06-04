@@ -1,18 +1,14 @@
-### AST
+## AST
 
+### Meta
 
+`pos` = (index, line, column)
 
-#### Meta
-
-("line": int, "file": string, "start": `pos`, "end": `pos`)
-
-pos = (line, column, index)
+{"line": int, "file": string, "start": `pos`, "end": `pos`}
 
 <hr>
+### Nodes
 
-#### Nodes
-
-<hr>
 
 #### Statements
 

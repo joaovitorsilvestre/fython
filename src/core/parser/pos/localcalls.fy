@@ -17,23 +17,28 @@ def convert_local_function_calls(node, var_names_avaliable):
         True -> raise "None should not be in the var names"
         False -> None
 
-    case Elixir.Map.get(node, 'NodeType') if Elixir.Kernel.is_map(node) else None:
-        'StatementsNode' -> resolve_statements(node, var_names_avaliable)
-        'PatternMatchNode' -> resolve_pattern(node, var_names_avaliable)
-        'FuncDefNode' -> resolve_func_or_lambda(node, var_names_avaliable)
-        'LambdaNode' -> resolve_func_or_lambda(node, var_names_avaliable)
-        'CallNode' -> resolve_call_node(node, var_names_avaliable)
-        'CaseNode' -> resolve_case_node(node, var_names_avaliable)
-        'IfNode' -> resolve_if_node(node, var_names_avaliable)
-        'PipeNode' -> resolve_pipe_node(node, var_names_avaliable)
-        'InNode' -> resolve_in_node(node, var_names_avaliable)
-        'ListNode' -> resolve_list_or_tuple_node(node, var_names_avaliable)
-        'MapNode' -> resolve_map_node(node, var_names_avaliable)
-        'RaiseNode' -> resolve_raise_node(node, var_names_avaliable)
-        'StaticAccessNode' -> resolve_staticaccess_node(node, var_names_avaliable)
-        'UnaryOpNode' -> resolve_unary_node(node, var_names_avaliable)
-        'BinOpNode' -> resolve_unary_node(node, var_names_avaliable)
-        _ -> node
+    # TEMP FIX WHILE WE DONT CONVERT ALL NODES TO NEW AST
+    case Elixir.Map.get(node, '_new') if Elixir.Kernel.is_map(node) else None:
+        None ->
+            case Elixir.Map.get(node, 'NodeType') if Elixir.Kernel.is_map(node) else None:
+                'StatementsNode' -> resolve_statements(node, var_names_avaliable)
+                'PatternMatchNode' -> resolve_pattern(node, var_names_avaliable)
+                'FuncDefNode' -> resolve_func_or_lambda(node, var_names_avaliable)
+                'LambdaNode' -> resolve_func_or_lambda(node, var_names_avaliable)
+                'CallNode' -> resolve_call_node(node, var_names_avaliable)
+                'CaseNode' -> resolve_case_node(node, var_names_avaliable)
+                'IfNode' -> resolve_if_node(node, var_names_avaliable)
+                'PipeNode' -> resolve_pipe_node(node, var_names_avaliable)
+                'InNode' -> resolve_in_node(node, var_names_avaliable)
+                'ListNode' -> resolve_list_or_tuple_node(node, var_names_avaliable)
+                'MapNode' -> resolve_map_node(node, var_names_avaliable)
+                'RaiseNode' -> resolve_raise_node(node, var_names_avaliable)
+                'StaticAccessNode' -> resolve_staticaccess_node(node, var_names_avaliable)
+                'UnaryOpNode' -> resolve_unary_node(node, var_names_avaliable)
+                'BinOpNode' -> resolve_unary_node(node, var_names_avaliable)
+                _ -> node
+        _ ->
+            new_resolver(node, var_names_avaliable)
 
 
 def get_variables_bound_in_pattern(node):
@@ -278,3 +283,6 @@ def resolve_staticaccess_node(node, var_names_avaliable):
             )
         }
     )
+
+def new_resolver(node <- {"_new": (:number, _, _)}, _):
+    node

@@ -7,12 +7,23 @@ def node_types_accept_pattern_in_function_argument():
         ['NumberNode', 'StringNode', 'AtomNode']
     )
 
+def gen_meta(pos_start, pos_end):
+    convert_pos = lambda {"idx": idx, "ln": ln, "col": col}:
+        (idx, ln, col)
+
+    {"file": "unkown", "start": convert_pos(pos_start), "end": convert_pos(pos_end)}
+
 def make_number_node(tok):
     {
         "NodeType": "NumberNode",
         "tok": tok,
         "pos_start": Elixir.Map.get(tok, "pos_start"),
-        "pos_end": Elixir.Map.get(tok, "pos_end")
+        "pos_end": Elixir.Map.get(tok, "pos_end"),
+        "_new": (
+            :number,
+            gen_meta(tok['pos_start'], tok['pos_end']),
+            [tok['value']]
+        )
     }
 
 def make_string_node(tok):
