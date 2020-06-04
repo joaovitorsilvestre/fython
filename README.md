@@ -157,6 +157,11 @@ a()()
 - [x] PosParser -> support for the pin variable in pattern matching: `e = "a""; {^e: 1} = {"a": 1}`
 - [x] Support to dict access: ```a["key"]["nesteddict_key""]```
 - [ ] `and` and `or` operators must work with multiline
+- [ ] `<-` Operator in function params must work inside nested pattern. like:
+```
+# we want to match the third element of this tuple and still get the entire tuple in the var full
+def convert((:var, _, full <- [False, value])):
+```
 
 #### Good to have
 - [ ] support for list 'explode'. Eg: [*[1, 2]] must be converted to [1, 2]. Need do find a way to make this works

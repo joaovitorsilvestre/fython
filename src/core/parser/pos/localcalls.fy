@@ -289,3 +289,6 @@ def new_resolver(node <- {"_new": (:number, _, _)}, _):
 
 def new_resolver(node <- {"_new": (:atom, _, _)}, _):
     node
+
+def new_resolver(node <- {"_new": (:var, _, _)}, _):
+    node

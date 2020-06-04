@@ -40,7 +40,12 @@ def make_varaccess_node(var_name_tok, pinned):
         "var_name_tok": var_name_tok,
         "pinned": pinned,
         "pos_start": Elixir.Map.get(var_name_tok, "pos_start"),
-        "pos_end": Elixir.Map.get(var_name_tok, "pos_end")
+        "pos_end": Elixir.Map.get(var_name_tok, "pos_end"),
+        "_new": (
+            :var,
+            gen_meta(var_name_tok['pos_start'], var_name_tok['pos_end']),
+            [pinned, var_name_tok['value']]
+        )
     }
 
 def make_staticaccess_node(node_left, node_value, pos_end):
