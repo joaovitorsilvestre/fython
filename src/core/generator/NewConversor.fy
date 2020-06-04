@@ -109,3 +109,9 @@ def convert((:if, meta, [comp_expr, true_case, false_case])):
         old_convert(false_case),
         "]]}"
     ])
+
+def convert((:func, meta, [name, arity])):
+    Elixir.Enum.join([
+        "{:&, ", convert_meta(meta), ", [{:/, ", convert_meta(meta), ", [{:",
+        name, ", ", convert_meta(meta), ", Elixir}, ", arity, "]}]}"
+    ])

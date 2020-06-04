@@ -83,7 +83,12 @@ def make_funcasvariable_node(var_name_tok, arity, pos_start):
         "var_name_tok": var_name_tok,
         "arity": Elixir.String.to_integer(Elixir.Map.get(arity, 'value')),
         "pos_start": pos_start,
-        "pos_end": Elixir.Map.get(arity, "pos_end")
+        "pos_end": Elixir.Map.get(arity, "pos_end"),
+        "_new": (
+            :func,
+            gen_meta(pos_start, arity['pos_end']),
+            [var_name_tok['value'], Elixir.String.to_integer(Elixir.Map.get(arity, 'value'))]
+        )
     }
 
 def make_pipe_node(left_node, right_node):

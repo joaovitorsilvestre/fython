@@ -246,6 +246,9 @@ def new_resolver(node <- {"_new": (:var, _, _)}, _):
 def new_resolver(node <- {"_new": (:string, _, _)}, _):
     node
 
+def new_resolver(node <- {"_new": (:func, _, _)}, _):
+    node
+
 def new_resolver(node <- {"_new": (:unary, meta, [op, op_node])}, var_names_avaliable):
     Elixir.Map.merge(
         node,

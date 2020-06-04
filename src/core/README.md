@@ -194,8 +194,6 @@ With *finnaly*
 
 <hr>
 
-#### FuncRef
+#### Func
 
-`ref` = `(string, number)`is `(function_name, arity)`
-
-(:func_ref, `meta`, [`ref`])
+(:func, `meta`, [*string*, *number*])
