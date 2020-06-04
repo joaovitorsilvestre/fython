@@ -22,7 +22,6 @@ def convert_local_function_calls(node, var_names_avaliable):
         None ->
             case Elixir.Map.get(node, 'NodeType') if Elixir.Kernel.is_map(node) else None:
                 'StatementsNode' -> resolve_statements(node, var_names_avaliable)
-                'PatternMatchNode' -> resolve_pattern(node, var_names_avaliable)
                 'FuncDefNode' -> resolve_func_or_lambda(node, var_names_avaliable)
                 'LambdaNode' -> resolve_func_or_lambda(node, var_names_avaliable)
                 'CallNode' -> resolve_call_node(node, var_names_avaliable)
@@ -84,17 +83,6 @@ def resolve_statements(node, var_names_avaliable):
         )
 
     node |> Elixir.Map.put('statement_nodes', statement_nodes)
-
-
-def resolve_pattern(node, var_names_avaliable):
-    Elixir.Map.merge(
-        node,
-        {
-            "right_node": convert_local_function_calls(
-                Elixir.Map.get(node, "right_node"), var_names_avaliable
-            )
-        }
-    )
 
 
 def resolve_func_or_lambda(func_def_node, var_names_avaliable):
@@ -317,6 +305,21 @@ def new_resolver(node <- {"_new": (:binop, meta, [left, op, right])}, var_names_
                 [
                     convert_local_function_calls(left, var_names_avaliable),
                     op,
+                    convert_local_function_calls(right, var_names_avaliable)
+                ]
+            )
+        }
+    )
+
+def new_resolver(node <- {"_new": (:pattern, meta, [left, right])}, var_names_avaliable):
+    Elixir.Map.merge(
+        node,
+        {
+            "_new": (
+                :pattern,
+                meta,
+                [
+                    left,
                     convert_local_function_calls(right, var_names_avaliable)
                 ]
             )

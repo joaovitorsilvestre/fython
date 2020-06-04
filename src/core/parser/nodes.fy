@@ -161,7 +161,12 @@ def make_patternmatch_node(left_node, right_node, pos_start, pos_end):
         "left_node": left_node,
         "right_node": right_node,
         "pos_start": pos_start,
-        "pos_end": pos_end
+        "pos_end": pos_end,
+        "_new": (
+            :pattern,
+            gen_meta(pos_start, pos_end),
+            [left_node, right_node]
+        )
     }
 
 

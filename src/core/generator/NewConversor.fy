@@ -90,3 +90,11 @@ def convert((:binop, meta, [left, op, right])):
     Elixir.Enum.join([
         "{:", elixir_op[op], ", ", convert_meta(meta), ", [", old_convert(left), ", ", old_convert(right), "]}"
     ])
+
+def convert((:pattern, meta, [left, right])):
+    Elixir.Enum.join([
+        "{:=, ",
+        convert_meta(meta), ", ",
+        "[", old_convert(left) , ", ", old_convert(right) , "]",
+        "}"
+    ])

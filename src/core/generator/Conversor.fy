@@ -4,9 +4,7 @@ def convert(node):
         None ->
             case Elixir.Map.get(node, "NodeType"):
                 "StatementsNode"    -> convert_statements_node(node)
-                "PatternMatchNode"  -> convert_patternmatch_node(node)
                 "IfNode"            -> convert_if_node(node)
-                "UnaryOpNode"       -> convert_unaryop_node(node)
                 "FuncDefNode"       -> convert_deffunc_node(node)
                 "LambdaNode"        -> convert_lambda_node(node)
                 "CallNode"          -> convert_call_node(node)
@@ -23,17 +21,6 @@ def convert(node):
 
 def meta(node):
     Elixir.Enum.join(['[line: ', node['pos_start']['ln'], "]"])
-
-def convert_patternmatch_node(node):
-    left = Elixir.Map.get(node, 'left_node') |> convert()
-    right = Elixir.Map.get(node, 'right_node') |> convert()
-
-    Elixir.Enum.join([
-        "{:=, ",
-        meta(node), ", ",
-        "[", left , ", ", right , "]",
-        "}"
-    ])
 
 def convert_if_node(node):
     comp_expr = convert(node |> Elixir.Map.get("comp_expr"))
@@ -270,39 +257,6 @@ def convert_pipe_node(node):
     )
 
     convert(call_node)
-
-
-def convert_unaryop_node(node):
-    value = convert(node |> Elixir.Map.get("node"))
-
-    tok_type = node |> Elixir.Map.get("op_tok") |> Elixir.Map.get("type")
-    tok_value = node |> Elixir.Map.get("op_tok") |> Elixir.Map.get("value")
-
-    cases = [
-        tok_type == "KEYWORD" and tok_value == "not",
-        tok_type == "PLUS",
-        tok_type == "MINUS"
-    ]
-
-    not_case = lambda value:
-        Elixir.Enum.join([
-            "{:__block__, ", meta(node), ", [{:!, ", meta(node), ", [", value, "]}]}"
-        ])
-
-    plus_case = lambda value:
-        Elixir.Enum.join([
-            "{:+, ", meta(node), ", [", value, "]}"
-        ])
-
-    minus_case = lambda value:
-        Elixir.Enum.join([
-            "{:-, ", meta(node), ", [", value, "]}"
-        ])
-
-    builder = case cases:
-        [True, _, _] -> not_case(value)
-        [_, True, _] -> plus_case(value)
-        [_, _, True] -> minus_case(value)
 
 def convert_staticaccess_node(node):
     to_be_accesed = convert(Elixir.Map.get(node, "node"))
