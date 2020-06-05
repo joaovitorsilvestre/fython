@@ -3,7 +3,6 @@ def convert(node):
     case Elixir.Map.get(node, '_new'):
         None ->
             case Elixir.Map.get(node, "NodeType"):
-                "StatementsNode"    -> convert_statements_node(node)
                 "FuncDefNode"       -> convert_deffunc_node(node)
                 "LambdaNode"        -> convert_lambda_node(node)
                 "CallNode"          -> convert_call_node(node)
@@ -47,17 +46,6 @@ def convert_map_node(node):
         |> Elixir.Enum.join(', ')
 
     r = Elixir.Enum.join(["{:%{}, ", meta(node), ", [", pairs, "]}"])
-
-def convert_statements_node(node):
-    content = node
-        |> Elixir.Map.get("statement_nodes")
-        |> Elixir.Enum.map(lambda i: convert(i))
-
-    case Elixir.Enum.count(content):
-        1 -> Elixir.Enum.at(content, 0)
-        _ -> Elixir.Enum.join([
-            '{:__block__, ', meta(node), ', [', Elixir.Enum.join(content, ', '), ']}'
-        ])
 
 def convert_deffunc_node(node):
     name = node |> Elixir.Map.get("var_name_tok") |> Elixir.Map.get("value")

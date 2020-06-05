@@ -115,3 +115,22 @@ def convert((:func, meta, [name, arity])):
         "{:&, ", convert_meta(meta), ", [{:/, ", convert_meta(meta), ", [{:",
         name, ", ", convert_meta(meta), ", Elixir}, ", arity, "]}]}"
     ])
+
+def convert((:statements, meta, nodes)):
+    content = Elixir.Enum.map(nodes, &old_convert/1)
+
+    case Elixir.Enum.count(content):
+        1 -> Elixir.Enum.at(content, 0)
+        _ -> Elixir.Enum.join([
+            '{:__block__, ', convert_meta(meta), ', [', Elixir.Enum.join(content, ', '), ']}'
+        ])
+
+
+
+
+
+
+
+
+
+

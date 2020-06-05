@@ -126,6 +126,7 @@ def statements(state, expected_ident_gte):
             [state, None]
         True ->
             pos_end = state["current_tok"]["pos_end"]
+
             node = Core.Parser.Nodes.make_statements_node(_statements, pos_start, pos_end)
 
             [state, node]

@@ -114,7 +114,12 @@ def make_statements_node(statements, pos_start, pos_end):
         "NodeType": "StatementsNode",
         "statement_nodes": statements,
         "pos_start": pos_start,
-        "pos_end": pos_end
+        "pos_end": pos_end,
+        "_new": (
+            :statements,
+            gen_meta(pos_start, pos_end),
+            statements
+        )
     }
 
 def make_atom_node(tok):

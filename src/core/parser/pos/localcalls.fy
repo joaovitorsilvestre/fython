@@ -21,7 +21,6 @@ def convert_local_function_calls(node, var_names_avaliable):
     case Elixir.Map.get(node, '_new') if Elixir.Kernel.is_map(node) else None:
         None ->
             case Elixir.Map.get(node, 'NodeType') if Elixir.Kernel.is_map(node) else None:
-                'StatementsNode' -> resolve_statements(node, var_names_avaliable)
                 'FuncDefNode' -> resolve_func_or_lambda(node, var_names_avaliable)
                 'LambdaNode' -> resolve_func_or_lambda(node, var_names_avaliable)
                 'CallNode' -> resolve_call_node(node, var_names_avaliable)
@@ -62,27 +61,6 @@ def get_variables_bound_in_pattern(node):
             raise Elixir.Enum.join([
                 "The node type '", node_type, "' doesnt work as a pattern match"
             ])
-
-
-def resolve_statements(node, var_names_avaliable):
-    defined_vars_this_level = Elixir.Map.get(node, 'statement_nodes')
-        |> Elixir.Enum.filter(lambda i:
-            Elixir.Map.get(i, 'NodeType') == 'PatternMatchNode'
-        )
-        |> Elixir.Enum.map(lambda i:
-            # only the left node can assign any variable
-            get_variables_bound_in_pattern(Elixir.Map.get(i, 'left_node'))
-        )
-
-    var_names_avaliable = Elixir.List.flatten([var_names_avaliable, defined_vars_this_level])
-
-    statement_nodes = Elixir.Map.get(node, "statement_nodes")
-        |> Elixir.Enum.map(lambda i:
-            convert_local_function_calls(i, var_names_avaliable)
-        )
-
-    node |> Elixir.Map.put('statement_nodes', statement_nodes)
-
 
 def resolve_func_or_lambda(func_def_node, var_names_avaliable):
     func_arguments = func_def_node
@@ -324,6 +302,29 @@ def new_resolver(node <- {"_new": (:if, meta, [comp_expr, true_case, false_case]
                     convert_local_function_calls(true_case, var_names_avaliable),
                     convert_local_function_calls(false_case, var_names_avaliable)
                 ]
+            )
+        }
+    )
+
+def new_resolver(node <- {"_new": (:statements, meta, nodes)}, var_names_avaliable):
+    defined_vars_this_level = nodes
+        |> Elixir.Enum.filter(lambda i: i['NodeType'] == "PatternMatchNode")
+        |> Elixir.Enum.map(lambda {"_new": (_, _, [left_node, _])}:
+            # only the left node can assign any variable
+            get_variables_bound_in_pattern(left_node)
+        )
+
+    var_names_avaliable = Elixir.List.flatten([var_names_avaliable, defined_vars_this_level])
+
+    Elixir.Map.merge(
+        node,
+        {
+            "_new": (
+                :statements,
+                meta,
+                Elixir.Enum.map(nodes, lambda i:
+                    convert_local_function_calls(i, var_names_avaliable)
+                )
             )
         }
     )
