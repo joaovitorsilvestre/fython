@@ -4,7 +4,6 @@ def convert(node):
         None ->
             case Elixir.Map.get(node, "NodeType"):
                 "CallNode"          -> convert_call_node(node)
-                "PipeNode"          -> convert_pipe_node(node)
                 "MapNode"           -> convert_map_node(node)
                 "ImportNode"        -> convert_import_node(node)
                 "CaseNode"          -> convert_case_node(node)
@@ -145,44 +144,6 @@ def convert_import_node(node):
                 |> Elixir.Enum.join(', ')
 
             Elixir.Enum.join(["{:__block__, ", meta(node), ", [", import_commands, "]}"])
-
-
-def get_childs(right_or_left_node):
-    case Elixir.Map.get(right_or_left_node, "NodeType") == "PipeNode":
-        True -> [
-            get_childs(right_or_left_node |> Elixir.Map.get("left_node")),
-            get_childs(right_or_left_node |> Elixir.Map.get("right_node"))
-        ]
-        False -> [right_or_left_node]
-
-def convert_pipe_node(node):
-    # Actually, we never convert to elixir pipe ast
-    # Instead, we do elixier job to put the left node of the pipe
-    # as the first parameter of the right node
-    # We do this because elixir pipe ast doesnt work well
-    # with a erlang call in the right. Eg: "oii" |> :string.replace("o", "i")
-
-    left_node = Elixir.Map.get(node, 'left_node')
-    right_node = Elixir.Map.get(node, 'right_node')
-
-    ([first], flat_pipe) = left_node
-        |> get_childs()
-        |> Elixir.List.insert_at(-1, get_childs(right_node))
-        |> Elixir.List.flatten()
-        |> Elixir.Enum.split(1)
-
-    call_node = Elixir.Enum.reduce(
-        flat_pipe,
-        first,
-        lambda c_node, acc:
-            {"arg_nodes": arg_nodes, "arity": arity} = c_node
-
-            c_node
-                |> Elixir.Map.put("arity", arity + 1)
-                |> Elixir.Map.put("arg_nodes", Elixir.List.insert_at(arg_nodes, 0, acc))
-    )
-
-    convert(call_node)
 
 def convert_try_node(node):
     do = Elixir.Enum.join([

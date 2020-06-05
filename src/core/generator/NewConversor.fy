@@ -154,3 +154,35 @@ def convert((:static_access, meta, [node_to_access, node_key])):
 
 def convert((:raise, meta, [expr])):
     Elixir.Enum.join(["{:raise, ", convert_meta(meta), ", [", old_convert(expr), "]}"])
+
+def get_childs({"_new": (:pipe, _, [left_node, right_node])}):
+    [get_childs(left_node), get_childs(right_node)]
+
+def get_childs(right_or_left_node):
+    [right_or_left_node]
+
+def convert((:pipe, meta, [left_node, right_node])):
+    # Actually, we never convert to elixir pipe ast
+    # Instead, we do elixir job to put the left node of the pipe
+    # as the first parameter of the right node
+    # We do this because elixir pipe ast doesnt work well
+    # with a erlang call in the right. Eg: "oii" |> :string.replace("o", "i")
+
+    ([first], flat_pipe) = left_node
+        |> get_childs()
+        |> Elixir.List.insert_at(-1, get_childs(right_node))
+        |> Elixir.List.flatten()
+        |> Elixir.Enum.split(1)
+
+    flat_pipe
+        |> Elixir.Enum.reduce(
+            first,
+            lambda c_node, acc:
+                # TODO after conver the call not to new ast change this to get arity from the umber of args
+                {"arg_nodes": arg_nodes, "arity": arity} = c_node
+
+                c_node
+                    |> Elixir.Map.put("arity", arity + 1)
+                    |> Elixir.Map.put("arg_nodes", Elixir.List.insert_at(arg_nodes, 0, acc))
+        )
+        |> old_convert()

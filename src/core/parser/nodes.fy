@@ -102,7 +102,12 @@ def make_pipe_node(left_node, right_node):
         "left_node": left_node,
         "right_node": right_node,
         "pos_start": Elixir.Map.get(left_node, "pos_start"),
-        "pos_end": Elixir.Map.get(right_node, "pos_end")
+        "pos_end": Elixir.Map.get(right_node, "pos_end"),
+        "_new": (
+            :pipe,
+            gen_meta(left_node['pos_start'], right_node['pos_end']),
+            [left_node, right_node]
+        )
     }
 
 def make_case_node(expr, cases, pos_start, pos_end):

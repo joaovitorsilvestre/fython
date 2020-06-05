@@ -361,3 +361,18 @@ def new_resolver(node <- {"_new": (:raise, meta, [expr])}, var_names_avaliable):
         node,
         {"_new": (:raise, meta, [convert_local_function_calls(expr, var_names_avaliable)])}
     )
+
+def new_resolver(node <- {"_new": (:pipe, meta, [left_node, right_node])}, var_names_avaliable):
+    Elixir.Map.merge(
+        node,
+        {
+            "_new": (
+                :pipe,
+                meta,
+                [
+                    convert_local_function_calls(left_node, var_names_avaliable),
+                    convert_local_function_calls(right_node, var_names_avaliable)
+                ]
+            )
+        }
+    )
