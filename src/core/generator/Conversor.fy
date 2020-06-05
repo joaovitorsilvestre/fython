@@ -8,10 +8,7 @@ def convert(node):
                 "MapNode"           -> convert_map_node(node)
                 "ImportNode"        -> convert_import_node(node)
                 "CaseNode"          -> convert_case_node(node)
-                "RaiseNode"         -> convert_raise_node(node)
-                "StaticAccessNode"  -> convert_staticaccess_node(node)
                 "TryNode"           -> convert_try_node(node)
-                "FuncAsVariableNode" -> convert_funcasvariable_node(node)
         _ ->
             Core.Generator.Newconversor.convert(node['_new'])
 
@@ -53,18 +50,6 @@ def convert_case_node(node):
                 "{:case, ", meta(node), ", [", expr, ", [do: [", arguments, "]]]}"
             ])
 
-def convert_raise_node(node):
-    expr = Elixir.Map.get(node, "expr") |> convert()
-
-    Elixir.Enum.join(["{:raise, ", meta(node), ", [", expr, "]}"])
-
-def convert_funcasvariable_node(node):
-    name = node |> Elixir.Map.get("var_name_tok") |> Elixir.Map.get("value")
-    arity = node |> Elixir.Map.get("arity")
-    Elixir.Enum.join([
-        "{:&, ", meta(node), ", [{:/, ", meta(node), ", [{:",
-        name, ", ", meta(node), ", Elixir}, ", arity, "]}]}"
-    ])
 
 def convert_call_node(node):
     args = node
@@ -198,15 +183,6 @@ def convert_pipe_node(node):
     )
 
     convert(call_node)
-
-def convert_staticaccess_node(node):
-    to_be_accesed = convert(Elixir.Map.get(node, "node"))
-    value_to_find = convert(Elixir.Map.get(node, "node_value"))
-
-    Elixir.Enum.join([
-        "{{:., ", meta(node), ", [{:__aliases__, [alias: false], [:Map]}, :fetch!]}, ", meta(node), ", [",
-        to_be_accesed, ", ", value_to_find, "]}"
-    ])
 
 def convert_try_node(node):
     do = Elixir.Enum.join([

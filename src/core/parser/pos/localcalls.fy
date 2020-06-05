@@ -340,3 +340,24 @@ def new_resolver(node <- {"_new": (:lambda, meta, [args, statements])}, var_name
         node,
         {"_new": (:lambda, meta, get_vars_defined_def_or_lambda(args, statements, var_names_avaliable))}
     )
+
+def new_resolver(node <- {"_new": (:static_access, meta, [node_to_access, node_key])}, var_names_avaliable):
+    Elixir.Map.merge(
+        node,
+        {
+            "_new": (
+                :static_access,
+                meta,
+                [
+                    convert_local_function_calls(node_to_access, var_names_avaliable),
+                    convert_local_function_calls(node_key, var_names_avaliable)
+                ]
+            )
+        }
+    )
+
+def new_resolver(node <- {"_new": (:raise, meta, [expr])}, var_names_avaliable):
+    Elixir.Map.merge(
+        node,
+        {"_new": (:raise, meta, [convert_local_function_calls(expr, var_names_avaliable)])}
+    )

@@ -102,7 +102,7 @@ First element means if the variable is pinned
 
 `keyarg`  = (:myarg, `node`) 
 
-(:def, `meta`, [[`node*`], [`keyarg*`], `statements`])
+(:def, `meta`, [`string`, [`node*`], [`keyarg*`], `statements`])
 
 <hr>
 
@@ -176,7 +176,11 @@ normal *case* expression
 
 e.g: ```mymap["mykey"]```
 
-(:static_access, `meta`, [`node`])
+`left_node` = the node being accessed. The node map, for instance.
+
+`right_node` = the node that will generate the key or its the key itself; `call` or `string` node respectively.
+
+(:static_access, `meta`, [`left_node`, `right_node`])
 
 <hr>
 

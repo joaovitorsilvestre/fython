@@ -59,7 +59,12 @@ def make_staticaccess_node(node_left, node_value, pos_end):
         "node": node_left,
         "node_value": node_value,
         "pos_start": Elixir.Map.get(node_left, "pos_start"),
-        "pos_end": pos_end
+        "pos_end": pos_end,
+        "_new": (
+            :static_access,
+            gen_meta(node_left['pos_start'], pos_end),
+            [node_left, node_value]
+        )
     }
 
 def make_if_node(comp_expr, true_expr, false_expr):
@@ -190,7 +195,12 @@ def make_raise_node(expr, pos_start):
         "NodeType": "RaiseNode",
         "expr": expr,
         "pos_start": pos_start,
-        "pos_end": Elixir.Map.get(expr, 'pos_end')
+        "pos_end": Elixir.Map.get(expr, 'pos_end'),
+        "_new": (
+            :raise,
+            gen_meta(pos_start, expr['pos_end']),
+            [expr]
+        )
     }
 
 

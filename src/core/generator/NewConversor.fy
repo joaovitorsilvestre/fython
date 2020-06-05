@@ -145,3 +145,12 @@ def convert((:def, meta, [name, args, statements])):
         "{:def, ", convert_meta(meta), ", [{:", name, ", ", convert_meta(meta),", [",
         args, "]}, [do: ", old_convert(statements), "]]}"
     ])
+
+def convert((:static_access, meta, [node_to_access, node_key])):
+        Elixir.Enum.join([
+        "{{:., ", convert_meta(meta), ", [{:__aliases__, [alias: false], [:Map]}, :fetch!]}, ", convert_meta(meta), ", [",
+        old_convert(node_to_access), ", ", old_convert(node_key), "]}"
+    ])
+
+def convert((:raise, meta, [expr])):
+    Elixir.Enum.join(["{:raise, ", convert_meta(meta), ", [", old_convert(expr), "]}"])
