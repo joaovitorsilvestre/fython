@@ -21,8 +21,6 @@ def convert_local_function_calls(node, var_names_avaliable):
     case Elixir.Map.get(node, '_new') if Elixir.Kernel.is_map(node) else None:
         None ->
             case Elixir.Map.get(node, 'NodeType') if Elixir.Kernel.is_map(node) else None:
-                'FuncDefNode' -> resolve_func_or_lambda(node, var_names_avaliable)
-                'LambdaNode' -> resolve_func_or_lambda(node, var_names_avaliable)
                 'CallNode' -> resolve_call_node(node, var_names_avaliable)
                 'CaseNode' -> resolve_case_node(node, var_names_avaliable)
                 'PipeNode' -> resolve_pipe_node(node, var_names_avaliable)
@@ -61,22 +59,6 @@ def get_variables_bound_in_pattern(node):
             raise Elixir.Enum.join([
                 "The node type '", node_type, "' doesnt work as a pattern match"
             ])
-
-def resolve_func_or_lambda(func_def_node, var_names_avaliable):
-    func_arguments = func_def_node
-        |> Elixir.Map.get('arg_nodes')
-        |> Elixir.Enum.filter(lambda i:
-            i['NodeType'] in Core.Parser.Nodes.node_types_accept_pattern()
-        )
-        |> Elixir.Enum.map(&get_variables_bound_in_pattern/1)
-
-    body_node = Elixir.Map.get(func_def_node, 'body_node')
-        |> convert_local_function_calls(
-            Elixir.List.flatten(var_names_avaliable, func_arguments)
-        )
-
-    Elixir.Map.put(func_def_node, 'body_node', body_node)
-
 
 def resolve_call_node(node, var_names_avaliable):
     local_call = case:
@@ -327,4 +309,34 @@ def new_resolver(node <- {"_new": (:statements, meta, nodes)}, var_names_avaliab
                 )
             )
         }
+    )
+
+def get_vars_defined_def_or_lambda(args, statements,var_names_avaliable):
+    received_arguments = args
+        |> Elixir.Enum.filter(lambda i:
+            i['NodeType'] in Core.Parser.Nodes.node_types_accept_pattern()
+        )
+        |> Elixir.Enum.map(&get_variables_bound_in_pattern/1)
+
+    statements = convert_local_function_calls(
+        statements,
+        Elixir.List.flatten(var_names_avaliable, received_arguments)
+    )
+
+    [args, statements]
+
+def new_resolver(node <- {"_new": (:def, meta, [name, args, statements])}, var_names_avaliable):
+    [args, statements] = get_vars_defined_def_or_lambda(
+        args, statements, var_names_avaliable
+    )
+
+    Elixir.Map.merge(
+        node,
+        {"_new": (:def, meta, [name, args, statements])}
+    )
+
+def new_resolver(node <- {"_new": (:lambda, meta, [args, statements])}, var_names_avaliable):
+    Elixir.Map.merge(
+        node,
+        {"_new": (:lambda, meta, get_vars_defined_def_or_lambda(args, statements, var_names_avaliable))}
     )

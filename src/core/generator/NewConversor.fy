@@ -125,12 +125,23 @@ def convert((:statements, meta, nodes)):
             '{:__block__, ', convert_meta(meta), ', [', Elixir.Enum.join(content, ', '), ']}'
         ])
 
+def convert((:lambda, meta, [args, statements])):
+    args = args
+        |> Elixir.Enum.map(&old_convert/1)
+        |> Elixir.Enum.join(", ")
 
+    Elixir.Enum.join([
+        "{:fn, ", convert_meta(meta), ", [{:->, ", convert_meta(meta), ", [[",
+        args,
+        "], ",
+        old_convert(statements),
+        "]}]}"
+    ])
 
+def convert((:def, meta, [name, args, statements])):
+    args = Elixir.Enum.map(args, &old_convert/1) |> Elixir.Enum.join(', ')
 
-
-
-
-
-
-
+    Elixir.Enum.join([
+        "{:def, ", convert_meta(meta), ", [{:", name, ", ", convert_meta(meta),", [",
+        args, "]}, [do: ", old_convert(statements), "]]}"
+    ])

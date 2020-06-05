@@ -3,8 +3,6 @@ def convert(node):
     case Elixir.Map.get(node, '_new'):
         None ->
             case Elixir.Map.get(node, "NodeType"):
-                "FuncDefNode"       -> convert_deffunc_node(node)
-                "LambdaNode"        -> convert_lambda_node(node)
                 "CallNode"          -> convert_call_node(node)
                 "PipeNode"          -> convert_pipe_node(node)
                 "MapNode"           -> convert_map_node(node)
@@ -20,21 +18,6 @@ def convert(node):
 def meta(node):
     Elixir.Enum.join(['[line: ', node['pos_start']['ln'], "]"])
 
-def convert_lambda_node(node):
-    params = node
-        |> Elixir.Map.get("arg_nodes")
-        |> Elixir.Enum.map(&convert/1)
-        |> Elixir.Enum.join(", ")
-
-    params = ['[', params, ']'] |> Elixir.Enum.join('')
-
-    Elixir.Enum.join([
-        "{:fn, ", meta(node), ", [{:->, ", meta(node), ", [",
-        params,
-        ", ",
-        convert(node |> Elixir.Map.get('body_node')),
-        "]}]}"
-    ])
 
 def convert_map_node(node):
     pairs = node
@@ -46,20 +29,6 @@ def convert_map_node(node):
         |> Elixir.Enum.join(', ')
 
     r = Elixir.Enum.join(["{:%{}, ", meta(node), ", [", pairs, "]}"])
-
-def convert_deffunc_node(node):
-    name = node |> Elixir.Map.get("var_name_tok") |> Elixir.Map.get("value")
-    statements_node = node |> Elixir.Map.get("body_node")
-
-    arguments = node
-        |> Elixir.Map.get("arg_nodes")
-        |> Elixir.Enum.map(&convert/1)
-        |> Elixir.Enum.join(', ')
-
-    Elixir.Enum.join([
-        "{:def, ", meta(node), ", [{:", name, ", ", meta(node),", [",
-        arguments, "]}, [do: ", convert(statements_node), "]]}"
-    ])
 
 def convert_case_node(node):
     expr = convert(node |> Elixir.Map.get("expr")) if node |> Elixir.Map.get("expr") else None

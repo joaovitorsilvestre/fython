@@ -203,14 +203,34 @@ def make_funcdef_node(var_name_tok, arg_nodes, body_node, docstring, pos_start):
         "body_node": body_node,
         "docstring": docstring,
         "pos_start": pos_start,
-        "pos_end": Elixir.Map.get(body_node, 'pos_end')
+        "pos_end": Elixir.Map.get(body_node, 'pos_end'),
+        "_new": (
+            :def,
+            Elixir.Map.merge(
+                gen_meta(pos_start, body_node['pos_end']),
+                {"docstring": docstring}
+            ),
+            [var_name_tok['value'], arg_nodes, body_node]
+        )
     }
 
 def make_lambda_node(var_name_tok, arg_nodes, body_node, pos_start):
-    Elixir.Map.merge(
-        make_funcdef_node(var_name_tok, arg_nodes, body_node, None, pos_start),
-        {"NodeType": "LambdaNode"}
-    )
+    {
+        "NodeType": "LambdaNode",
+        "var_name_tok": var_name_tok,
+        "arg_nodes": arg_nodes,
+        "arity": Elixir.Enum.count(arg_nodes),
+        "body_node": body_node,
+        "docstring": None,
+        "pos_start": pos_start,
+        "pos_end": Elixir.Map.get(body_node, 'pos_end'),
+        "_new": (
+            :lambda,
+            gen_meta(pos_start, body_node['pos_end']),
+            [arg_nodes, body_node]
+        )
+    }
+
 
 
 def make_call_node(node_to_call, arg_nodes, keywords, pos_end):
