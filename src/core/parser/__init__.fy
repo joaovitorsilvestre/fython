@@ -487,9 +487,7 @@ def map_expr(state):
 
     case ct['type']:
         'RCURLY' ->
-            pairs = Elixir.Map.get(state, "_pairs", {})
-                |> Elixir.Map.to_list()
-                |> Elixir.Enum.map(lambda i: [Elixir.Kernel.elem(i, 0), Elixir.Kernel.elem(i, 1)])
+            pairs = Elixir.Map.get(state, "_pairs", {}) |> Elixir.Map.to_list()
 
             pos_end = state["current_tok"]["pos_end"]
 

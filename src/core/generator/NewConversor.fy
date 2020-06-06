@@ -186,3 +186,13 @@ def convert((:pipe, meta, [left_node, right_node])):
                     |> Elixir.Map.put("arg_nodes", Elixir.List.insert_at(arg_nodes, 0, acc))
         )
         |> old_convert()
+
+
+def convert((:map, meta, pairs)):
+    pairs = pairs
+        |> Elixir.Enum.map(lambda (key, value):
+            Elixir.Enum.join(["{", old_convert(key), ", ", old_convert(value), "}"])
+        )
+        |> Elixir.Enum.join(', ')
+
+    Elixir.Enum.join(["{:%{}, ", convert_meta(meta), ", [", pairs, "]}"])

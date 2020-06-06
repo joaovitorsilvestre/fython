@@ -4,8 +4,6 @@ def convert(node):
         None ->
             case Elixir.Map.get(node, "NodeType"):
                 "CallNode"          -> convert_call_node(node)
-                "MapNode"           -> convert_map_node(node)
-                "ImportNode"        -> convert_import_node(node)
                 "CaseNode"          -> convert_case_node(node)
                 "TryNode"           -> convert_try_node(node)
         _ ->
@@ -13,18 +11,6 @@ def convert(node):
 
 def meta(node):
     Elixir.Enum.join(['[line: ', node['pos_start']['ln'], "]"])
-
-
-def convert_map_node(node):
-    pairs = node
-        |> Elixir.Map.get("pairs_list")
-        |> Elixir.Enum.map(lambda pair:
-            [key, value] = pair
-            Elixir.Enum.join(["{", convert(key), ", ", convert(value), "}"])
-        )
-        |> Elixir.Enum.join(', ')
-
-    r = Elixir.Enum.join(["{:%{}, ", meta(node), ", [", pairs, "]}"])
 
 def convert_case_node(node):
     expr = convert(node |> Elixir.Map.get("expr")) if node |> Elixir.Map.get("expr") else None
@@ -103,47 +89,6 @@ def convert_call_node(node):
                     # this is for call a function that is defined in
                     # the same module
                     Elixir.Enum.join(["{:", func_name, ", ", meta(node), ", ", arguments, "}"])
-
-def convert_import_node(node):
-    case Elixir.Map.get(node, "modules_import"):
-        None -> "not implemened from"
-        _    ->
-            import_commands = node
-                |> Elixir.Map.get("modules_import")
-                |> Elixir.Enum.map(lambda imp:
-                    name = Elixir.Map.get(imp, "name")
-                    alias = Elixir.Map.get(imp, "alias")
-
-                    case Elixir.String.contains?(name, "."):
-                        True ->
-                            name = name
-                                |> Elixir.String.split(".")
-                                |> Elixir.Enum.map(lambda i: Elixir.Enum.join([':', i]))
-                                |> Elixir.Enum.join(', ')
-                        False -> Elixir.Enum.join([':', name])
-
-                    import_command = Elixir.Enum.join([
-                        "{:import, ", meta(node), ", ",
-                        "[{:__aliases__, [alias: false], ",
-                        "[", name, "]}]}"
-                    ])
-
-                    result = case Elixir.Map.get(imp, "alias"):
-                        None -> import_command
-                        _ -> Elixir.Enum.join([
-                            "{:__block__, ", meta(node), ", [",
-                                import_command,
-                                ", {:alias, ", meta(node), ", [",
-                                "{:__aliases__, [alias: false], [", name, "]},",
-                                "[as: {:__aliases__, [alias: ", name, "], [:", alias,"]}]",
-                                "]}",
-                            "]}"
-                        ])
-                    result
-                )
-                |> Elixir.Enum.join(', ')
-
-            Elixir.Enum.join(["{:__block__, ", meta(node), ", [", import_commands, "]}"])
 
 def convert_try_node(node):
     do = Elixir.Enum.join([

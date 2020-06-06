@@ -23,42 +23,37 @@ def convert_local_function_calls(node, var_names_avaliable):
             case Elixir.Map.get(node, 'NodeType') if Elixir.Kernel.is_map(node) else None:
                 'CallNode' -> resolve_call_node(node, var_names_avaliable)
                 'CaseNode' -> resolve_case_node(node, var_names_avaliable)
-                'PipeNode' -> resolve_pipe_node(node, var_names_avaliable)
-                'InNode' -> resolve_in_node(node, var_names_avaliable)
-                'MapNode' -> resolve_map_node(node, var_names_avaliable)
-                'RaiseNode' -> resolve_raise_node(node, var_names_avaliable)
-                'StaticAccessNode' -> resolve_staticaccess_node(node, var_names_avaliable)
-                'BinOpNode' -> resolve_binop_node(node, var_names_avaliable)
                 _ -> node
         _ ->
             new_resolver(node, var_names_avaliable)
 
+def node_accept_pattern_match({"NodeType": node_type}):
+    node_type in Core.Parser.Nodes.node_types_accept_pattern()
 
-def get_variables_bound_in_pattern(node):
-    node_type = Elixir.Map.get(node, 'NodeType')
+def get_variables_bound_in_pattern({"_new": (:map, _, pairs)}):
+    # We dont support pattern match on map keys
+    Elixir.Enum.map(
+        pairs,
+        lambda (_, value): get_variables_bound_in_pattern(value)
+    )
 
-    filter_types = lambda i: Elixir.Map.get(i, 'NodeType') in Core.Parser.Nodes.node_types_accept_pattern()
+def get_variables_bound_in_pattern({"_new": (:tuple, _, elements)}):
+    elements
+        |> Elixir.Enum.filter(&node_accept_pattern_match/1)
+        |> Elixir.Enum.map(&get_variables_bound_in_pattern/1)
 
-    case:
-        node_type == 'MapNode' ->
-            node
-                |> Elixir.Map.get("pairs_list")
-                |> Elixir.List.flatten()
-                |> Elixir.Enum.filter(filter_types)
-                |> Elixir.Enum.map(&get_variables_bound_in_pattern/1)
-                |> Elixir.List.flatten()
-        node_type in ['TupleNode', 'ListNode'] ->
-            node
-                |> Elixir.Map.get('element_nodes')
-                |> Elixir.Enum.filter(filter_types)
-                |> Elixir.Enum.map(&get_variables_bound_in_pattern/1)
-                |> Elixir.List.flatten()
-        "VarAccessNode" ->
-            Elixir.Map.get(node, "var_name_tok") |> Elixir.Map.get("value")
-        True ->
-            raise Elixir.Enum.join([
-                "The node type '", node_type, "' doesnt work as a pattern match"
-            ])
+def get_variables_bound_in_pattern({"_new": (:list, _, elements)}):
+    elements
+        |> Elixir.Enum.filter(&node_accept_pattern_match/1)
+        |> Elixir.Enum.map(&get_variables_bound_in_pattern/1)
+
+def get_variables_bound_in_pattern({"_new": (:var, _, [_, value])}):
+    value
+
+def get_variables_bound_in_pattern({"NodeType": node_type}):
+    raise Elixir.Enum.join([
+        "The node type '", node_type, "' doesnt work as a pattern match"
+    ])
 
 def resolve_call_node(node, var_names_avaliable):
     local_call = case:
@@ -130,53 +125,6 @@ def resolve_in_node(node, var_names_avaliable):
             ),
             "right_expr": convert_local_function_calls(
                 Elixir.Map.get(node, "right_expr"), var_names_avaliable
-            )
-        }
-    )
-
-def resolve_varassign_node(node, var_names_avaliable):
-    Elixir.Map.merge(
-        node,
-        {
-            "value_node": convert_local_function_calls(
-                Elixir.Map.get(node, "value_node"), var_names_avaliable
-            )
-        }
-    )
-
-def resolve_map_node(node, var_names_avaliable):
-    Elixir.Map.merge(
-        node,
-        {
-            "pairs_list": Elixir.Map.get(node, "pairs_list")
-                |> Elixir.Enum.map(lambda i:
-                    [
-                        convert_local_function_calls(Elixir.Enum.at(i, 0), var_names_avaliable),
-                        convert_local_function_calls(Elixir.Enum.at(i, 1), var_names_avaliable)
-                    ]
-                )
-        }
-    )
-
-def resolve_raise_node(node, var_names_avaliable):
-    Elixir.Map.merge(
-        node,
-        {
-            "expr": convert_local_function_calls(
-                Elixir.Map.get(node, "expr"), var_names_avaliable
-            )
-        }
-    )
-
-def resolve_binop_node(node, var_names_avaliable):
-    Elixir.Map.merge(
-        node,
-        {
-            "left_node": convert_local_function_calls(
-                Elixir.Map.get(node, "left_node"), var_names_avaliable
-            ),
-            "right_node": convert_local_function_calls(
-                Elixir.Map.get(node, "right_node"), var_names_avaliable
             )
         }
     )
@@ -314,6 +262,10 @@ def new_resolver(node <- {"_new": (:statements, meta, nodes)}, var_names_avaliab
 def get_vars_defined_def_or_lambda(args, statements,var_names_avaliable):
     received_arguments = args
         |> Elixir.Enum.filter(lambda i:
+            case Elixir.Kernel.is_map(i):
+                True -> None
+                False -> raise 'popai'
+
             i['NodeType'] in Core.Parser.Nodes.node_types_accept_pattern()
         )
         |> Elixir.Enum.map(&get_variables_bound_in_pattern/1)
@@ -373,6 +325,25 @@ def new_resolver(node <- {"_new": (:pipe, meta, [left_node, right_node])}, var_n
                     convert_local_function_calls(left_node, var_names_avaliable),
                     convert_local_function_calls(right_node, var_names_avaliable)
                 ]
+            )
+        }
+    )
+
+def new_resolver(node <- {"_new": (:map, meta, pairs)}, var_names_avaliable):
+    Elixir.Map.merge(
+        node,
+        {
+            "_new": (
+                :map,
+                meta,
+                Elixir.Enum.map(
+                    pairs,
+                    lambda (key, value):
+                        (
+                            convert_local_function_calls(key, var_names_avaliable),
+                            convert_local_function_calls(value, var_names_avaliable)
+                        )
+                )
             )
         }
     )

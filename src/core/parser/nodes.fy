@@ -163,7 +163,12 @@ def make_map_node(pairs_list, pos_start, pos_end):
         "NodeType": "MapNode",
         "pairs_list": pairs_list,
         "pos_start": pos_start,
-        "pos_end": pos_end
+        "pos_end": pos_end,
+        "_new": (
+            :map,
+            gen_meta(pos_start, pos_end),
+            pairs_list
+        )
     }
 
 def make_tuple_node(element_nodes, pos_start, pos_end):
