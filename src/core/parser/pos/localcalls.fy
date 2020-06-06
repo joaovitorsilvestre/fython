@@ -22,7 +22,6 @@ def convert_local_function_calls(node, var_names_avaliable):
         None ->
             case Elixir.Map.get(node, 'NodeType') if Elixir.Kernel.is_map(node) else None:
                 'CallNode' -> resolve_call_node(node, var_names_avaliable)
-                'CaseNode' -> resolve_case_node(node, var_names_avaliable)
                 _ -> node
         _ ->
             new_resolver(node, var_names_avaliable)
@@ -84,60 +83,6 @@ def resolve_call_node(node, var_names_avaliable):
                     key = Elixir.Kernel.elem(i, 0)
                     value = Elixir.Kernel.elem(i, 1) |> convert_local_function_calls(var_names_avaliable)
                     Elixir.Map.to_list({key: value}) |> Elixir.Enum.at(0)
-            )
-        }
-    )
-
-
-def resolve_case_node(node, var_names_avaliable):
-    Elixir.Map.merge(
-        node,
-        {
-            'expr': convert_local_function_calls(Elixir.Map.get(node, 'expr'), var_names_avaliable),
-            'cases': node
-                |> Elixir.Map.get('cases')
-                |> Elixir.Enum.map(lambda i:
-                    [condition, statements] = i
-                    [condition, convert_local_function_calls(statements, var_names_avaliable)]
-                )
-        }
-    )
-
-def resolve_pipe_node(node, var_names_avaliable):
-    Elixir.Map.merge(
-        node,
-        {
-            "left_node": convert_local_function_calls(
-                Elixir.Map.get(node, "left_node"), var_names_avaliable
-            ),
-            "right_node": convert_local_function_calls(
-                Elixir.Map.get(node, "right_node"), var_names_avaliable
-            )
-        }
-    )
-
-def resolve_in_node(node, var_names_avaliable):
-    Elixir.Map.merge(
-        node,
-        {
-            "left_expr": convert_local_function_calls(
-                Elixir.Map.get(node, "left_expr"), var_names_avaliable
-            ),
-            "right_expr": convert_local_function_calls(
-                Elixir.Map.get(node, "right_expr"), var_names_avaliable
-            )
-        }
-    )
-
-def resolve_staticaccess_node(node, var_names_avaliable):
-    Elixir.Map.merge(
-        node,
-        {
-            "node": convert_local_function_calls(
-                Elixir.Map.get(node, "node"), var_names_avaliable
-            ),
-            "node_value": convert_local_function_calls(
-                Elixir.Map.get(node, "node_value"), var_names_avaliable
             )
         }
     )
@@ -347,3 +292,19 @@ def new_resolver(node <- {"_new": (:map, meta, pairs)}, var_names_avaliable):
             )
         }
     )
+
+def new_resolver(node <- {"_new": (:case, meta, [expr, pairs])}, var_names_avaliable):
+    # When expr of case is none we convert to a elixir Cond node
+    expr = convert_local_function_calls(expr, var_names_avaliable) if expr != None else None
+
+    # only elixir's Cond can have function call in the case expr
+    pairs = Elixir.Enum.map(
+        pairs,
+        lambda (left, right):
+            (
+                convert_local_function_calls(left, var_names_avaliable) if expr != None else left,
+                convert_local_function_calls(right, var_names_avaliable)
+            )
+    )
+
+    Elixir.Map.merge(node, {"_new": (:case, meta, [expr, pairs])})

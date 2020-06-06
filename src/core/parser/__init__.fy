@@ -658,7 +658,7 @@ def case_expr(state):
                                 True -> statement(state)
                                 False -> statements(state, this_ident + 4)
 
-                            cases = Elixir.List.insert_at(cases, -1, [left_expr, right_expr])
+                            cases = Elixir.List.insert_at(cases, -1, (left_expr, right_expr))
 
                             state |> Elixir.Map.put('_cases', cases)
                         False ->

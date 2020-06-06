@@ -12,30 +12,6 @@ def convert(node):
 def meta(node):
     Elixir.Enum.join(['[line: ', node['pos_start']['ln'], "]"])
 
-def convert_case_node(node):
-    expr = convert(node |> Elixir.Map.get("expr")) if node |> Elixir.Map.get("expr") else None
-
-    arguments = node
-        |> Elixir.Map.get("cases")
-        |> Elixir.Enum.map(lambda left_right:
-            left = Elixir.Enum.at(left_right, 0)
-            right = Elixir.Enum.at(left_right, 1)
-
-            Elixir.Enum.join([
-                "{:->, ", meta(node), ", [[", convert(left), "], ", convert(right), "]}"
-            ], '')
-        )
-        |> Elixir.Enum.join(', ')
-
-    case expr:
-        None -> Elixir.Enum.join([
-                "{:cond, ", meta(node), ", [[do: [", arguments, "]]]}"
-            ])
-        _ -> Elixir.Enum.join([
-                "{:case, ", meta(node), ", [", expr, ", [do: [", arguments, "]]]}"
-            ])
-
-
 def convert_call_node(node):
     args = node
         |> Elixir.Map.get("arg_nodes")

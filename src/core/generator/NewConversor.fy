@@ -196,3 +196,21 @@ def convert((:map, meta, pairs)):
         |> Elixir.Enum.join(', ')
 
     Elixir.Enum.join(["{:%{}, ", convert_meta(meta), ", [", pairs, "]}"])
+
+def convert((:case, meta, [expr, pairs])):
+
+    pairs = pairs
+        |> Elixir.Enum.map(lambda (left, right):
+            Elixir.Enum.join([
+                "{:->, ", convert_meta(meta), ", [[", old_convert(left), "], ", old_convert(right), "]}"
+            ], '')
+        )
+        |> Elixir.Enum.join(', ')
+
+    case expr:
+        None -> Elixir.Enum.join([
+                "{:cond, ", convert_meta(meta), ", [[do: [", pairs, "]]]}"
+            ])
+        _ -> Elixir.Enum.join([
+                "{:case, ", convert_meta(meta), ", [", old_convert(expr), ", [do: [", pairs, "]]]}"
+            ])

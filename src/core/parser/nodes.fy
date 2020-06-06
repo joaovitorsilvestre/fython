@@ -116,7 +116,12 @@ def make_case_node(expr, cases, pos_start, pos_end):
         "expr": expr,
         "cases": cases,
         "pos_start": pos_start,
-        "pos_end": pos_end
+        "pos_end": pos_end,
+        "_new": (
+            :case,
+            gen_meta(pos_start, pos_end),
+            [expr, cases]
+        )
     }
 
 def make_statements_node(statements, pos_start, pos_end):
