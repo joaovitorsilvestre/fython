@@ -19,10 +19,7 @@ def convert_local_function_calls(node, var_names_avaliable):
 
     # TEMP FIX WHILE WE DONT CONVERT ALL NODES TO NEW AST
     case Elixir.Map.get(node, '_new') if Elixir.Kernel.is_map(node) else None:
-        None ->
-            case Elixir.Map.get(node, 'NodeType') if Elixir.Kernel.is_map(node) else None:
-                'CallNode' -> resolve_call_node(node, var_names_avaliable)
-                _ -> node
+        None -> node
         _ ->
             new_resolver(node, var_names_avaliable)
 
@@ -54,37 +51,27 @@ def get_variables_bound_in_pattern({"NodeType": node_type}):
         "The node type '", node_type, "' doesnt work as a pattern match"
     ])
 
-def resolve_call_node(node, var_names_avaliable):
-    local_call = case:
-        (Elixir.Map.get(node, 'node_to_call') |> Elixir.Map.get('NodeType')) == 'VarAccessNode' ->
-            func_name = Elixir.Map.get(node, 'node_to_call')
-                |> Elixir.Map.get('var_name_tok')
-                |> Elixir.Map.get('value')
-
+def new_resolver(node <- {"_new": (:call, meta, [node_to_call, args, keywords, _])}, var_names_avaliable):
+    local_call = case node_to_call['_new']:
+        (:var, _, [_pinned, func_name]) ->
             not Elixir.String.contains?(func_name, ".") and func_name in var_names_avaliable
-        (Elixir.Map.get(node, 'node_to_call') |> Elixir.Map.get('NodeType')) == 'CallNode' -> True
-        (Elixir.Map.get(node, 'node_to_call') |> Elixir.Map.get('NodeType')) == 'StaticAccessNode' -> True
+        (:call, _, _) -> True
+        (:static_access, _, _) -> True
         True -> False
+
+    node_to_call = convert_local_function_calls(node_to_call, var_names_avaliable)
+    args = Elixir.Enum.map(
+        args, lambda i: convert_local_function_calls(i, var_names_avaliable)
+    )
+    keywords = Elixir.Enum.map(
+        keywords,
+        lambda (key, value):
+            (key, convert_local_function_calls(value, var_names_avaliable))
+    )
 
     Elixir.Map.merge(
         node,
-        {
-            'node_to_call': convert_local_function_calls(
-                Elixir.Map.get(node, 'node_to_call'), var_names_avaliable
-            ),
-            'local_call': local_call,
-            "arg_nodes": Elixir.Enum.map(
-                Elixir.Map.get(node, "arg_nodes"),
-                lambda i: convert_local_function_calls(i, var_names_avaliable)
-            ),
-            "keywords": Elixir.Map.new(
-                Elixir.Map.get(node, "keywords"),
-                lambda i:
-                    key = Elixir.Kernel.elem(i, 0)
-                    value = Elixir.Kernel.elem(i, 1) |> convert_local_function_calls(var_names_avaliable)
-                    Elixir.Map.to_list({key: value}) |> Elixir.Enum.at(0)
-            )
-        }
+        {'_new': (:call, meta, [node_to_call, args, keywords, local_call]), 'local_call': local_call}
     )
 
 def new_resolver(node <- {"_new": (:number, _, _)}, _):

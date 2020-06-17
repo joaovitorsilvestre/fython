@@ -783,7 +783,7 @@ def call_func_expr(state, atom):
             )
 
     arg_nodes = Elixir.Map.get(state, '_arg_nodes')
-    keywords = Elixir.Map.get(state, '_keywords')
+    keywords = Elixir.Map.get(state, '_keywords') |> Elixir.Map.to_list()
 
     state = state |> Elixir.Map.delete('_arg_nodes') |> Elixir.Map.delete('_keywords')
 

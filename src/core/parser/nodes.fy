@@ -267,7 +267,12 @@ def make_call_node(node_to_call, arg_nodes, keywords, pos_end):
         "arity": Elixir.Enum.count(arg_nodes),
         "pos_start": Elixir.Map.get(node_to_call, 'pos_start'),
         "pos_end": pos_end,
-        "local_call": False
+        "local_call": False,
+        "_new": (
+            :call,
+            gen_meta(node_to_call['pos_start'], pos_end),
+            [node_to_call, arg_nodes, keywords, False]
+        )
     }
 
 def make_unary_node(tok, node):

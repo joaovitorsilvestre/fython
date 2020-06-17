@@ -178,12 +178,13 @@ def convert((:pipe, meta, [left_node, right_node])):
         |> Elixir.Enum.reduce(
             first,
             lambda c_node, acc:
-                # TODO after conver the call not to new ast change this to get arity from the umber of args
-                {"arg_nodes": arg_nodes, "arity": arity} = c_node
+                (:call, meta, [node_to_call, args, keywords, local_call]) = c_node['_new']
 
                 c_node
-                    |> Elixir.Map.put("arity", arity + 1)
-                    |> Elixir.Map.put("arg_nodes", Elixir.List.insert_at(arg_nodes, 0, acc))
+                    |> Elixir.Map.put(
+                        "_new",
+                        (:call, meta, [node_to_call, Elixir.List.insert_at(args, 0, acc), keywords, local_call])
+                    )
         )
         |> old_convert()
 
@@ -214,3 +215,57 @@ def convert((:case, meta, [expr, pairs])):
         _ -> Elixir.Enum.join([
                 "{:case, ", convert_meta(meta), ", [", old_convert(expr), ", [do: [", pairs, "]]]}"
             ])
+
+def convert_call_args(args, keywords):
+    args = Elixir.Enum.map(args, &old_convert/1)
+
+    keywords = keywords
+        |> Elixir.Enum.map(lambda (key, value):
+            Elixir.Enum.join(["[", key, ": ", old_convert(value), "]"])
+        )
+
+    Elixir.Enum.join([
+        "[",
+        [args, keywords] |> Elixir.List.flatten() |> Elixir.Enum.join(", "),
+        "]"
+    ])
+
+def convert((:call, meta, [node_to_call, args, keywords, True])):
+    arguments = convert_call_args(args, keywords)
+
+    Elixir.Enum.join([
+        "{{:., ", convert_meta(meta), ", [", old_convert(node_to_call), "]}, ",
+        convert_meta(meta), ", ", arguments, "}"
+    ])
+
+def convert(full <- (:call, meta, [{"_new": (:var, _, [_, func_name])}, args, keywords, False])):
+    # node_to_call will always be a VarAccessNode on a module call. E.g: Elixir.Map.get
+
+    arguments = convert_call_args(args, keywords)
+
+    case Elixir.String.contains?(func_name, '.'):
+        True ->
+            (function, modules) = func_name
+                |> Elixir.String.split(".")
+                |> Elixir.List.pop_at(-1)
+
+            # for fython modules we need to use the elixir
+            # syntax for erlang calls. Doing this way, we prevent
+            # Elixer compiler from adding 'Elixir.' to module name to call
+
+            module = Elixir.Enum.join(modules, ".")
+
+            module = case:
+                Elixir.String.starts_with?(module, "Elixir.") -> module
+                Elixir.String.starts_with?(module, "Erlang.") ->
+                    Elixir.Enum.join([':"', Elixir.String.replace(module, "Erlang.", ""), '"'])
+                True -> Elixir.Enum.join([':"Fython.', module, '"'])
+
+            Elixir.Enum.join([
+                "{{:., ", convert_meta(meta), ", [", module, ", :",
+                function, "]}, ", convert_meta(meta), ", ", arguments, "}"
+            ])
+        False ->
+            # this is for call a function that is defined in
+            # the same module
+            Elixir.Enum.join(["{:", func_name, ", ", convert_meta(meta), ", ", arguments, "}"])
