@@ -295,3 +295,19 @@ def new_resolver(node <- {"_new": (:case, meta, [expr, pairs])}, var_names_avali
     )
 
     Elixir.Map.merge(node, {"_new": (:case, meta, [expr, pairs])})
+
+def new_resolver(node <- {"_new": (:try, meta, [try_block, exceptions, finally_block])}, var_names_avaliable):
+    try_block = convert_local_function_calls(try_block, var_names_avaliable)
+    exceptions = Elixir.Enum.map(
+        exceptions,
+        lambda (except_identifier, alias, block):
+            (except_identifier, alias, convert_local_function_calls(block, var_names_avaliable))
+    )
+    finally_block = convert_local_function_calls(finally_block, var_names_avaliable)
+
+    Elixir.Map.merge(
+        node,
+        {
+            "_new": (:try, meta, [try_block, exceptions, finally_block])
+        }
+    )

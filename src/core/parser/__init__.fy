@@ -958,7 +958,7 @@ def handle_do_new_line(state, base_line):
 
 
 def handle_except_blocks(state, base_ident, base_line, prev_blocks):
-    (state, except_expr) = case state['current_tok']['type'] != 'IDENTIFIER':
+    (state, except_identifier) = case state['current_tok']['type'] != 'IDENTIFIER':
         True ->
             state = Core.Parser.Utils.set_error(
                 state, "Expected identifier",
@@ -989,7 +989,7 @@ def handle_except_blocks(state, base_ident, base_line, prev_blocks):
 
     [state, block] = statements(state, base_ident + 4)
 
-    new_list_blocks = Elixir.List.insert_at(prev_blocks, -1, (except_expr, alias, block))
+    new_list_blocks = Elixir.List.insert_at(prev_blocks, -1, (except_identifier, alias, block))
 
     ct_is_except = Core.Parser.Utils.tok_matchs(state['current_tok'], 'KEYWORD', 'except')
 

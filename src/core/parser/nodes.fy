@@ -334,6 +334,11 @@ def make_try_node(try_block_node, exceptions, finally_block, pos_start, pos_end)
         "exceptions": exceptions,
         "finally_block": finally_block,
         "pos_start": pos_start,
-        "pos_end": pos_end
+        "pos_end": pos_end,
+        "_new": (
+            :try,
+            gen_meta(pos_start, pos_end),
+            [try_block_node, exceptions, finally_block]
+        )
     }
 

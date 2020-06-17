@@ -269,3 +269,36 @@ def convert(full <- (:call, meta, [{"_new": (:var, _, [_, func_name])}, args, ke
             # this is for call a function that is defined in
             # the same module
             Elixir.Enum.join(["{:", func_name, ", ", convert_meta(meta), ", ", arguments, "}"])
+
+def convert((:try, meta, [try_block, exceptions, finally_block])):
+    do = Elixir.Enum.join([
+        "{:do, ", old_convert(try_block), "}"
+    ])
+
+    each_rescue = Elixir.Enum.map(
+        exceptions,
+        lambda i :
+            (except_identifier, alias, block) = i
+
+            case alias:
+                None -> Elixir.Enum.join([
+                    "{:->, ", convert_meta(meta), ", [[{:__aliases__, [alias: false], [:",
+                    except_identifier, "]}], ", old_convert(block), "]}"
+                ])
+                _ -> Elixir.Enum.join([
+                    "{:->, ", convert_meta(meta), ",", "[[",
+                    "{:in, ", convert_meta(meta), ",",
+                    "[{:", alias, ", ", convert_meta(meta), ", Elixir}, {:__aliases__, [alias: false], [:", except_identifier, "]}]}",
+                    "],", old_convert(block), "]}"
+                ])
+    )
+
+    each_rescue = Elixir.Enum.join(each_rescue, ", ")
+
+    rescue = Elixir.Enum.join([
+        "{:rescue, [", each_rescue, "]}"
+    ])
+
+    Elixir.Enum.join([
+        "{:try, ", convert_meta(meta), ", [[", do, ", ", rescue, "]]}"
+    ])
