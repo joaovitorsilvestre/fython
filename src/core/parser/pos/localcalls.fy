@@ -18,41 +18,40 @@ def convert_local_function_calls(node, var_names_avaliable):
         False -> None
 
     # TEMP FIX WHILE WE DONT CONVERT ALL NODES TO NEW AST
-    case Elixir.Map.get(node, '_new') if Elixir.Kernel.is_map(node) else None:
+    case node:
         None -> node
-        _ ->
-            new_resolver(node, var_names_avaliable)
+        _ -> new_resolver(node, var_names_avaliable)
 
-def node_accept_pattern_match({"NodeType": node_type}):
+def node_accept_pattern_match((node_type, _, _)):
     node_type in Core.Parser.Nodes.node_types_accept_pattern()
 
-def get_variables_bound_in_pattern({"_new": (:map, _, pairs)}):
+def get_variables_bound_in_pattern((:map, _, pairs)):
     # We dont support pattern match on map keys
     Elixir.Enum.map(
         pairs,
         lambda (_, value): get_variables_bound_in_pattern(value)
     )
 
-def get_variables_bound_in_pattern({"_new": (:tuple, _, elements)}):
+def get_variables_bound_in_pattern((:tuple, _, elements)):
     elements
         |> Elixir.Enum.filter(&node_accept_pattern_match/1)
         |> Elixir.Enum.map(&get_variables_bound_in_pattern/1)
 
-def get_variables_bound_in_pattern({"_new": (:list, _, elements)}):
+def get_variables_bound_in_pattern((:list, _, elements)):
     elements
         |> Elixir.Enum.filter(&node_accept_pattern_match/1)
         |> Elixir.Enum.map(&get_variables_bound_in_pattern/1)
 
-def get_variables_bound_in_pattern({"_new": (:var, _, [_, value])}):
+def get_variables_bound_in_pattern((:var, _, [_, value])):
     value
 
-def get_variables_bound_in_pattern({"NodeType": node_type}):
+def get_variables_bound_in_pattern((node_type, _, _)):
     raise Elixir.Enum.join([
         "The node type '", node_type, "' doesnt work as a pattern match"
     ])
 
-def new_resolver(node <- {"_new": (:call, meta, [node_to_call, args, keywords, _])}, var_names_avaliable):
-    local_call = case node_to_call['_new']:
+def new_resolver(node <- (:call, meta, [node_to_call, args, keywords, _]), var_names_avaliable):
+    local_call = case node_to_call:
         (:var, _, [_pinned, func_name]) ->
             not Elixir.String.contains?(func_name, ".") and func_name in var_names_avaliable
         (:call, _, _) -> True
@@ -69,136 +68,94 @@ def new_resolver(node <- {"_new": (:call, meta, [node_to_call, args, keywords, _
             (key, convert_local_function_calls(value, var_names_avaliable))
     )
 
-    Elixir.Map.merge(
-        node,
-        {'_new': (:call, meta, [node_to_call, args, keywords, local_call]), 'local_call': local_call}
-    )
+    (:call, meta, [node_to_call, args, keywords, local_call])
 
-def new_resolver(node <- {"_new": (:number, _, _)}, _):
+def new_resolver(node <- (:number, _, _), _):
     node
 
-def new_resolver(node <- {"_new": (:atom, _, _)}, _):
+def new_resolver(node <- (:atom, _, _), _):
     node
 
-def new_resolver(node <- {"_new": (:var, _, _)}, _):
+def new_resolver(node <- (:var, _, _), _):
     node
 
-def new_resolver(node <- {"_new": (:string, _, _)}, _):
+def new_resolver(node <- (:string, _, _), _):
     node
 
-def new_resolver(node <- {"_new": (:func, _, _)}, _):
+def new_resolver(node <- (:func, _, _), _):
     node
 
-def new_resolver(node <- {"_new": (:unary, meta, [op, op_node])}, var_names_avaliable):
-    Elixir.Map.merge(
-        node,
-        {
-            "_new": (:unary, meta, [op, convert_local_function_calls(op_node, var_names_avaliable)])
-        }
+def new_resolver((:unary, meta, [op, op_node]), var_names_avaliable):
+    (:unary, meta, [op, convert_local_function_calls(op_node, var_names_avaliable)])
+
+def new_resolver((:list, meta, elements), var_names_avaliable):
+    (
+        :list,
+        meta,
+        Elixir.Enum.map(elements, lambda i: convert_local_function_calls(i, var_names_avaliable))
     )
 
-def new_resolver(node <- {"_new": (:list, meta, elements)}, var_names_avaliable):
-    Elixir.Map.merge(
-        node,
-        {
-            "_new": (
-                :list,
-                meta,
-                Elixir.Enum.map(elements, lambda i: convert_local_function_calls(i, var_names_avaliable))
-            )
-        }
+def new_resolver((:tuple, meta, elements), var_names_avaliable):
+    (
+        :tuple,
+        meta,
+        Elixir.Enum.map(elements, lambda i: convert_local_function_calls(i, var_names_avaliable))
     )
 
-def new_resolver(node <- {"_new": (:tuple, meta, elements)}, var_names_avaliable):
-    Elixir.Map.merge(
-        node,
-        {
-            "_new": (
-                :tuple,
-                meta,
-                Elixir.Enum.map(elements, lambda i: convert_local_function_calls(i, var_names_avaliable))
-            )
-        }
+def new_resolver((:binop, meta, [left, op, right]), var_names_avaliable):
+    (
+        :binop,
+        meta,
+        [
+            convert_local_function_calls(left, var_names_avaliable),
+            op,
+            convert_local_function_calls(right, var_names_avaliable)
+        ]
     )
 
-def new_resolver(node <- {"_new": (:binop, meta, [left, op, right])}, var_names_avaliable):
-    Elixir.Map.merge(
-        node,
-        {
-            "_new": (
-                :binop,
-                meta,
-                [
-                    convert_local_function_calls(left, var_names_avaliable),
-                    op,
-                    convert_local_function_calls(right, var_names_avaliable)
-                ]
-            )
-        }
+def new_resolver((:pattern, meta, [left, right]), var_names_avaliable):
+    (
+        :pattern,
+        meta,
+        [
+            left,
+            convert_local_function_calls(right, var_names_avaliable)
+        ]
     )
 
-def new_resolver(node <- {"_new": (:pattern, meta, [left, right])}, var_names_avaliable):
-    Elixir.Map.merge(
-        node,
-        {
-            "_new": (
-                :pattern,
-                meta,
-                [
-                    left,
-                    convert_local_function_calls(right, var_names_avaliable)
-                ]
-            )
-        }
+def new_resolver((:if, meta, [comp_expr, true_case, false_case]), var_names_avaliable):
+    (
+        :if,
+        meta,
+        [
+            convert_local_function_calls(comp_expr, var_names_avaliable),
+            convert_local_function_calls(true_case, var_names_avaliable),
+            convert_local_function_calls(false_case, var_names_avaliable)
+        ]
     )
 
-def new_resolver(node <- {"_new": (:if, meta, [comp_expr, true_case, false_case])}, var_names_avaliable):
-    Elixir.Map.merge(
-        node,
-        {
-            "_new": (
-                :if,
-                meta,
-                [
-                    convert_local_function_calls(comp_expr, var_names_avaliable),
-                    convert_local_function_calls(true_case, var_names_avaliable),
-                    convert_local_function_calls(false_case, var_names_avaliable)
-                ]
-            )
-        }
-    )
-
-def new_resolver(node <- {"_new": (:statements, meta, nodes)}, var_names_avaliable):
+def new_resolver((:statements, meta, nodes), var_names_avaliable):
     defined_vars_this_level = nodes
-        |> Elixir.Enum.filter(lambda i: i['NodeType'] == "PatternMatchNode")
-        |> Elixir.Enum.map(lambda {"_new": (_, _, [left_node, _])}:
+        |> Elixir.Enum.filter(lambda (node_type, _, _): node_type == :pattern)
+        |> Elixir.Enum.map(lambda (_, _, [left_node, _]):
             # only the left node can assign any variable
             get_variables_bound_in_pattern(left_node)
         )
 
     var_names_avaliable = Elixir.List.flatten([var_names_avaliable, defined_vars_this_level])
 
-    Elixir.Map.merge(
-        node,
-        {
-            "_new": (
-                :statements,
-                meta,
-                Elixir.Enum.map(nodes, lambda i:
-                    convert_local_function_calls(i, var_names_avaliable)
-                )
-            )
-        }
+    (
+        :statements,
+        meta,
+        Elixir.Enum.map(nodes, lambda i:
+            convert_local_function_calls(i, var_names_avaliable)
+        )
     )
 
 def get_vars_defined_def_or_lambda(args, statements,var_names_avaliable):
     received_arguments = args
-        |> Elixir.Enum.filter(lambda i:
-            case Elixir.Kernel.is_map(i):
-                True -> None
-                False -> raise 'popai'
-
-            i['NodeType'] in Core.Parser.Nodes.node_types_accept_pattern()
+        |> Elixir.Enum.filter(lambda (node_type, _, _):
+            node_type in Core.Parser.Nodes.node_types_accept_pattern()
         )
         |> Elixir.Enum.map(&get_variables_bound_in_pattern/1)
 
@@ -209,78 +166,54 @@ def get_vars_defined_def_or_lambda(args, statements,var_names_avaliable):
 
     [args, statements]
 
-def new_resolver(node <- {"_new": (:def, meta, [name, args, statements])}, var_names_avaliable):
+def new_resolver((:def, meta, [name, args, statements]), var_names_avaliable):
     [args, statements] = get_vars_defined_def_or_lambda(
         args, statements, var_names_avaliable
     )
 
-    Elixir.Map.merge(
-        node,
-        {"_new": (:def, meta, [name, args, statements])}
+    (:def, meta, [name, args, statements])
+
+def new_resolver((:lambda, meta, [args, statements]), var_names_avaliable):
+    (:lambda, meta, get_vars_defined_def_or_lambda(args, statements, var_names_avaliable))
+
+def new_resolver((:static_access, meta, [node_to_access, node_key]), var_names_avaliable):
+    (
+        :static_access,
+        meta,
+        [
+            convert_local_function_calls(node_to_access, var_names_avaliable),
+            convert_local_function_calls(node_key, var_names_avaliable)
+        ]
     )
 
-def new_resolver(node <- {"_new": (:lambda, meta, [args, statements])}, var_names_avaliable):
-    Elixir.Map.merge(
-        node,
-        {"_new": (:lambda, meta, get_vars_defined_def_or_lambda(args, statements, var_names_avaliable))}
+def new_resolver((:raise, meta, [expr]), var_names_avaliable):
+    (:raise, meta, [convert_local_function_calls(expr, var_names_avaliable)])
+
+def new_resolver((:pipe, meta, [left_node, right_node]), var_names_avaliable):
+    (
+        :pipe,
+        meta,
+        [
+            convert_local_function_calls(left_node, var_names_avaliable),
+            convert_local_function_calls(right_node, var_names_avaliable)
+        ]
     )
 
-def new_resolver(node <- {"_new": (:static_access, meta, [node_to_access, node_key])}, var_names_avaliable):
-    Elixir.Map.merge(
-        node,
-        {
-            "_new": (
-                :static_access,
-                meta,
-                [
-                    convert_local_function_calls(node_to_access, var_names_avaliable),
-                    convert_local_function_calls(node_key, var_names_avaliable)
-                ]
-            )
-        }
-    )
-
-def new_resolver(node <- {"_new": (:raise, meta, [expr])}, var_names_avaliable):
-    Elixir.Map.merge(
-        node,
-        {"_new": (:raise, meta, [convert_local_function_calls(expr, var_names_avaliable)])}
-    )
-
-def new_resolver(node <- {"_new": (:pipe, meta, [left_node, right_node])}, var_names_avaliable):
-    Elixir.Map.merge(
-        node,
-        {
-            "_new": (
-                :pipe,
-                meta,
-                [
-                    convert_local_function_calls(left_node, var_names_avaliable),
-                    convert_local_function_calls(right_node, var_names_avaliable)
-                ]
-            )
-        }
-    )
-
-def new_resolver(node <- {"_new": (:map, meta, pairs)}, var_names_avaliable):
-    Elixir.Map.merge(
-        node,
-        {
-            "_new": (
-                :map,
-                meta,
-                Elixir.Enum.map(
-                    pairs,
-                    lambda (key, value):
-                        (
-                            convert_local_function_calls(key, var_names_avaliable),
-                            convert_local_function_calls(value, var_names_avaliable)
-                        )
+def new_resolver((:map, meta, pairs), var_names_avaliable):
+    (
+        :map,
+        meta,
+        Elixir.Enum.map(
+            pairs,
+            lambda (key, value):
+                (
+                    convert_local_function_calls(key, var_names_avaliable),
+                    convert_local_function_calls(value, var_names_avaliable)
                 )
-            )
-        }
+        )
     )
 
-def new_resolver(node <- {"_new": (:case, meta, [expr, pairs])}, var_names_avaliable):
+def new_resolver((:case, meta, [expr, pairs]), var_names_avaliable):
     # When expr of case is none we convert to a elixir Cond node
     expr = convert_local_function_calls(expr, var_names_avaliable) if expr != None else None
 
@@ -294,9 +227,9 @@ def new_resolver(node <- {"_new": (:case, meta, [expr, pairs])}, var_names_avali
             )
     )
 
-    Elixir.Map.merge(node, {"_new": (:case, meta, [expr, pairs])})
+    (:case, meta, [expr, pairs])
 
-def new_resolver(node <- {"_new": (:try, meta, [try_block, exceptions, finally_block])}, var_names_avaliable):
+def new_resolver((:try, meta, [try_block, exceptions, finally_block]), var_names_avaliable):
     try_block = convert_local_function_calls(try_block, var_names_avaliable)
     exceptions = Elixir.Enum.map(
         exceptions,
@@ -305,9 +238,4 @@ def new_resolver(node <- {"_new": (:try, meta, [try_block, exceptions, finally_b
     )
     finally_block = convert_local_function_calls(finally_block, var_names_avaliable)
 
-    Elixir.Map.merge(
-        node,
-        {
-            "_new": (:try, meta, [try_block, exceptions, finally_block])
-        }
-    )
+    (:try, meta, [try_block, exceptions, finally_block])

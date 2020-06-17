@@ -880,10 +880,10 @@ def tuple_expr(state, pos_start, first_expr):
         _ ->
             [state, None]
 
-def pattern_match(state, left_node, pos_start):
+def pattern_match(state, left_node <- (left_node_type, _, _), pos_start):
     state = advance(state)
 
-    valid_left_node = Elixir.Kernel.is_map(left_node) and Elixir.Map.get(left_node, "NodeType") in Core.Parser.Nodes.node_types_accept_pattern()
+    valid_left_node = left_node_type in Core.Parser.Nodes.node_types_accept_pattern()
 
     case:
         state['error'] -> [state, None]
