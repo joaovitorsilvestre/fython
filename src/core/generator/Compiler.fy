@@ -80,14 +80,15 @@ def compile_project_to_binary(directory_path, compiled_folder, bootstrap):
 
             Elixir.IO.puts(Elixir.Enum.join(["Compiling module: ", module_name]))
 
-            [state, convert] = lexer_parse_convert_file(
+            [state, quoted] = lexer_parse_convert_file(
                 module_name, Elixir.File.read(full_path) |> Elixir.Kernel.elem(1)
             )
 
+            Elixir.IO.inspect('quoted result')
+            Elixir.IO.inspect(quoted)
+
             case Elixir.Map.get(state, "error"):
                 None ->
-                    #(quoted, _) = Elixir.Code.eval_string(converted)
-
                     # Its super important to use this Module.create function
                     # to ensure that our module binary will not have
                     # Elixir. in the begin of the module name
