@@ -93,7 +93,7 @@ def convert_tuple((:tuple, meta, elements)):
     #    "]}"
     #])
 
-    (:"{}", convert_meta(meta), [Elixir.Enum.map(elements, &convert/1)])
+    (:"{}", convert_meta(meta), Elixir.Enum.map(elements, &convert/1))
 
 def convert_binop((:binop, meta, [left, :or, right])):
     #Elixir.Enum.join([
@@ -307,7 +307,7 @@ def convert_call_args(args, keywords):
     #    [args, keywords] |> Elixir.List.flatten() |> Elixir.Enum.join(", "),
     #    "]"
     #])
-    Elixir.List.flatten([args, keywords])
+    Elixir.Enum.concat(args, keywords)
 
 
 def convert_call((:call, meta, [node_to_call, args, keywords, True])):
