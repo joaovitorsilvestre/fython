@@ -163,7 +163,11 @@ def convert_func((:func, meta, [name, arity])):
     #    name, ", ", convert_meta(meta), ", Elixir}, ", arity, "]}]}"
     #])
 
-    (:"&", convert_meta(meta), [(:"/", convert_meta(meta), [Elixir.String.to_atom(name), convert_meta(meta), :Elixir]), arity])
+    (
+        :"&",
+        convert_meta(meta),
+        [(:"/", convert_meta(meta), [(Elixir.String.to_atom(name), convert_meta(meta), :Elixir), arity])]
+    )
 
 def convert_statements((:statements, meta, nodes)):
     content = Elixir.Enum.map(nodes, &convert/1)
@@ -263,7 +267,7 @@ def convert_map((:map, meta, pairs)):
         #|> Elixir.Enum.join(', ')
 
     # Elixir.Enum.join(["{:%{}, ", convert_meta(meta), ", [", pairs, "]}"])
-    (:map, convert_meta(meta), pairs)
+    (:'%{}', convert_meta(meta), pairs)
 
 def convert_case((:case, meta, [expr, pairs])):
 
@@ -281,12 +285,12 @@ def convert_case((:case, meta, [expr, pairs])):
             #Elixir.Enum.join([
             #    "{:cond, ", convert_meta(meta), ", [[do: [", pairs, "]]]}"
             #])
-            (:cond, convert_meta(meta), [(:do, pairs)])
+            (:cond, convert_meta(meta), [[(:do, pairs)]])
         _ ->
             #Elixir.Enum.join([
             #    "{:case, ", convert_meta(meta), ", [", convert(expr), ", [do: [", pairs, "]]]}"
             #])
-            (:case, convert_meta(meta), [convert(expr), [(:do, [pairs])]])
+            (:case, convert_meta(meta), [convert(expr), [(:do, pairs)]])
 
 
 def convert_call_args(args, keywords):
