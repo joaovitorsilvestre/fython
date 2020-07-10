@@ -188,8 +188,8 @@ def resolve_one_param(state):
     (state, node) = case node != None and state['current_tok']['type'] == 'LARROW':
         False -> (state, node)
         True ->
-            case node['NodeType'] == 'VarAccessNode':
-                True ->
+            case node:
+                (:var, _, _) ->
                     state = advance(state)
                     [state, right_node] = Core.Parser.expr(state)
 
@@ -197,21 +197,20 @@ def resolve_one_param(state):
                         node, right_node, pos_start, state['current_tok']['pos_start']
                     )
                     (state, node)
-                False ->
+                _ ->
+                    (_, {"pos_end": pos_end}, _) = node
+
                     state = Core.Parser.Utils.set_error(
-                        state,
-                        "Expected an identifier",
-                        pos_start,
-                        node["pos_end"]
+                        state, "Expected an identifier", pos_start, pos_end
                     )
                     (state, node)
 
     accepted_nodes = Elixir.List.flatten([
         Core.Parser.Nodes.node_types_accept_pattern_in_function_argument(),
-        "PatternMatchNode"
+        :pattern
     ])
 
-    case node['NodeType'] in accepted_nodes:
+    case Elixir.Kernel.elem(node, 0) in accepted_nodes:
         True -> (state, node)
         False ->
             state = Core.Parser.Utils.set_error(

@@ -10,7 +10,7 @@ def start(count, state):
     head = Elixir.IO.ANSI.format([
         :black, :bright , "[", :cyan, count |> Elixir.Kernel.to_string(), :black, :bright, "]: "
     ])
-    user_input = Elixir.IO.gets(head) |> to_string()
+    user_input = Elixir.IO.gets(head) |> Elixir.Kernel.to_string()
 
     case Elixir.String.trim(user_input):
         "" -> start(count, state)

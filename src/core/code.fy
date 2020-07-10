@@ -8,17 +8,12 @@ def compile_project_file(project_root, file_full_path, destine_compiled):
 
     Elixir.IO.puts(Elixir.Enum.join(["Compiling module: ", module_name]))
 
-    state_n_converted = lexer_parse_convert_file(
+    [state, quoted] = lexer_parse_convert_file(
         module_name, Elixir.File.read(file_full_path) |> Elixir.Kernel.elem(1)
     )
 
-    state = Elixir.Enum.at(state_n_converted, 0)
-    converted = Elixir.Enum.at(state_n_converted, 1)
-
     case Elixir.Map.get(state, "error"):
         None ->
-            (quoted, _) = Elixir.Code.eval_string(converted)
-
             # Its super important to use this Module.create function
             # to ensure that our module binary will not have
             # Elixir. in the begin of the module name
@@ -30,6 +25,10 @@ def compile_project_file(project_root, file_full_path, destine_compiled):
                 Elixir.Enum.join([destine_compiled, "/", module_name, ".beam"]),
                 binary,
                 mode=:binary
+            )
+            Elixir.File.write(
+                Elixir.Enum.join([destine_compiled, "/", module_name, ".ex"]),
+                Elixir.Macro.to_string(quoted),
             )
         _ ->
             Elixir.IO.puts("Compilation error:")

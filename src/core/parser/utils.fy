@@ -1,24 +1,3 @@
-def valid_node?(node):
-    case:
-        node == None ->
-            [False, "None is not a valid type of node"]
-        Elixir.Map.get(node, "NodeType") == None ->
-            [False, "Node map must have 'NodeType'"]
-        True ->
-            [True, None]
-
-def add_node(state, node):
-    case:
-        Elixir.Map.get(state, 'error') != None -> state
-        True ->
-            case valid_node?(node):
-                [True, _] ->
-                    nodes = Elixir.Map.get(state, 'nodes')
-                    Elixir.Map.put(
-                        state, 'nodes', Elixir.List.flatten([nodes, node])
-                    )
-                [False, reason] -> raise reason
-
 def has_error(state):
     Elixir.Map.get(state, "error") != None
 

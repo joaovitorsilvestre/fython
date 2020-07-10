@@ -48,7 +48,7 @@ def add_eof_token(state):
 
     start_end = case tokens:
         [] -> {"idx": 0, "ln": 0, "col": 0}
-        _ -> Elixir.Map.get(Elixir.Enum.at(tokens, -1), "pos_end")
+        _ -> state["position"]
 
     add_token(state, "EOF", None, start_end)
 
@@ -60,13 +60,14 @@ def add_token(state, type, value):
     add_token(state, type, value, pos_start)
 
 def add_token(state, type, value, pos_start):
-    ident = state |> Elixir.Map.get("current_ident_level")
+    ident = state["current_ident_level"]
+    pos_end = state["position"]
 
-    pos_end = state |> Elixir.Map.get("position")
-
-    pos_end = case Elixir.Map.get(pos_end, 'col') != -1:
+    pos_end = case pos_end['col'] != -1:
         True -> pos_end
-        False -> Elixir.Map.get(state, 'prev_position')
+        False -> state['prev_position']
+
+    pos_end = pos_end if pos_end != None else pos_start
 
     case valid_token_type?(type):
         False -> raise Elixir.Enum.join(["Invalid Token Type: ", type])

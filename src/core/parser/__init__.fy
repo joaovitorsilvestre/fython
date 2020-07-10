@@ -126,6 +126,7 @@ def statements(state, expected_ident_gte):
             [state, None]
         True ->
             pos_end = state["current_tok"]["pos_end"]
+
             node = Core.Parser.Nodes.make_statements_node(_statements, pos_start, pos_end)
 
             [state, node]
@@ -167,7 +168,12 @@ def expr(state):
     ct = state['current_tok']
     ct_type = ct['type']
 
-    [state, node] = bin_op(state, &comp_expr/1, [['KEYWORD', 'and'], ['KEYWORD', 'or']], None)
+    [state, node] = bin_op(
+        state,
+        &comp_expr/1,
+        [['KEYWORD', 'and'], ['KEYWORD', 'or'], ['KEYWORD', 'in']],
+        None
+    )
 
     ct = state["current_tok"]
 
@@ -176,15 +182,6 @@ def expr(state):
             if_expr(state, node)
         ct['type'] == 'PIPE' ->
             pipe_expr(state, node)
-        Core.Parser.Utils.tok_matchs(ct, 'KEYWORD', 'in') ->
-            state = advance(state)
-
-            [state, right_node] = expr(state)
-
-            node = Core.Parser.Nodes.make_in_node(
-                node, right_node
-            )
-            [state, node]
         True -> [state, node]
 
 
@@ -490,9 +487,7 @@ def map_expr(state):
 
     case ct['type']:
         'RCURLY' ->
-            pairs = Elixir.Map.get(state, "_pairs", {})
-                |> Elixir.Map.to_list()
-                |> Elixir.Enum.map(lambda i: [Elixir.Kernel.elem(i, 0), Elixir.Kernel.elem(i, 1)])
+            pairs = Elixir.Map.get(state, "_pairs", {}) |> Elixir.Map.to_list()
 
             pos_end = state["current_tok"]["pos_end"]
 
@@ -663,7 +658,7 @@ def case_expr(state):
                                 True -> statement(state)
                                 False -> statements(state, this_ident + 4)
 
-                            cases = Elixir.List.insert_at(cases, -1, [left_expr, right_expr])
+                            cases = Elixir.List.insert_at(cases, -1, (left_expr, right_expr))
 
                             state |> Elixir.Map.put('_cases', cases)
                         False ->
@@ -788,7 +783,7 @@ def call_func_expr(state, atom):
             )
 
     arg_nodes = Elixir.Map.get(state, '_arg_nodes')
-    keywords = Elixir.Map.get(state, '_keywords')
+    keywords = Elixir.Map.get(state, '_keywords') |> Elixir.Map.to_list()
 
     state = state |> Elixir.Map.delete('_arg_nodes') |> Elixir.Map.delete('_keywords')
 
@@ -885,10 +880,10 @@ def tuple_expr(state, pos_start, first_expr):
         _ ->
             [state, None]
 
-def pattern_match(state, left_node, pos_start):
+def pattern_match(state, left_node <- (left_node_type, _, _), pos_start):
     state = advance(state)
 
-    valid_left_node = Elixir.Kernel.is_map(left_node) and Elixir.Map.get(left_node, "NodeType") in Core.Parser.Nodes.node_types_accept_pattern()
+    valid_left_node = left_node_type in Core.Parser.Nodes.node_types_accept_pattern()
 
     case:
         state['error'] -> [state, None]
@@ -963,7 +958,7 @@ def handle_do_new_line(state, base_line):
 
 
 def handle_except_blocks(state, base_ident, base_line, prev_blocks):
-    (state, except_expr) = case state['current_tok']['type'] != 'IDENTIFIER':
+    (state, except_identifier) = case state['current_tok']['type'] != 'IDENTIFIER':
         True ->
             state = Core.Parser.Utils.set_error(
                 state, "Expected identifier",
@@ -994,7 +989,7 @@ def handle_except_blocks(state, base_ident, base_line, prev_blocks):
 
     [state, block] = statements(state, base_ident + 4)
 
-    new_list_blocks = Elixir.List.insert_at(prev_blocks, -1, (except_expr, alias, block))
+    new_list_blocks = Elixir.List.insert_at(prev_blocks, -1, (except_identifier, alias, block))
 
     ct_is_except = Core.Parser.Utils.tok_matchs(state['current_tok'], 'KEYWORD', 'except')
 

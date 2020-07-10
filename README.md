@@ -107,6 +107,7 @@ hi.()
 ### Roadmap
 
 #### Bugs
+- [ ] `Critical`- Putting a comma at a end of a list makes the list empty. Need to fix it and ensure that map and tuple dont has same error.
 - [ ] If you put pycharm in mode of use tab instead of 4 spaces the compile doesnt work properly. It just cant understand what is a statement anymore, and give a syntax error. Probably the fix is only in the lexer in the part that add the indent key to Token.
 - [x] Map are being compiled empty if theres a comma at end of it. E.g: `{"a": 1,}`
 - [ ] In the pos parser we need to convert any variable that is a elixir keyword to something else
@@ -157,6 +158,11 @@ a()()
 - [x] PosParser -> support for the pin variable in pattern matching: `e = "a""; {^e: 1} = {"a": 1}`
 - [x] Support to dict access: ```a["key"]["nesteddict_key""]```
 - [ ] `and` and `or` operators must work with multiline
+- [ ] `<-` Operator in function params must work inside nested pattern. like:
+```
+# we want to match the third element of this tuple and still get the entire tuple in the var full
+def convert((:var, _, full <- [False, value])):
+```
 
 #### Good to have
 - [ ] support for list 'explode'. Eg: [*[1, 2]] must be converted to [1, 2]. Need do find a way to make this works

@@ -1,348 +1,151 @@
+def convert_meta(_):
+    # TODO
+    []
+
 def convert(node):
-    case Elixir.Map.get(node, "NodeType"):
-        "StatementsNode"    -> convert_statements_node(node)
-        "NumberNode"        -> convert_number_node(node)
-        "AtomNode"          -> convert_atom_node(node)
-        "ListNode"          -> convert_list_node(node)
-        "PatternMatchNode"  -> convert_patternmatch_node(node)
-        "IfNode"            -> convert_if_node(node)
-        "VarAccessNode"     -> convert_varaccess_node(node)
-        "UnaryOpNode"       -> convert_unaryop_node(node)
-        "BinOpNode"         -> convert_binop_node(node)
-        "FuncDefNode"       -> convert_deffunc_node(node)
-        "LambdaNode"        -> convert_lambda_node(node)
-        "CallNode"          -> convert_call_node(node)
-        "StringNode"        -> convert_string_node(node)
-        "PipeNode"          -> convert_pipe_node(node)
-        "MapNode"           -> convert_map_node(node)
-        "ImportNode"        -> convert_import_node(node)
-        "CaseNode"          -> convert_case_node(node)
-        "InNode"            -> convert_in_node(node)
-        "TupleNode"         -> convert_tuple_node(node)
-        "RaiseNode"         -> convert_raise_node(node)
-        "StaticAccessNode"  -> convert_staticaccess_node(node)
-        "TryNode"           -> convert_try_node(node)
-        "FuncAsVariableNode" -> convert_funcasvariable_node(node)
+    case Elixir.Kernel.elem(node, 0):
+        :number         -> convert_number(node)
+        :atom           -> convert_atom(node)
+        :var            -> convert_var(node)
+        :string         -> convert_string(node)
+        :unary          -> convert_unary(node)
+        :list           -> convert_list(node)
+        :tuple          -> convert_tuple(node)
+        :binop          -> convert_binop(node)
+        :pattern        -> convert_pattern(node)
+        :if             -> convert_if(node)
+        :func           -> convert_func(node)
+        :statements     -> convert_statements(node)
+        :lambda         -> convert_lambda(node)
+        :def            -> convert_def(node)
+        :static_access  -> convert_static_access(node)
+        :raise          -> convert_raise(node)
+        :pipe           -> convert_pipe(node)
+        :map            -> convert_map(node)
+        :case           -> convert_case(node)
+        :call           -> convert_call(node)
+        :try            -> convert_try(node)
 
-def convert_number_node(node):
-    node |> Elixir.Map.get("tok") |> Elixir.Map.get("value") |> Elixir.Kernel.to_string()
+def convert_number((:number, _, [value])):
+    value
 
-def convert_atom_node(node):
-    Elixir.Enum.join([":", node |> Elixir.Map.get("tok") |> Elixir.Map.get("value")])
+def convert_atom((:atom, _, [value])):
+    Elixir.String.to_atom(value)
 
-def meta(node):
-    Elixir.Enum.join(['[line: ', node['pos_start']['ln'], "]"])
+def convert_var((:var, _, [_pinned, "True"])):
+    True
 
-def convert_string_node(node):
-    value = node
-        |> Elixir.Map.get("tok")
-        |> Elixir.Map.get("value")
+def convert_var((:var, _, [_pinned, "False"])):
+    False
 
-    Elixir.Enum.join(['{:<<>>, ', meta(node), ', ["', value, '"]}'])
+def convert_var((:var, _, [_pinned, "None"])):
+    None
 
-def convert_varaccess_node(node):
-    tok_value = node |> Elixir.Map.get("var_name_tok") |> Elixir.Map.get("value")
+def convert_var((:var, meta, [True, value])):
+    (:"^", convert_meta(meta), [(Elixir.String.to_atom(value), convert_meta(meta), :Elixir)])
 
-    pinned = Elixir.Map.get(node, "pinned")
+def convert_var((:var, meta, [False, value])):
+    (Elixir.String.to_atom(value), convert_meta(meta), :Elixir)
 
-    pin_node = lambda i: Elixir.Enum.join(["{:^, ", meta(node), ", [", i, "]}"]) if pinned else i
+def convert_string((:string, meta, [value])):
+    value = Elixir.Enum.join(['"', value,'"']) |> Elixir.Code.eval_string() |> Elixir.Kernel.elem(0)
+    (:"<<>>", convert_meta(meta), [value])
 
-    case:
-        tok_value == "True" -> "true"
-        tok_value == "False" -> "false"
-        tok_value == "None" -> "nil"
-        True -> Elixir.Enum.join(["{:", tok_value, ",", meta(node), ", Elixir}"]) |> pin_node()
+def convert_unary((:unary, meta, [:minus, node])):
+    (:"-", convert_meta(meta), [convert(node)])
 
-def convert_patternmatch_node(node):
-    left = Elixir.Map.get(node, 'left_node') |> convert()
-    right = Elixir.Map.get(node, 'right_node') |> convert()
+def convert_unary((:unary, meta, [:plus, node])):
+    (:"+", convert_meta(meta), [convert(node)])
 
-    Elixir.Enum.join([
-        "{:=, ",
-        meta(node), ", ",
-        "[", left , ", ", right , "]",
-        "}"
-    ])
+def convert_unary((:unary, meta, [:not, node])):
+    (:"__block__", convert_meta(meta), [(:"!", convert_meta(meta), [convert(node)])])
 
-def convert_if_node(node):
-    comp_expr = convert(node |> Elixir.Map.get("comp_expr"))
-    true_case = convert(node |> Elixir.Map.get("true_case"))
-    false_case = convert(node |> Elixir.Map.get("false_case"))
+def convert_list((:list, meta, elements)):
+    Elixir.Enum.map(elements, &convert/1)
 
-    Elixir.Enum.join([
-        "{:if, ", meta(node), ", [",
-        comp_expr,
-        ", [do: ",
-        true_case,
-        ", else: ",
-        false_case,
-        "]]}"
-    ])
+def convert_tuple((:tuple, meta, elements)):
+    (:"{}", convert_meta(meta), Elixir.Enum.map(elements, &convert/1))
 
-def convert_lambda_node(node):
-    params = node
-        |> Elixir.Map.get("arg_nodes")
-        |> Elixir.Enum.map(&convert/1)
-        |> Elixir.Enum.join(", ")
+def convert_binop((:binop, meta, [left, :or, right])):
+    (:or, convert_meta(meta), [convert(left), convert(right)])
 
-    params = ['[', params, ']'] |> Elixir.Enum.join('')
+def convert_binop((:binop, meta, [left, :and, right])):
+    (:and, convert_meta(meta), [convert(left), convert(right)])
 
-    Elixir.Enum.join([
-        "{:fn, ", meta(node), ", [{:->, ", meta(node), ", [",
-        params,
-        ", ",
-        convert(node |> Elixir.Map.get('body_node')),
-        "]}]}"
-    ])
+def convert_binop((:binop, meta, [left, :in, right])):
+    (:in, convert_meta(meta), [convert(left), convert(right)])
 
-def convert_list_node(node):
-    Elixir.Enum.join([
-        "[",
-        Elixir.Enum.join(Elixir.Enum.map(node |> Elixir.Map.get("element_nodes"), &convert/1), ", "),
-        "]"
-    ])
+def convert_binop((:binop, meta, [left, :pow, right])):
+    ((:".", convert_meta(meta), [:math, :pow]), convert_meta(meta), [convert(left), convert(right)])
 
-def convert_map_node(node):
-    pairs = node
-        |> Elixir.Map.get("pairs_list")
-        |> Elixir.Enum.map(lambda pair:
-            [key, value] = pair
-            Elixir.Enum.join(["{", convert(key), ", ", convert(value), "}"])
-        )
-        |> Elixir.Enum.join(', ')
+def convert_binop((:binop, meta, [left, op, right])):
+    elixir_op = {
+        :plus: '+', :minus: '-', :mul: '*', :div: '/',
+        :gt: '>', :gte: '>=', :lt: '<', :lte: '<=',
+        :ee: '==', :ne: '!=', :in: 'in'
+    }
 
-    r = Elixir.Enum.join(["{:%{}, ", meta(node), ", [", pairs, "]}"])
+    (Elixir.String.to_atom(elixir_op[op]), convert_meta(meta), [convert(left), convert(right)])
 
-def convert_statements_node(node):
-    content = node
-        |> Elixir.Map.get("statement_nodes")
-        |> Elixir.Enum.map(lambda i: convert(i))
+def convert_pattern((:pattern, meta, [left, right])):
+    (:"=", convert_meta(meta), [convert(left), convert(right)])
+
+def convert_if((:if, meta, [comp_expr, true_case, false_case])):
+    (:if, convert_meta(meta), [convert(comp_expr), [(:do, convert(true_case)), (:else, convert(false_case))]])
+
+def convert_func((:func, meta, [name, arity])):
+    (
+        :"&",
+        convert_meta(meta),
+        [(:"/", convert_meta(meta), [(Elixir.String.to_atom(name), convert_meta(meta), :Elixir), arity])]
+    )
+
+def convert_statements((:statements, meta, nodes)):
+    content = Elixir.Enum.map(nodes, &convert/1)
 
     case Elixir.Enum.count(content):
         1 -> Elixir.Enum.at(content, 0)
-        _ -> Elixir.Enum.join([
-            '{:__block__, ', meta(node), ', [', Elixir.Enum.join(content, ', '), ']}'
-        ])
+        _ -> (:"__block__", convert_meta(meta), content)
 
-def convert_deffunc_node(node):
-    name = node |> Elixir.Map.get("var_name_tok") |> Elixir.Map.get("value")
-    statements_node = node |> Elixir.Map.get("body_node")
+def convert_lambda((:lambda, meta, [args, statements])):
+    args = args |> Elixir.Enum.map(&convert/1)
 
-    arguments = node
-        |> Elixir.Map.get("arg_nodes")
-        |> Elixir.Enum.map(&convert/1)
-        |> Elixir.Enum.join(', ')
+    (:fn, convert_meta(meta), [(:"->", convert_meta(meta), [args, convert(statements)])])
 
-    Elixir.Enum.join([
-        "{:def, ", meta(node), ", [{:", name, ", ", meta(node),", [",
-        arguments, "]}, [do: ", convert(statements_node), "]]}"
-    ])
+def convert_def((:def, meta, [name, args, statements])):
+    args = Elixir.Enum.map(args, &convert/1)
 
-def convert_case_node(node):
-    expr = convert(node |> Elixir.Map.get("expr")) if node |> Elixir.Map.get("expr") else None
+    (
+        :def,
+        convert_meta(meta),
+        [
+            (Elixir.String.to_atom(name), convert_meta(meta), args),
+            [(:do, convert(statements))]
+        ]
+    )
 
-    arguments = node
-        |> Elixir.Map.get("cases")
-        |> Elixir.Enum.map(lambda left_right:
-            left = Elixir.Enum.at(left_right, 0)
-            right = Elixir.Enum.at(left_right, 1)
+def convert_static_access((:static_access, meta, [node_to_access, node_key])):
+    (
+        (:".", convert_meta(meta), [(:"__aliases__", [(:alias, False)], [:Map]), :fetch!]),
+        convert_meta(meta),
+        [convert(node_to_access), convert(node_key)]
+    )
 
-            Elixir.Enum.join([
-                "{:->, ", meta(node), ", [[", convert(left), "], ", convert(right), "]}"
-            ], '')
-        )
-        |> Elixir.Enum.join(', ')
+def convert_raise((:raise, meta, [expr])):
+    (:raise, convert_meta(meta), [convert(expr)])
 
-    case expr:
-        None -> Elixir.Enum.join([
-                "{:cond, ", meta(node), ", [[do: [", arguments, "]]]}"
-            ])
-        _ -> Elixir.Enum.join([
-                "{:case, ", meta(node), ", [", expr, ", [do: [", arguments, "]]]}"
-            ])
-
-def convert_in_node(node):
-    left = Elixir.Map.get(node, "left_expr") |> convert()
-    right = Elixir.Map.get(node, "right_expr") |> convert()
-
-    Elixir.Enum.join([
-        "{:in, ", meta(node), ", [", left, ", ", right, "]}"
-    ])
-
-def convert_raise_node(node):
-    expr = Elixir.Map.get(node, "expr") |> convert()
-
-    Elixir.Enum.join(["{:raise, ", meta(node), ", [", expr, "]}"])
-
-def convert_funcasvariable_node(node):
-    name = node |> Elixir.Map.get("var_name_tok") |> Elixir.Map.get("value")
-    arity = node |> Elixir.Map.get("arity")
-    Elixir.Enum.join([
-        "{:&, ", meta(node), ", [{:/, ", meta(node), ", [{:",
-        name, ", ", meta(node), ", Elixir}, ", arity, "]}]}"
-    ])
-
-def convert_binop_node(node):
-    a = convert(Elixir.Map.get(node, "left_node"))
-    b = convert(Elixir.Map.get(node, "right_node"))
-
-    simple_ops = {
-        "PLUS": '+', "MINUS": '-', "MUL": '*', "DIV": '/',
-        "GT": '>', "GTE": '>=', "LT": '<', "LTE": '<=',
-        "EE": '==', 'NE': '!='
-    }
-
-    tok_type = node |> Elixir.Map.get("op_tok") |> Elixir.Map.get("type")
-    tok_value = node |> Elixir.Map.get("op_tok") |> Elixir.Map.get("value")
-
-    cases = [
-        Elixir.Map.has_key?(simple_ops, tok_type),
-        tok_type == "POW",
-        tok_type == "KEYWORD" and tok_value == "or",
-        tok_type == "KEYWORD" and tok_value == "and"
-    ]
-
-    simple_op_node = lambda simple_ops, node, a, b:
-        op = simple_ops |> Elixir.Map.get(node |> Elixir.Map.get("op_tok") |> Elixir.Map.get("type"))
-        Elixir.Enum.join([
-            "{:", op, ", ", meta(node), ", [", a, ", ", b, "]}"
-        ])
-
-    power_op = lambda a, b:
-        Elixir.Enum.join([
-            "{{:., ", meta(node), ", [:math, :pow]}, ", meta(node), ", [", a, ", ", b, "]}"
-        ])
-
-    or_op = lambda a, b:
-        Elixir.Enum.join([
-            "{:or, ", meta(node), ", [", a, ", ", b, "]}"
-        ])
-
-    and_op = lambda a, b:
-        Elixir.Enum.join([
-            "{:and, ", meta(node), ", [", a, ", ", b, "]}"
-        ])
-
-    case cases:
-        [True, _, _, _] -> simple_op_node(simple_ops, node, a, b)
-        [_, True, _, _] -> power_op(a, b)
-        [_, _,True, _]  -> or_op(a, b)
-        [_, _, _,True]  -> and_op(a, b)
-
-
-def convert_call_node(node):
-    args = node
-        |> Elixir.Map.get("arg_nodes")
-        |> Elixir.Enum.map(&convert/1)
-
-    keywords = node
-        |> Elixir.Map.get("keywords")
-        |> Elixir.Map.to_list()
-        |> Elixir.Enum.map(lambda k_v:
-            k = Elixir.Kernel.elem(k_v, 0)
-            v = Elixir.Kernel.elem(k_v, 1)
-            Elixir.Enum.join(["[", k, ": ", convert(v), "]"])
-        )
-
-    arguments = Elixir.Enum.join([
-        "[",
-        [args, keywords] |> Elixir.List.flatten() |> Elixir.Enum.join(", "),
-        "]"
-    ], "")
-
-    case Elixir.Map.get(node, "local_call"):
-        True ->
-            func_to_call = convert(Elixir.Map.get(node, "node_to_call"))
-            Elixir.Enum.join(["{{:., ", meta(node), ", [", func_to_call, "]}, ", meta(node), ", ", arguments, "}"])
-        False ->
-            # node_to_call will always be a VarAccessNode on a module call. E.g: Elixir.Map.get
-            func_name = node
-                |> Elixir.Map.get("node_to_call")
-                |> Elixir.Map.get("var_name_tok")
-                |> Elixir.Map.get("value")
-
-            case Elixir.String.contains?(func_name, '.'):
-                True ->
-                    modules = func_name |> Elixir.String.split(".") |> Elixir.List.pop_at(-1) |> Elixir.Kernel.elem(1)
-                    function = func_name |> Elixir.String.split(".") |> Elixir.Enum.at(-1)
-
-                    # for fython modules we need to use the elixir
-                    # syntax for erlang calls. Doing this way, we prevent
-                    # Elixer compiler from adding 'Elixir.' to module name to call
-
-                    module = Elixir.Enum.join(modules, ".")
-
-                    module = case:
-                        Elixir.String.starts_with?(module, "Elixir.") -> module
-                        Elixir.String.starts_with?(module, "Erlang.") ->
-                            Elixir.Enum.join([':"', Elixir.String.replace(module, "Erlang.", ""), '"'])
-                        True -> Elixir.Enum.join([':"Fython.', module, '"'])
-
-                    Elixir.Enum.join(["{{:., ", meta(node), ", [", module, ", :", function, "]}, ", meta(node), ", ", arguments, "}"])
-                False ->
-                    # this is for call a function that is defined in
-                    # the same module
-                    Elixir.Enum.join(["{:", func_name, ", ", meta(node), ", ", arguments, "}"])
-
-def convert_import_node(node):
-    case Elixir.Map.get(node, "modules_import"):
-        None -> "not implemened from"
-        _    ->
-            import_commands = node
-                |> Elixir.Map.get("modules_import")
-                |> Elixir.Enum.map(lambda imp:
-                    name = Elixir.Map.get(imp, "name")
-                    alias = Elixir.Map.get(imp, "alias")
-
-                    case Elixir.String.contains?(name, "."):
-                        True ->
-                            name = name
-                                |> Elixir.String.split(".")
-                                |> Elixir.Enum.map(lambda i: Elixir.Enum.join([':', i]))
-                                |> Elixir.Enum.join(', ')
-                        False -> Elixir.Enum.join([':', name])
-
-                    import_command = Elixir.Enum.join([
-                        "{:import, ", meta(node), ", ",
-                        "[{:__aliases__, [alias: false], ",
-                        "[", name, "]}]}"
-                    ])
-
-                    result = case Elixir.Map.get(imp, "alias"):
-                        None -> import_command
-                        _ -> Elixir.Enum.join([
-                            "{:__block__, ", meta(node), ", [",
-                                import_command,
-                                ", {:alias, ", meta(node), ", [",
-                                "{:__aliases__, [alias: false], [", name, "]},",
-                                "[as: {:__aliases__, [alias: ", name, "], [:", alias,"]}]",
-                                "]}",
-                            "]}"
-                        ])
-                    result
-                )
-                |> Elixir.Enum.join(', ')
-
-            Elixir.Enum.join(["{:__block__, ", meta(node), ", [", import_commands, "]}"])
-
+def get_childs((:pipe, _, [left_node, right_node])):
+    [get_childs(left_node), get_childs(right_node)]
 
 def get_childs(right_or_left_node):
-    case Elixir.Map.get(right_or_left_node, "NodeType") == "PipeNode":
-        True -> [
-            get_childs(right_or_left_node |> Elixir.Map.get("left_node")),
-            get_childs(right_or_left_node |> Elixir.Map.get("right_node"))
-        ]
-        False -> [right_or_left_node]
+    [right_or_left_node]
 
-def convert_pipe_node(node):
+def convert_pipe((:pipe, meta, [left_node, right_node])):
     # Actually, we never convert to elixir pipe ast
-    # Instead, we do elixier job to put the left node of the pipe
+    # Instead, we do elixir job to put the left node of the pipe
     # as the first parameter of the right node
     # We do this because elixir pipe ast doesnt work well
     # with a erlang call in the right. Eg: "oii" |> :string.replace("o", "i")
-
-    left_node = Elixir.Map.get(node, 'left_node')
-    right_node = Elixir.Map.get(node, 'right_node')
 
     ([first], flat_pipe) = left_node
         |> get_childs()
@@ -350,99 +153,129 @@ def convert_pipe_node(node):
         |> Elixir.List.flatten()
         |> Elixir.Enum.split(1)
 
-    call_node = Elixir.Enum.reduce(
-        flat_pipe,
-        first,
-        lambda c_node, acc:
-            {"arg_nodes": arg_nodes, "arity": arity} = c_node
+    flat_pipe
+        |> Elixir.Enum.reduce(
+            first,
+            lambda c_node, acc:
+                (:call, meta, [node_to_call, args, keywords, local_call]) = c_node
 
-            c_node
-                |> Elixir.Map.put("arity", arity + 1)
-                |> Elixir.Map.put("arg_nodes", Elixir.List.insert_at(arg_nodes, 0, acc))
+                (:call, meta, [node_to_call, Elixir.List.insert_at(args, 0, acc), keywords, local_call])
+        )
+        |> convert()
+
+
+def convert_map((:map, meta, pairs)):
+    pairs = pairs
+        |> Elixir.Enum.map(lambda (key, value):
+            (convert(key), convert(value))
+        )
+
+    (:'%{}', convert_meta(meta), pairs)
+
+def convert_case((:case, meta, [expr, pairs])):
+
+    pairs = pairs
+        |> Elixir.Enum.map(lambda (left, right):
+            (:"->", convert_meta(meta), [[convert(left)], convert(right)])
+        )
+
+    case expr:
+        None -> (:cond, convert_meta(meta), [[(:do, pairs)]])
+        _ -> (:case, convert_meta(meta), [convert(expr), [(:do, pairs)]])
+
+
+def convert_call_args(args, keywords):
+    args = Elixir.Enum.map(args, &convert/1)
+
+    keywords = keywords
+        |> Elixir.Enum.map(lambda (key, value):
+            [(:key, convert(value))]
+        )
+
+    Elixir.Enum.concat(args, keywords)
+
+
+def convert_call((:call, meta, [node_to_call, args, keywords, True])):
+    arguments = convert_call_args(args, keywords)
+
+    (
+        (:".", convert_meta(meta), [convert(node_to_call)]),
+        convert_meta(meta),
+        arguments
     )
 
-    convert(call_node)
+def convert_call(full <- (:call, meta, [(:var, _, [_, func_name]), args, keywords, False])):
+    # node_to_call will always be a VarAccessNode on a module call. E.g: Elixir.Map.get
 
+    arguments = convert_call_args(args, keywords)
 
-def convert_unaryop_node(node):
-    value = convert(node |> Elixir.Map.get("node"))
+    case Elixir.String.contains?(func_name, '.'):
+        True ->
+            (function, modules) = func_name
+                |> Elixir.String.split(".")
+                |> Elixir.List.pop_at(-1)
 
-    tok_type = node |> Elixir.Map.get("op_tok") |> Elixir.Map.get("type")
-    tok_value = node |> Elixir.Map.get("op_tok") |> Elixir.Map.get("value")
+            # for fython modules we need to use the elixir
+            # syntax for erlang calls. Doing this way, we prevent
+            # Elixir compiler from adding 'Elixir.' to module name to call
 
-    cases = [
-        tok_type == "KEYWORD" and tok_value == "not",
-        tok_type == "PLUS",
-        tok_type == "MINUS"
-    ]
+            module = Elixir.Enum.join(modules, ".")
 
-    not_case = lambda value:
-        Elixir.Enum.join([
-            "{:__block__, ", meta(node), ", [{:!, ", meta(node), ", [", value, "]}]}"
-        ])
+            module = case:
+                Elixir.String.starts_with?(module, "Elixir.") -> module
+                Elixir.String.starts_with?(module, "Erlang.") ->
+                    Elixir.String.replace(module, "Erlang.", "")
+                True ->
+                    Elixir.Enum.join(['Fython.', module])
 
-    plus_case = lambda value:
-        Elixir.Enum.join([
-            "{:+, ", meta(node), ", [", value, "]}"
-        ])
+            module = Elixir.String.to_atom(module)
+            (
+                (:".", convert_meta(meta), [module, Elixir.String.to_atom(function)]),
+                convert_meta(meta),
+                arguments
+            )
+        False ->
+            # this is for call a function that is defined in
+            # the same module
+            (Elixir.String.to_atom(func_name), convert_meta(meta), arguments)
 
-    minus_case = lambda value:
-        Elixir.Enum.join([
-            "{:-, ", meta(node), ", [", value, "]}"
-        ])
-
-    builder = case cases:
-        [True, _, _] -> not_case(value)
-        [_, True, _] -> plus_case(value)
-        [_, _, True] -> minus_case(value)
-
-
-def convert_tuple_node(node):
-    items = node
-        |> Elixir.Map.get("element_nodes")
-        |> Elixir.Enum.map(&convert/1)
-        |> Elixir.Enum.join(", ")
-
-    Elixir.Enum.join(["{:{}, ", meta(node), ", [", items, "]}"])
-
-def convert_staticaccess_node(node):
-    to_be_accesed = convert(Elixir.Map.get(node, "node"))
-    value_to_find = convert(Elixir.Map.get(node, "node_value"))
-
-    Elixir.Enum.join([
-        "{{:., ", meta(node), ", [{:__aliases__, [alias: false], [:Map]}, :fetch!]}, ", meta(node), ", [",
-        to_be_accesed, ", ", value_to_find, "]}"
-    ])
-
-def convert_try_node(node):
-    do = Elixir.Enum.join([
-        "{:do, ", convert(node['try_block_node']), "}"
-    ])
+def convert_try((:try, meta, [try_block, exceptions, finally_block])):
+    do = (:do, convert(try_block))
 
     each_rescue = Elixir.Enum.map(
-        node['exceptions'],
+        exceptions,
         lambda i :
-            (except_expr, alias, block) = i
+            (except_identifier, alias, block) = i
 
             case alias:
-                None -> Elixir.Enum.join([
-                    "{:->, ", meta(node), ", [[{:__aliases__, [alias: false], [:",
-                    except_expr, "]}], ", convert(block), "]}"
-                ])
-                _ -> Elixir.Enum.join([
-                    "{:->, ", meta(node), ",", "[[",
-                    "{:in, ", meta(node), ",",
-                    "[{:", alias, ", ", meta(node), ", Elixir}, {:__aliases__, [alias: false], [:", except_expr, "]}]}",
-                    "],", convert(block), "]}"
-                ])
+                None ->
+                    (
+                        :"->",
+                        convert_meta(meta),
+                        [
+                            [(:'__aliases__', [(:alias, False)], [Elixir.String.to_atom(except_identifier)])],
+                            convert(block)
+                        ]
+                    )
+                _ ->
+                    (
+                        :"->",
+                        convert_meta(meta),
+                        [[
+                            (
+                                :in,
+                                convert_meta(meta),
+                                :Elixir
+                            ),
+                            (
+                                :'__aliases__',
+                                [(:alias, False)],
+                                [Elixir.String.to_atom(except_identifier)]
+                            )
+                        ]]
+                    )
     )
 
-    each_rescue = Elixir.Enum.join(each_rescue, ", ")
+    rescue = (:rescue, each_rescue)
 
-    rescue = Elixir.Enum.join([
-        "{:rescue, [", each_rescue, "]}"
-    ])
-
-    Elixir.Enum.join([
-        "{:try, ", meta(node), ", [[", do, ", ", rescue, "]]}"
-    ])
+    (:try, convert_meta(meta), [[do, rescue]])

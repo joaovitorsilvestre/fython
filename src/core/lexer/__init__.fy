@@ -365,12 +365,12 @@ def make_number(state):
         Elixir.String.contains?(result, '.') ->
             state
                 |> Core.Lexer.Tokens.add_token(
-                    "FLOAT", result, pos_start
+                    "FLOAT", Elixir.Float.parse(result) |> Elixir.Kernel.elem(0), pos_start
                 )
         True ->
             state
                 |> Core.Lexer.Tokens.add_token(
-                    "INT", result, pos_start
+                    "INT", Elixir.Integer.parse(result) |> Elixir.Kernel.elem(0), pos_start
                 )
 
     state |> Elixir.Map.delete("result")
