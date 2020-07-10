@@ -26,6 +26,10 @@ def compile_project_file(project_root, file_full_path, destine_compiled):
                 binary,
                 mode=:binary
             )
+            Elixir.File.write(
+                Elixir.Enum.join([destine_compiled, "/", module_name, ".ex"]),
+                Elixir.Macro.to_string(quoted),
+            )
         _ ->
             Elixir.IO.puts("Compilation error:")
             Elixir.IO.puts("file path:")
