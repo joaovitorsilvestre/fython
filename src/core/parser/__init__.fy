@@ -4,6 +4,7 @@ def execute(tokens):
         "prev_tok": None,
         "current_tok": None,
         "next_tok": None,
+        "inside_pattern": False, # true when current evaluation is inside a pattern (right side) of pattern match
         "node": None,
         "_current_tok_idx": -1,
         "_tokens": tokens |> Elixir.Enum.filter(lambda i: i["type"] != 'NEWLINE')
@@ -13,9 +14,9 @@ def execute(tokens):
 
 def advance(state):
     # before anything, lets check that the states only contains expected keys
-    # other wise they are invalid and can have terrible effects in recusive functions
+    # otherwise they are invalid and can have terrible effects in recusive functions
     valid_keys = [
-        "error", "current_tok", "next_tok",
+        "error", "current_tok", "next_tok", "inside_pattern",
         "node", "_current_tok_idx", "_tokens", "prev_tok"
     ]
 
@@ -136,6 +137,17 @@ def statement(state):
     ct = state['current_tok']
     pos_start = ct['pos_start']
 
+    # check if there's a pattern matching running
+    # if there's one EQ token in this line we have a pattern matching
+    line_with_pattern_match = state['_tokens']
+        |> Elixir.Enum.find(lambda {"pos_start": {"ln": ln}, "type": type}:
+            (ln == state['current_tok']['pos_start']["ln"]) and (type == "EQ")
+        )
+
+    line_with_pattern_match = True if line_with_pattern_match else False
+
+    state = Elixir.Map.put(state, 'inside_pattern', line_with_pattern_match)
+
     [state, node] = case:
         Core.Parser.Utils.tok_matchs(ct, "KEYWORD", "def") ->
             Core.Parser.Functions.func_def_expr(state)
@@ -160,7 +172,9 @@ def statement(state):
                     )
                     [state, None]
 
-    case (state['current_tok']['type']) == 'EQ':
+    state = Elixir.Map.put(state, 'inside_pattern', False)
+
+    case state['current_tok']['type'] == 'EQ':
         True -> pattern_match(state, node, pos_start)
         False -> [state, node]
 
@@ -383,6 +397,7 @@ def bin_op(state, func_a, ops, func_b):
 
 def list_expr(state):
     pos_start = state["current_tok"]["pos_start"]
+    state = Elixir.Map.put(state, "_element_nodes", [])
 
     state = loop_while(
         state,
@@ -394,20 +409,38 @@ def list_expr(state):
                 True -> True
         ,
         lambda state, ct:
-            element_nodes = Elixir.Map.get(state, "_element_nodes", [])
-            state = Elixir.Map.delete(state, "_element_nodes")
+            (element_nodes, state) = Elixir.Map.pop(state, "_element_nodes")
 
             state = state if ct["type"] == "COMMA" and element_nodes == [] else advance(state)
 
-            case state["current_tok"]["type"]:
-                "RSQUARE" -> state
+            case (state["current_tok"]["type"], state['inside_pattern']):
+                ("RSQUARE", _) -> state
+                ("MUL", True) ->
+                    Core.Parser.Utils.set_error(
+                        state,
+                        "Unpack are now allowed inside patterns",
+                        state['current_tok']["pos_start"],
+                        state['current_tok']["pos_end"]
+                    )
+                ("MUL", False) ->
+                    pos_start = state["current_tok"]['pos_start']
+
+                    [state, node_to_unpack] = expr(advance(state))
+
+                    node = Core.Parser.Nodes.make_unpack(node_to_unpack, pos_start)
+
+                    Elixir.Map.put(
+                        state,
+                        "_element_nodes",
+                        Elixir.List.insert_at(element_nodes, -1, node)
+                    )
                 _ ->
                     [state, _expr] = expr(state)
 
                     Elixir.Map.put(
-                        state |> Elixir.Map.put("_element_nodes", element_nodes),
+                        state,
                         "_element_nodes",
-                        Elixir.List.flatten([element_nodes, _expr])
+                        Elixir.List.insert_at(element_nodes, -1, _expr)
                     )
     )
 
@@ -415,8 +448,7 @@ def list_expr(state):
 
     case ct['type']:
         'RSQUARE' ->
-            element_nodes = Elixir.Map.get(state, "_element_nodes", [])
-            state = Elixir.Map.delete(state, "_element_nodes")
+            (element_nodes, state) = Elixir.Map.pop(state, "_element_nodes")
 
             pos_end = state["current_tok"]["pos_end"]
 
@@ -438,6 +470,8 @@ def list_expr(state):
 def map_expr(state):
     pos_start = state["current_tok"]["pos_start"]
 
+    state = Elixir.Map.put(state, "_pairs", [])
+
     map_get_pairs = lambda state:
         [state, key] = expr(state)
 
@@ -447,7 +481,7 @@ def map_expr(state):
 
                 [state, value] = expr(state)
 
-                [state, {key: value}]
+                [state, (key, value)]
             True ->
                 ct = state["current_tok"]
                 Core.Parser.Utils.set_error(
@@ -468,32 +502,48 @@ def map_expr(state):
                 True -> True
         ,
         lambda state, ct:
-            pairs = Elixir.Map.get(state, "_pairs", {})
-            state = Elixir.Map.delete(state, "_pairs")
+            (pairs, state) = Elixir.Map.pop(state, "_pairs")
 
             state = advance(state)
 
-            case state["current_tok"]["type"]:
-                "RCURLY" -> state
-                _ ->
-                    [state, map] = map_get_pairs(state)
+            case (state["current_tok"]["type"], state['inside_pattern']):
+                ("RCURLY", _) -> Elixir.Map.put(state, "_pairs", pairs)
+                ("POW", True) ->
+                    Core.Parser.Utils.set_error(
+                        state,
+                        "Spread are now allowed inside patterns",
+                        state['current_tok']["pos_start"],
+                        state['current_tok']["pos_end"]
+                    )
+                ("POW", False) ->
+                    pos_start = state["current_tok"]['pos_start']
 
-                    case map:
+                    [state, node_to_spread] = expr(advance(state))
+
+                    node = Core.Parser.Nodes.make_spread(node_to_spread, pos_start)
+
+                    Elixir.Map.put(state, "_pairs", Elixir.List.insert_at(pairs, -1, node))
+                _ ->
+                    [state, pair] = map_get_pairs(state)
+
+                    case pair:
                         None -> state
-                        _ -> Elixir.Map.put(state, "_pairs", Elixir.Map.merge(pairs, map))
+                        _ ->
+                            # TODO check for duplicated keys
+                            Elixir.Map.put(state, "_pairs", Elixir.List.insert_at(pairs, -1, pair))
     )
 
     ct = state["current_tok"]
 
     case ct['type']:
         'RCURLY' ->
-            pairs = Elixir.Map.get(state, "_pairs", {}) |> Elixir.Map.to_list()
+            (pairs, state) = Elixir.Map.pop(state, "_pairs")
 
             pos_end = state["current_tok"]["pos_end"]
 
             node = Core.Parser.Nodes.make_map_node(pairs, pos_start, pos_end)
 
-            state = state |> Elixir.Map.delete("_pairs") |> Elixir.Map.delete("_break") |> advance()
+            state = state |> Elixir.Map.delete("_break") |> advance()
 
             [state, node]
         _ ->

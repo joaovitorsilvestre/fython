@@ -1,10 +1,10 @@
 def node_types_accept_pattern():
-    ['ListNode', 'MapNode', 'TupleNode', 'VarAccessNode', :list, :map, :tuple, :var]
+    [:list, :map, :tuple, :var]
 
 def node_types_accept_pattern_in_function_argument():
     Elixir.List.flatten(
         node_types_accept_pattern(),
-        ['NumberNode', 'StringNode', 'AtomNode', :number, :string, :atom]
+        [:number, :string, :atom]
     )
 
 def gen_meta(pos_start, pos_end):
@@ -199,3 +199,19 @@ def make_try_node(try_block_node, exceptions, finally_block, pos_start, pos_end)
         [try_block_node, exceptions, finally_block]
     )
 
+
+def make_unpack(node_to_unpack <- (_, {"end": pos_end}, _), pos_start):
+    # unpack operator have different behaviour depending in
+    # what side of matching it is
+    (
+        :unpack,
+        gen_meta(pos_start, pos_end),
+        [node_to_unpack]
+    )
+
+def make_spread(node_to_spread <- (_, {"end": pos_end}, _), pos_start):
+    (
+        :spread,
+        gen_meta(pos_start, pos_end),
+        [node_to_spread]
+    )

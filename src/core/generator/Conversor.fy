@@ -60,8 +60,14 @@ def convert_unary((:unary, meta, [:plus, node])):
 def convert_unary((:unary, meta, [:not, node])):
     (:"__block__", convert_meta(meta), [(:"!", convert_meta(meta), [convert(node)])])
 
+def convert_item_list((:unpack, _, [node_to_unpack]), acc):
+    ((:".", [], [(:"__aliases__", [(:alias, False)], [Elixir.String.to_atom("Elixir.Enum")]), :concat]), [], [acc, convert(node_to_unpack)])
+
+def convert_item_list(node, acc):
+    Elixir.List.insert_at(acc, -1, convert(node))
+
 def convert_list((:list, meta, elements)):
-    Elixir.Enum.map(elements, &convert/1)
+    Elixir.Enum.reduce(elements, [], &convert_item_list/2)
 
 def convert_tuple((:tuple, meta, elements)):
     (:"{}", convert_meta(meta), Elixir.Enum.map(elements, &convert/1))
@@ -163,14 +169,66 @@ def convert_pipe((:pipe, meta, [left_node, right_node])):
         )
         |> convert()
 
+def is_spread((:spread, _, _)):
+    True
 
-def convert_map((:map, meta, pairs)):
-    pairs = pairs
-        |> Elixir.Enum.map(lambda (key, value):
-            (convert(key), convert(value))
+def is_spread(item):
+    False
+
+def convert_map_with_spread((:map, meta, pairs)):
+    pairs
+        # after this step we will have all keys in senquence grouped
+        # this step will avoid creating a Map.merge command for each key that is not spread
+        |> Elixir.Enum.reduce(
+            [],
+            lambda item, acc:
+                case [is_spread(item), acc]:
+                    [True, _] -> Elixir.List.insert_at(acc, -1, item)
+                    [False, []] -> [[item]]
+                    [False, acc] ->
+                        case is_spread(Elixir.Enum.at(acc, -1)):
+                            True -> Elixir.List.insert_at(acc, -1, [item])
+                            False ->
+                                last_group = Elixir.Enum.at(acc, -1)
+                                Elixir.List.replace_at(acc, -1, Elixir.List.insert_at(last_group, -1, item))
+        )
+        # convert each group in a elixir ast map
+        |> Elixir.Enum.map(
+            lambda pairs_or_spread:
+                case pairs_or_spread:
+                    (:spread, meta, [node_to_spread]) -> convert(node_to_spread)
+                    _ -> (
+                        :'%{}',
+                        convert_meta(meta),
+                        Elixir.Enum.map(
+                            pairs_or_spread,
+                            lambda (key, value): (convert(key), convert(value))
+                        )
+                    )
+        )
+        |> Elixir.Enum.reduce(
+            lambda item, acc:
+                (
+                    (
+                        :".",
+                        convert_meta(meta),
+                        [(:__aliases__, [(:alias, False)], [Elixir.String.to_atom("Elixir.Map")]), :merge]
+                    ),
+                    convert_meta(meta),
+                    [acc, item]
+                )
         )
 
-    (:'%{}', convert_meta(meta), pairs)
+def convert_map(node <- (:map, meta, pairs)):
+    case Elixir.Enum.find(pairs, &is_spread/1):
+        None ->
+            pairs = pairs
+                |> Elixir.Enum.map(lambda (key, value):
+                    (convert(key), convert(value))
+                )
+
+            (:'%{}', convert_meta(meta), pairs)
+        _ -> convert_map_with_spread(node)
 
 def convert_case((:case, meta, [expr, pairs])):
 

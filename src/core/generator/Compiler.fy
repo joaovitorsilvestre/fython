@@ -84,9 +84,6 @@ def compile_project_to_binary(directory_path, compiled_folder, bootstrap):
                 module_name, Elixir.File.read(full_path) |> Elixir.Kernel.elem(1)
             )
 
-            Elixir.IO.inspect('quoted result')
-            Elixir.IO.inspect(quoted)
-
             case Elixir.Map.get(state, "error"):
                 None ->
                     # Its super important to use this Module.create function

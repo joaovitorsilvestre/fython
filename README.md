@@ -102,6 +102,35 @@ hi.()
 
 *Today, the syntax of the language is following this rule. But, its not sure if it will possible to keep this working, in the future, due to erlang/elixir limitations.*
 
+
+
+#### Unpack and Spread Operators
+
+`*` is called unpack operator while `**` is called spread. They are used to handle lists and maps, respectively.
+
+```python
+a = [1, 2, 3]
+a = [*a, *a]
+# a is now [1,2,3,1,2,3]
+
+a = {"key": 2}
+
+{**a, "key": 3}
+# > {"key": 3}
+
+{"key": 3, **a}
+# > {"key": 2}
+
+# the last one will overryde any previous key or spread
+a = {"a": 2}
+c = {"a": 3}
+{**a, "a": 4, **c, **a}
+# {"a": 2}
+
+```
+
+
+
 <hr>
 
 ### Roadmap
@@ -165,8 +194,8 @@ def convert((:var, _, full <- [False, value])):
 ```
 
 #### Good to have
-- [ ] support for list 'explode'. Eg: [*[1, 2]] must be converted to [1, 2]. Need do find a way to make this works
-- [ ] support for dict 'explode'. Eg: {\**{"a": 2}} must be converted to {"a": 2}. Need do find a way to make this works
+- [x] support for list 'explode'. Eg: [*[1, 2]] must be converted to [1, 2]. Need do find a way to make this works
+- [x] support for dict 'explode'. Eg: {\**{"a": 2}} must be converted to {"a": 2}. Need do find a way to make this works
 - [ ] use python style keyword params to make elixir optional arguments like // ops
 - [ ] list comprehensions
 - [ ] dict/map comprehensions
