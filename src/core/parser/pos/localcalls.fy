@@ -240,13 +240,13 @@ def new_resolver((:try, meta, [try_block, exceptions, finally_block]), var_names
 
     (:try, meta, [try_block, exceptions, finally_block])
 
-def new_resolver((:unpack, meta, [node_to_unpack]), var_names_avaliable):
+def new_resolver((:unpack, meta, [node_to_unpack, side_of_match]), var_names_avaliable):
     (
-        :unpack, meta, [new_resolver(node_to_unpack, var_names_avaliable)]
+        :unpack, meta, [new_resolver(node_to_unpack, var_names_avaliable), side_of_match]
     )
 
 
-def new_resolver((:spread, meta, [node_to_spread]), var_names_avaliable):
+def new_resolver((:spread, meta, [node_to_spread, side_of_match]), var_names_avaliable):
     (
-        :spread, meta, [new_resolver(node_to_spread, var_names_avaliable)]
+        :spread, meta, [new_resolver(node_to_spread, var_names_avaliable), side_of_match]
     )

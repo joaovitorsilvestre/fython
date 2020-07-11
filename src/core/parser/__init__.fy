@@ -4,6 +4,7 @@ def execute(tokens):
         "prev_tok": None,
         "current_tok": None,
         "next_tok": None,
+        "inside_pattern": False, # true when current evaluation is inside a pattern (right side) of pattern match
         "node": None,
         "_current_tok_idx": -1,
         "_tokens": tokens |> Elixir.Enum.filter(lambda i: i["type"] != 'NEWLINE')
@@ -13,9 +14,9 @@ def execute(tokens):
 
 def advance(state):
     # before anything, lets check that the states only contains expected keys
-    # other wise they are invalid and can have terrible effects in recusive functions
+    # otherwise they are invalid and can have terrible effects in recusive functions
     valid_keys = [
-        "error", "current_tok", "next_tok",
+        "error", "current_tok", "next_tok", "inside_pattern",
         "node", "_current_tok_idx", "_tokens", "prev_tok"
     ]
 
@@ -136,6 +137,17 @@ def statement(state):
     ct = state['current_tok']
     pos_start = ct['pos_start']
 
+    # check if there's a pattern matching running
+    # if there's one EQ token in this line we have a pattern matching
+    line_with_pattern_match = state['_tokens']
+        |> Elixir.Enum.find(lambda {"pos_start": {"ln": ln}, "type": type}:
+            (ln == state['current_tok']['pos_start']["ln"]) and (type == "EQ")
+        )
+
+    line_with_pattern_match = True if line_with_pattern_match else False
+
+    state = Elixir.Map.put(state, 'inside_pattern', line_with_pattern_match)
+
     [state, node] = case:
         Core.Parser.Utils.tok_matchs(ct, "KEYWORD", "def") ->
             Core.Parser.Functions.func_def_expr(state)
@@ -160,9 +172,12 @@ def statement(state):
                     )
                     [state, None]
 
-    case (state['current_tok']['type']) == 'EQ':
-        True -> pattern_match(state, node, pos_start)
-        False -> [state, node]
+    state = Elixir.Map.put(state, 'inside_pattern', False)
+
+    case (line_with_pattern_match, state['current_tok']['type'] == 'EQ'):
+        (True, True) -> pattern_match(state, node, pos_start)
+        (False, False) -> [state, node]
+        _ -> raise "Inconsistency found in parser code"
 
 def expr(state):
     ct = state['current_tok']
@@ -406,7 +421,7 @@ def list_expr(state):
 
                     [state, node_to_unpack] = expr(advance(state))
 
-                    node = Core.Parser.Nodes.make_unpack(node_to_unpack, pos_start)
+                    node = Core.Parser.Nodes.make_unpack(node_to_unpack, state['inside_pattern'], pos_start)
 
                     Elixir.Map.put(
                         state,
