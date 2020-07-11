@@ -60,17 +60,10 @@ def convert_unary((:unary, meta, [:plus, node])):
 def convert_unary((:unary, meta, [:not, node])):
     (:"__block__", convert_meta(meta), [(:"!", convert_meta(meta), [convert(node)])])
 
-def convert_item_list((:unpack, _, [node_to_unpack, False]), acc):
-    ((:".", [], [(:"__aliases__", [(:alias, False)], [:"Elixir.Enum"]), :concat]), [], [acc, convert(node_to_unpack)])
-
-
-def convert_item_list((:unpack, _, [node_to_unpack, True]), acc):
-    # inside pattern (left side of pattern match)
-    raise "Not implemented"
+def convert_item_list((:unpack, _, [node_to_unpack]), acc):
+    ((:".", [], [(:"__aliases__", [(:alias, False)], [Elixir.String.to_atom("Elixir.Enum")]), :concat]), [], [acc, convert(node_to_unpack)])
 
 def convert_item_list(node, acc):
-    Elixir.IO.inspect("conversor")
-    Elixir.IO.inspect(node)
     Elixir.List.insert_at(acc, -1, convert(node))
 
 def convert_list((:list, meta, elements)):

@@ -174,10 +174,9 @@ def statement(state):
 
     state = Elixir.Map.put(state, 'inside_pattern', False)
 
-    case (line_with_pattern_match, state['current_tok']['type'] == 'EQ'):
-        (True, True) -> pattern_match(state, node, pos_start)
-        (False, False) -> [state, node]
-        _ -> raise "Inconsistency found in parser code"
+    case state['current_tok']['type'] == 'EQ':
+        True -> pattern_match(state, node, pos_start)
+        False -> [state, node]
 
 def expr(state):
     ct = state['current_tok']
@@ -414,14 +413,21 @@ def list_expr(state):
 
             state = state if ct["type"] == "COMMA" and element_nodes == [] else advance(state)
 
-            case state["current_tok"]["type"]:
-                "RSQUARE" -> state
-                "MUL" ->
+            case (state["current_tok"]["type"], state['inside_pattern']):
+                ("RSQUARE", _) -> state
+                ("MUL", True) ->
+                    Core.Parser.Utils.set_error(
+                        state,
+                        "Unpack are now allowed inside patterns",
+                        state['current_tok']["pos_start"],
+                        state['current_tok']["pos_end"]
+                    )
+                ("MUL", False) ->
                     pos_start = state["current_tok"]['pos_start']
 
                     [state, node_to_unpack] = expr(advance(state))
 
-                    node = Core.Parser.Nodes.make_unpack(node_to_unpack, state['inside_pattern'], pos_start)
+                    node = Core.Parser.Nodes.make_unpack(node_to_unpack, pos_start)
 
                     Elixir.Map.put(
                         state,

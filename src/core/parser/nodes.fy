@@ -200,13 +200,13 @@ def make_try_node(try_block_node, exceptions, finally_block, pos_start, pos_end)
     )
 
 
-def make_unpack(node_to_unpack <- (_, {"end": pos_end}, _), inside_pattern, pos_start):
+def make_unpack(node_to_unpack <- (_, {"end": pos_end}, _), pos_start):
     # unpack operator have different behaviour depending in
     # what side of matching it is
     (
         :unpack,
         gen_meta(pos_start, pos_end),
-        [node_to_unpack, inside_pattern]
+        [node_to_unpack]
     )
 
 def make_spread(node_to_spread <- (_, {"end": pos_end}, _), pos_start):
