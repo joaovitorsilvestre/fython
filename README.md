@@ -118,42 +118,18 @@ a = {"key": 2}
 {**a, "key": 3}
 # > {"key": 3}
 
-{"key": 3, **a, }
+{"key": 3, **a}
 # > {"key": 2}
 
+# the last one will overryde any previous key or spread
+a = {"a": 2}
+c = {"a": 3}
+{**a, "a": 4, **c, **a}
+# {"a": 2}
+
 ```
 
 
-
-#### Pattern Matching
-
-##### Advanced pattern matching
-
-```python
-a = [1, 2]
-
-[*^a, 3, *c] = [1, 2, 3, 4, 3]
-# a keeps being [1, 2]
-# c is [4, 3]
-
-[*^a, 3, *c] = [1, "wont match", 3, 4, 3]
-# will raise no matching value because of a is being expanded in match
-
-[*a, 3, *c] = [1, "will match", 3, 4, 3]
-# a is now [1, "will match"]
-# c is [3, 4]
-
-a = {"d": 2}
-
-{**a, "e": 1} = {"d": 4, "e": 1}
-# a is now {"d": 4}
-
-{**^a} = {"d": 4}
-# will raise no matching value because of a is being expanded in match
-
-{**^a} = {"d": 2}
-# correct match and a will keep with same value as the match is equal
-```
 
 <hr>
 
@@ -185,7 +161,6 @@ def add(a)
 - [x] `(values, [last]) = ...` the left part of this pattern is being evaluated as a empty map. It should be an error.
 - [ ] Access map value returned by a function (e.g: `advance()['current_char']`) is not working
 - [ ] Cant pass a variable as argument if it's form another module: `Elixir.Enum.reduce(0, &Elixir.String.length/1))`. Probably the dot is not treated in conversor.
-- [ ] `:"Elixir.Enum"` this atom breaks conversor of spread
 
 #### Must have
 - [x] Remove dependency of Jason lib
@@ -219,8 +194,8 @@ def convert((:var, _, full <- [False, value])):
 ```
 
 #### Good to have
-- [ ] support for list 'explode'. Eg: [*[1, 2]] must be converted to [1, 2]. Need do find a way to make this works
-- [ ] support for dict 'explode'. Eg: {\**{"a": 2}} must be converted to {"a": 2}. Need do find a way to make this works
+- [x] support for list 'explode'. Eg: [*[1, 2]] must be converted to [1, 2]. Need do find a way to make this works
+- [x] support for dict 'explode'. Eg: {\**{"a": 2}} must be converted to {"a": 2}. Need do find a way to make this works
 - [ ] use python style keyword params to make elixir optional arguments like // ops
 - [ ] list comprehensions
 - [ ] dict/map comprehensions

@@ -199,18 +199,22 @@ def new_resolver((:pipe, meta, [left_node, right_node]), var_names_avaliable):
         ]
     )
 
+def resolve_map_pair((key, value), var_names_avaliable):
+    (
+        convert_local_function_calls(key, var_names_avaliable),
+        convert_local_function_calls(value, var_names_avaliable)
+    )
+
+def resolve_map_pair((:spread, meta, [node_to_spread]), var_names_avaliable):
+    (
+        :spread, meta, [new_resolver(node_to_spread, var_names_avaliable)]
+    )
+
 def new_resolver((:map, meta, pairs), var_names_avaliable):
     (
         :map,
         meta,
-        Elixir.Enum.map(
-            pairs,
-            lambda (key, value):
-                (
-                    convert_local_function_calls(key, var_names_avaliable),
-                    convert_local_function_calls(value, var_names_avaliable)
-                )
-        )
+        Elixir.Enum.map(pairs, lambda i: resolve_map_pair(i, var_names_avaliable))
     )
 
 def new_resolver((:case, meta, [expr, pairs]), var_names_avaliable):
@@ -243,10 +247,4 @@ def new_resolver((:try, meta, [try_block, exceptions, finally_block]), var_names
 def new_resolver((:unpack, meta, [node_to_unpack]), var_names_avaliable):
     (
         :unpack, meta, [new_resolver(node_to_unpack, var_names_avaliable)]
-    )
-
-
-def new_resolver((:spread, meta, [node_to_spread, side_of_match]), var_names_avaliable):
-    (
-        :spread, meta, [new_resolver(node_to_spread, var_names_avaliable), side_of_match]
     )

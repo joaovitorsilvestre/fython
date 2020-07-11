@@ -201,3 +201,25 @@ With *finnaly*
 #### Func
 
 (:func, `meta`, [*string*, *number*])
+
+<hr>
+
+#### Unpack
+
+If the node is not a list, a runtime error will appear when the program is running
+
+As the `spread` operator, it is not allowed inside of patterns.
+
+(:unpack, `meta`, [`node`])
+
+
+
+<hr>
+
+#### Spread
+
+If the node is not a map, it will break in runtime.
+
+As the `unpack` operator, it is not allowed inside of patterns.
+
+(:spread, `meta`, [`node`])

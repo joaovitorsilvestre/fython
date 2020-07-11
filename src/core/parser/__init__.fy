@@ -470,6 +470,8 @@ def list_expr(state):
 def map_expr(state):
     pos_start = state["current_tok"]["pos_start"]
 
+    state = Elixir.Map.put(state, "_pairs", [])
+
     map_get_pairs = lambda state:
         [state, key] = expr(state)
 
@@ -479,7 +481,7 @@ def map_expr(state):
 
                 [state, value] = expr(state)
 
-                [state, {key: value}]
+                [state, (key, value)]
             True ->
                 ct = state["current_tok"]
                 Core.Parser.Utils.set_error(
@@ -500,32 +502,48 @@ def map_expr(state):
                 True -> True
         ,
         lambda state, ct:
-            pairs = Elixir.Map.get(state, "_pairs", {})
-            state = Elixir.Map.delete(state, "_pairs")
+            (pairs, state) = Elixir.Map.pop(state, "_pairs")
 
             state = advance(state)
 
-            case state["current_tok"]["type"]:
-                "RCURLY" -> state
-                _ ->
-                    [state, map] = map_get_pairs(state)
+            case (state["current_tok"]["type"], state['inside_pattern']):
+                ("RCURLY", _) -> Elixir.Map.put(state, "_pairs", pairs)
+                ("POW", True) ->
+                    Core.Parser.Utils.set_error(
+                        state,
+                        "Spread are now allowed inside patterns",
+                        state['current_tok']["pos_start"],
+                        state['current_tok']["pos_end"]
+                    )
+                ("POW", False) ->
+                    pos_start = state["current_tok"]['pos_start']
 
-                    case map:
+                    [state, node_to_spread] = expr(advance(state))
+
+                    node = Core.Parser.Nodes.make_spread(node_to_spread, pos_start)
+
+                    Elixir.Map.put(state, "_pairs", Elixir.List.insert_at(pairs, -1, node))
+                _ ->
+                    [state, pair] = map_get_pairs(state)
+
+                    case pair:
                         None -> state
-                        _ -> Elixir.Map.put(state, "_pairs", Elixir.Map.merge(pairs, map))
+                        _ ->
+                            # TODO check for duplicated keys
+                            Elixir.Map.put(state, "_pairs", Elixir.List.insert_at(pairs, -1, pair))
     )
 
     ct = state["current_tok"]
 
     case ct['type']:
         'RCURLY' ->
-            pairs = Elixir.Map.get(state, "_pairs", {}) |> Elixir.Map.to_list()
+            (pairs, state) = Elixir.Map.pop(state, "_pairs")
 
             pos_end = state["current_tok"]["pos_end"]
 
             node = Core.Parser.Nodes.make_map_node(pairs, pos_start, pos_end)
 
-            state = state |> Elixir.Map.delete("_pairs") |> Elixir.Map.delete("_break") |> advance()
+            state = state |> Elixir.Map.delete("_break") |> advance()
 
             [state, node]
         _ ->
