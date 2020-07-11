@@ -239,3 +239,14 @@ def new_resolver((:try, meta, [try_block, exceptions, finally_block]), var_names
     finally_block = convert_local_function_calls(finally_block, var_names_avaliable)
 
     (:try, meta, [try_block, exceptions, finally_block])
+
+def new_resolver((:unpack, meta, [node_to_unpack]), var_names_avaliable):
+    (
+        :unpack, meta, [new_resolver(node_to_unpack, var_names_avaliable)]
+    )
+
+
+def new_resolver((:spread, meta, [node_to_spread]), var_names_avaliable):
+    (
+        :spread, meta, [new_resolver(node_to_spread, var_names_avaliable)]
+    )

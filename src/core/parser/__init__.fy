@@ -383,6 +383,7 @@ def bin_op(state, func_a, ops, func_b):
 
 def list_expr(state):
     pos_start = state["current_tok"]["pos_start"]
+    state = Elixir.Map.put(state, "_element_nodes", [])
 
     state = loop_while(
         state,
@@ -394,20 +395,31 @@ def list_expr(state):
                 True -> True
         ,
         lambda state, ct:
-            element_nodes = Elixir.Map.get(state, "_element_nodes", [])
-            state = Elixir.Map.delete(state, "_element_nodes")
+            (element_nodes, state) = Elixir.Map.pop(state, "_element_nodes")
 
             state = state if ct["type"] == "COMMA" and element_nodes == [] else advance(state)
 
             case state["current_tok"]["type"]:
                 "RSQUARE" -> state
+                "MUL" ->
+                    pos_start = state["current_tok"]['pos_start']
+
+                    [state, node_to_unpack] = expr(advance(state))
+
+                    node = Core.Parser.Nodes.make_unpack(node_to_unpack, pos_start)
+
+                    Elixir.Map.put(
+                        state,
+                        "_element_nodes",
+                        Elixir.List.insert_at(element_nodes, -1, node)
+                    )
                 _ ->
                     [state, _expr] = expr(state)
 
                     Elixir.Map.put(
-                        state |> Elixir.Map.put("_element_nodes", element_nodes),
+                        state,
                         "_element_nodes",
-                        Elixir.List.flatten([element_nodes, _expr])
+                        Elixir.List.insert_at(element_nodes, -1, _expr)
                     )
     )
 
@@ -415,8 +427,7 @@ def list_expr(state):
 
     case ct['type']:
         'RSQUARE' ->
-            element_nodes = Elixir.Map.get(state, "_element_nodes", [])
-            state = Elixir.Map.delete(state, "_element_nodes")
+            (element_nodes, state) = Elixir.Map.pop(state, "_element_nodes")
 
             pos_end = state["current_tok"]["pos_end"]
 

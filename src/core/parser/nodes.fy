@@ -199,3 +199,17 @@ def make_try_node(try_block_node, exceptions, finally_block, pos_start, pos_end)
         [try_block_node, exceptions, finally_block]
     )
 
+
+def make_unpack(node_to_unpack <- (_, {"end": pos_end}, _), pos_start):
+    (
+        :unpack,
+        gen_meta(pos_start, pos_end),
+        [node_to_unpack]
+    )
+
+def make_spread(node_to_spread <- (_, {"end": pos_end}, _), pos_start):
+    (
+        :spread,
+        gen_meta(pos_start, pos_end),
+        [node_to_spread]
+    )

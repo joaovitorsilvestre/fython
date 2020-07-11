@@ -102,6 +102,59 @@ hi.()
 
 *Today, the syntax of the language is following this rule. But, its not sure if it will possible to keep this working, in the future, due to erlang/elixir limitations.*
 
+
+
+#### Unpack and Spread Operators
+
+`*` is called unpack operator while `**` is called spread. They are used to handle lists and maps, respectively.
+
+```python
+a = [1, 2, 3]
+a = [*a, *a]
+# a is now [1,2,3,1,2,3]
+
+a = {"key": 2}
+
+{**a, "key": 3}
+# > {"key": 3}
+
+{"key": 3, **a, }
+# > {"key": 2}
+
+```
+
+
+
+#### Pattern Matching
+
+##### Advanced pattern matching
+
+```python
+a = [1, 2]
+
+[*^a, 3, *c] = [1, 2, 3, 4, 3]
+# a keeps being [1, 2]
+# c is [4, 3]
+
+[*^a, 3, *c] = [1, "wont match", 3, 4, 3]
+# will raise no matching value because of a is being expanded in match
+
+[*a, 3, *c] = [1, "will match", 3, 4, 3]
+# a is now [1, "will match"]
+# c is [3, 4]
+
+a = {"d": 2}
+
+{**a, "e": 1} = {"d": 4, "e": 1}
+# a is now {"d": 4}
+
+{**^a} = {"d": 4}
+# will raise no matching value because of a is being expanded in match
+
+{**^a} = {"d": 2}
+# correct match and a will keep with same value as the match is equal
+```
+
 <hr>
 
 ### Roadmap

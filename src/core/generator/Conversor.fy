@@ -60,8 +60,20 @@ def convert_unary((:unary, meta, [:plus, node])):
 def convert_unary((:unary, meta, [:not, node])):
     (:"__block__", convert_meta(meta), [(:"!", convert_meta(meta), [convert(node)])])
 
+def convert_item_list(node_to_unpack <- (:unpack, meta, node_to_unpack), acc):
+    Elixir.IO.inspect('concat')
+    Elixir.IO.inspect(acc)
+    Elixir.IO.inspect('with')
+    Elixir.IO.inspect(node_to_unpack)
+    Elixir.Enum.concat(acc, node_to_unpack)
+
+def convert_item_list(node, acc):
+    List.insert_at(acc, -1, node)
+
 def convert_list((:list, meta, elements)):
-    Elixir.Enum.map(elements, &convert/1)
+    Elixir.IO.inspect('opaaa')
+    Elixir.IO.inspect(elements)
+    Elixir.Enum.reduce(elements, [], &convert_item_list/2)
 
 def convert_tuple((:tuple, meta, elements)):
     (:"{}", convert_meta(meta), Elixir.Enum.map(elements, &convert/1))
