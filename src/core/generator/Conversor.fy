@@ -61,7 +61,8 @@ def convert_unary((:unary, meta, [:not, node])):
     (:"__block__", convert_meta(meta), [(:"!", convert_meta(meta), [convert(node)])])
 
 def convert_item_list((:unpack, _, [node_to_unpack, False]), acc):
-    Elixir.Enum.concat(acc, convert(node_to_unpack))
+    ((:".", [], [(:"__aliases__", [(:alias, False)], [:"Elixir.Enum"]), :concat]), [], [acc, convert(node_to_unpack)])
+
 
 def convert_item_list((:unpack, _, [node_to_unpack, True]), acc):
     # inside pattern (left side of pattern match)
