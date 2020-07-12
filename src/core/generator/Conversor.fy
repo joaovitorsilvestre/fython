@@ -74,14 +74,14 @@ def convert_list_with_unpack((:list, meta, elements)):
             [],
             lambda item, acc:
                 case [is_unpack(item), acc]:
-                    [True, _] -> Elixir.List.insert_at(acc, -1, item)
+                    [True, _] -> [*acc, item]
                     [False, []] -> [[item]]
                     [False, acc] ->
                         case is_unpack(Elixir.Enum.at(acc, -1)):
-                            True -> Elixir.List.insert_at(acc, -1, [item])
+                            True -> [*acc, [item]]
                             False ->
                                 last_group = Elixir.Enum.at(acc, -1)
-                                Elixir.List.replace_at(acc, -1, Elixir.List.insert_at(last_group, -1, item))
+                                Elixir.List.replace_at(acc, -1, [*last_group, item])
         )
         |> Elixir.Enum.map(
             lambda elements_or_unpack:
@@ -203,7 +203,7 @@ def convert_pipe((:pipe, meta, [left_node, right_node])):
             lambda c_node, acc:
                 (:call, meta, [node_to_call, args, keywords, local_call]) = c_node
 
-                (:call, meta, [node_to_call, Elixir.List.insert_at(args, 0, acc), keywords, local_call])
+                (:call, meta, [node_to_call, [acc, *args], keywords, local_call])
         )
         |> convert()
 
@@ -221,14 +221,14 @@ def convert_map_with_spread((:map, meta, pairs)):
             [],
             lambda item, acc:
                 case [is_spread(item), acc]:
-                    [True, _] -> Elixir.List.insert_at(acc, -1, item)
+                    [True, _] -> [*acc, item]
                     [False, []] -> [[item]]
                     [False, acc] ->
                         case is_spread(Elixir.Enum.at(acc, -1)):
-                            True -> Elixir.List.insert_at(acc, -1, [item])
+                            True -> [*acc, [item]]
                             False ->
                                 last_group = Elixir.Enum.at(acc, -1)
-                                Elixir.List.replace_at(acc, -1, Elixir.List.insert_at(last_group, -1, item))
+                                Elixir.List.replace_at(acc, -1, [*last_group, item])
         )
         # convert each group in a elixir ast map
         |> Elixir.Enum.map(

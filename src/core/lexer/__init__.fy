@@ -33,11 +33,11 @@ def execute(text):
 
                 acc = case (acc['open_multiline'], has_multiline_token):
                     (False, False) ->
-                        Elixir.Map.put(acc, "lines", Elixir.List.insert_at(acc['lines'], -1, line))
+                        Elixir.Map.put(acc, "lines", [*acc['lines'], line])
                     (False, True) ->
                         acc
                             |> Elixir.Map.put('open_multiline', True)
-                            |> Elixir.Map.put("lines", Elixir.List.insert_at(acc['lines'], -1, line))
+                            |> Elixir.Map.put("lines", [*acc['lines'], line])
                     (True, True) ->
                         acc
                             |> merge_last(line)
