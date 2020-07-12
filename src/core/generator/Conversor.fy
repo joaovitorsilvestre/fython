@@ -60,14 +60,52 @@ def convert_unary((:unary, meta, [:plus, node])):
 def convert_unary((:unary, meta, [:not, node])):
     (:"__block__", convert_meta(meta), [(:"!", convert_meta(meta), [convert(node)])])
 
-def convert_item_list((:unpack, _, [node_to_unpack]), acc):
-    ((:".", [], [(:"__aliases__", [(:alias, False)], [Elixir.String.to_atom("Elixir.Enum")]), :concat]), [], [acc, convert(node_to_unpack)])
+def is_unpack((:unpack, _, _)):
+    True
 
-def convert_item_list(node, acc):
-    Elixir.List.insert_at(acc, -1, convert(node))
+def is_unpack(item):
+    False
 
-def convert_list((:list, meta, elements)):
-    Elixir.Enum.reduce(elements, [], &convert_item_list/2)
+def convert_list_with_unpack((:list, meta, elements)):
+    elements
+        # after this step we will have all keys in senquence grouped
+        # this step will avoid creating a Enum.concat command for each key that is not unpack
+        |> Elixir.Enum.reduce(
+            [],
+            lambda item, acc:
+                case [is_unpack(item), acc]:
+                    [True, _] -> Elixir.List.insert_at(acc, -1, item)
+                    [False, []] -> [[item]]
+                    [False, acc] ->
+                        case is_unpack(Elixir.Enum.at(acc, -1)):
+                            True -> Elixir.List.insert_at(acc, -1, [item])
+                            False ->
+                                last_group = Elixir.Enum.at(acc, -1)
+                                Elixir.List.replace_at(acc, -1, Elixir.List.insert_at(last_group, -1, item))
+        )
+        |> Elixir.Enum.map(
+            lambda elements_or_unpack:
+                case elements_or_unpack:
+                    (:unpack, meta, [node_to_unpack]) -> convert(node_to_unpack)
+                    _ -> Elixir.Enum.map(elements_or_unpack, &convert/1)
+        )
+        |> Elixir.Enum.reduce(
+            lambda item, acc:
+                (
+                    (
+                        :".",
+                        convert_meta(meta),
+                        [(:__aliases__, [(:alias, False)], [Elixir.String.to_atom("Elixir.Enum")]), :concat]
+                    ),
+                    convert_meta(meta),
+                    [acc, item]
+                )
+        )
+
+def convert_list(node <- (:list, meta, elements)):
+    case Elixir.Enum.find(elements, &is_unpack/1):
+        None -> Elixir.Enum.map(elements, &convert/1)
+        _ -> convert_list_with_unpack(node)
 
 def convert_tuple((:tuple, meta, elements)):
     (:"{}", convert_meta(meta), Elixir.Enum.map(elements, &convert/1))
