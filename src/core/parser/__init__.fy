@@ -105,7 +105,7 @@ def statements(state, expected_ident_gte):
                             Elixir.Map.put(
                                 state,
                                 "_statements",
-                                Elixir.List.insert_at(_statements, -1, _statement)
+                                [*_statements, _statement]
                             )
     )
 
@@ -433,7 +433,7 @@ def list_expr(state):
                     Elixir.Map.put(
                         state,
                         "_element_nodes",
-                        Elixir.List.insert_at(element_nodes, -1, node)
+                        [*element_nodes, node]
                     )
                 _ ->
                     [state, _expr] = expr(state)
@@ -441,7 +441,7 @@ def list_expr(state):
                     Elixir.Map.put(
                         state,
                         "_element_nodes",
-                        Elixir.List.insert_at(element_nodes, -1, _expr)
+                        [*element_nodes, _expr]
                     )
     )
 
@@ -527,14 +527,14 @@ def map_expr(state):
 
                     node = Core.Parser.Nodes.make_spread(node_to_spread, pos_start)
 
-                    Elixir.Map.put(state, "_pairs", Elixir.List.insert_at(pairs, -1, node))
+                    Elixir.Map.put(state, "_pairs", [*pairs, node])
                 _ ->
                     [state, pair] = map_get_pairs(state)
 
                     case:
                         pair == None -> state
                         True ->
-                            Elixir.Map.put(state, "_pairs", Elixir.List.insert_at(pairs, -1, pair))
+                            Elixir.Map.put(state, "_pairs", [*pairs, pair])
     )
 
     (pairs, state) = Elixir.Map.pop(state, "_pairs")
@@ -714,7 +714,7 @@ def case_expr(state):
                                 True -> statement(state)
                                 False -> statements(state, this_ident + 4)
 
-                            cases = Elixir.List.insert_at(cases, -1, (left_expr, right_expr))
+                            cases = [*cases, (left_expr, right_expr)]
 
                             state |> Elixir.Map.put('_cases', cases)
                         False ->
@@ -812,7 +812,7 @@ def call_func_expr(state, atom):
                                 False ->
                                     [state, _expr] = expr(state)
 
-                                    [state, Elixir.List.insert_at(arg_nodes, -1, _expr), keywords]
+                                    [state, [*arg_nodes, _expr], keywords]
 
                             state = Elixir.Enum.at(updated_fields, 0)
                             arg_nodes = Elixir.Enum.at(updated_fields, 1)
@@ -886,7 +886,7 @@ def tuple_expr(state, pos_start, first_expr):
 
             [state, _expr] = expr(state)
 
-            exprs = Elixir.List.insert_at(exprs, -1, _expr)
+            exprs = [*exprs, _expr]
 
             case state['current_tok']['type']:
                 'COMMA' ->
@@ -1045,7 +1045,7 @@ def handle_except_blocks(state, base_ident, base_line, prev_blocks):
 
     [state, block] = statements(state, base_ident + 4)
 
-    new_list_blocks = Elixir.List.insert_at(prev_blocks, -1, (except_identifier, alias, block))
+    new_list_blocks = [*prev_blocks, (except_identifier, alias, block)]
 
     ct_is_except = Core.Parser.Utils.tok_matchs(state['current_tok'], 'KEYWORD', 'except')
 

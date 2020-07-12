@@ -137,7 +137,7 @@ def resolve_params(state, end_tok):
 
             (state, node) = resolve_one_param(state)
 
-            arg_nodes = Elixir.List.insert_at(arg_nodes, -1, node)
+            arg_nodes = [*arg_nodes, node]
 
             ct_type = state['current_tok']['type']
 
