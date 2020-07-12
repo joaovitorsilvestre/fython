@@ -404,6 +404,7 @@ def list_expr(state):
         lambda state, ct:
             case:
                 ct["type"] == "RSQUARE" -> False
+                ct["type"] == "COMMA" and state['next_tok']['type'] == "RSQUARE" -> False
                 ct["type"] == "EOF" -> False
                 state["error"] != None -> False
                 True -> True
@@ -414,7 +415,7 @@ def list_expr(state):
             state = state if ct["type"] == "COMMA" and element_nodes == [] else advance(state)
 
             case (state["current_tok"]["type"], state['inside_pattern']):
-                ("RSQUARE", _) -> state
+                ("RSQUARE", _) -> Elixir.Map.put(state, "_element_nodes", element_nodes)
                 ("MUL", True) ->
                     Core.Parser.Utils.set_error(
                         state,
@@ -444,12 +445,15 @@ def list_expr(state):
                     )
     )
 
+    (element_nodes, state) = Elixir.Map.pop(state, "_element_nodes")
+
+    {"current_tok": {"type": ct_type}, "next_tok": {"type": next_tok_type}} = state
+    state = advance(state) if ct_type == "COMMA" and next_tok_type == "RSQUARE" else state
+
     ct = state["current_tok"]
 
     case ct['type']:
         'RSQUARE' ->
-            (element_nodes, state) = Elixir.Map.pop(state, "_element_nodes")
-
             pos_end = state["current_tok"]["pos_end"]
 
             node = Core.Parser.Nodes.make_list_node(element_nodes, pos_start, pos_end)
@@ -497,6 +501,7 @@ def map_expr(state):
         lambda state, ct:
             case:
                 ct["type"] == "RCURLY" -> False
+                ct["type"] == "COMMA" and state['next_tok']['type'] == "RCURLY" -> False
                 ct["type"] == "EOF" -> False
                 state["error"] != None -> False
                 True -> True
@@ -526,19 +531,20 @@ def map_expr(state):
                 _ ->
                     [state, pair] = map_get_pairs(state)
 
-                    case pair:
-                        None -> state
-                        _ ->
-                            # TODO check for duplicated keys
+                    case:
+                        pair == None -> state
+                        True ->
                             Elixir.Map.put(state, "_pairs", Elixir.List.insert_at(pairs, -1, pair))
     )
 
+    (pairs, state) = Elixir.Map.pop(state, "_pairs")
+
+    {"current_tok": {"type": ct_type}, "next_tok": {"type": next_tok_type}} = state
+    state = advance(state) if ct_type == "COMMA" and next_tok_type == "RCURLY" else state
     ct = state["current_tok"]
 
     case ct['type']:
         'RCURLY' ->
-            (pairs, state) = Elixir.Map.pop(state, "_pairs")
-
             pos_end = state["current_tok"]["pos_end"]
 
             node = Core.Parser.Nodes.make_map_node(pairs, pos_start, pos_end)
