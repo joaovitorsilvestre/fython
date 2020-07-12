@@ -136,7 +136,7 @@ c = {"a": 3}
 ### Roadmap
 
 #### Bugs
-- [ ] `Critical`- Putting a comma at a end of a list makes the list empty. Need to fix it and ensure that map and tuple dont has same error.
+- [x] `Critical`- Putting a comma at a end of a list makes the list empty. Need to fix it and ensure that map and tuple dont has same error.
 - [ ] If you put pycharm in mode of use tab instead of 4 spaces the compile doesnt work properly. It just cant understand what is a statement anymore, and give a syntax error. Probably the fix is only in the lexer in the part that add the indent key to Token.
 - [x] Map are being compiled empty if theres a comma at end of it. E.g: `{"a": 1,}`
 - [ ] In the pos parser we need to convert any variable that is a elixir keyword to something else
@@ -159,14 +159,14 @@ def add(a)
 - [ ] Lexer must save the value for KEYWORD arguments so we can show they in the expection.
 `Expeted ... Received: KEYWORD` should be `Expeted ... Received: lambda`
 - [x] `(values, [last]) = ...` the left part of this pattern is being evaluated as a empty map. It should be an error.
-- [ ] Access map value returned by a function (e.g: `advance()['current_char']`) is not working
+- [x] Access map value returned by a function (e.g: `advance()['current_char']`) is not working
 - [ ] Cant pass a variable as argument if it's form another module: `Elixir.Enum.reduce(0, &Elixir.String.length/1))`. Probably the dot is not treated in conversor.
 
 #### Must have
 - [x] Remove dependency of Jason lib
 - [x] Stop using PosParser to guess if a call is a local call. It can be a lot easier to just consider
 all call local calls, but call of modules like Map.get(...)
-- [ ] Use real tuples in conversor instead of strings
+- [x] Use real tuples in conversor instead of strings
 - [x] Define atoms using strings: `:"oii"`. Must work with single and double quotes.
 - [ ] Support to range syntax
 - [x] Support to try catch
