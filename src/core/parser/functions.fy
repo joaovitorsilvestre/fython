@@ -82,7 +82,7 @@ def func_def_expr(state):
         [None, None] -> [state, None]
         _ ->
             node = Core.Parser.Nodes.make_funcdef_node(
-                var_name_tok, arg_nodes, body, docstring, pos_start
+                state['file'], var_name_tok, arg_nodes, body, docstring, pos_start
             )
 
             [state, node]
@@ -116,7 +116,7 @@ def lambda_expr(state):
         [None, None] -> [state, None]
         _ ->
             node = Core.Parser.Nodes.make_lambda_node(
-                None, arg_nodes, body, pos_start
+                state['file'], None, arg_nodes, body, pos_start
             )
 
             [state, node]
@@ -194,7 +194,7 @@ def resolve_one_param(state):
                     [state, right_node] = Core.Parser.expr(state)
 
                     node = Core.Parser.Nodes.make_patternmatch_node(
-                        node, right_node, pos_start, state['current_tok']['pos_start']
+                        state['file'], node, right_node, pos_start, state['current_tok']['pos_start']
                     )
                     (state, node)
                 _ ->

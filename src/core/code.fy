@@ -9,7 +9,7 @@ def compile_project_file(project_root, file_full_path, destine_compiled):
     Elixir.IO.puts(Elixir.Enum.join(["Compiling module: ", module_name]))
 
     [state, quoted] = lexer_parse_convert_file(
-        module_name, Elixir.File.read(file_full_path) |> Elixir.Kernel.elem(1)
+        module_name, file_full_path, Elixir.File.read(file_full_path) |> Elixir.Kernel.elem(1)
     )
 
     case Elixir.Map.get(state, "error"):
@@ -39,13 +39,13 @@ def compile_project_file(project_root, file_full_path, destine_compiled):
             :error
 
 
-def lexer_parse_convert_file(module_name, text):
+def lexer_parse_convert_file(module_name, file_full_path, text):
     lexed = Core.Lexer.execute(text)
 
     state = case Elixir.Map.get(lexed, "error"):
         None ->
             tokens = Elixir.Map.get(lexed, "tokens")
-            Core.Parser.execute(tokens)
+            Core.Parser.execute(file_full_path, tokens)
         _ ->
             lexed
 

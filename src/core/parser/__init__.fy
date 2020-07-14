@@ -1,5 +1,6 @@
-def execute(tokens):
+def execute(file, tokens):
     state = {
+        "file": file,
         "error": None,
         "prev_tok": None,
         "current_tok": None,
@@ -17,7 +18,7 @@ def advance(state):
     # otherwise they are invalid and can have terrible effects in recusive functions
     valid_keys = [
         "error", "current_tok", "next_tok", "inside_pattern",
-        "node", "_current_tok_idx", "_tokens", "prev_tok"
+        "node", "_current_tok_idx", "_tokens", "prev_tok", "file"
     ]
 
     state_filtered = state
@@ -128,7 +129,7 @@ def statements(state, expected_ident_gte):
         True ->
             pos_end = state["current_tok"]["pos_end"]
 
-            node = Core.Parser.Nodes.make_statements_node(_statements, pos_start, pos_end)
+            node = Core.Parser.Nodes.make_statements_node(state['file'], _statements, pos_start, pos_end)
 
             [state, node]
 
@@ -154,7 +155,7 @@ def statement(state):
         Core.Parser.Utils.tok_matchs(ct, 'KEYWORD', 'raise') ->
             [state, _expr] = state |> advance() |> expr()
 
-            node = Core.Parser.Nodes.make_raise_node(_expr, pos_start)
+            node = Core.Parser.Nodes.make_raise_node(state['file'], _expr, pos_start)
             [state, node]
         True ->
             [state, _expr] = expr(state)
@@ -208,7 +209,7 @@ def comp_expr(state):
 
             [state, c_node] = comp_expr(state)
 
-            node = Core.Parser.Nodes.make_unary_node(ct, c_node)
+            node = Core.Parser.Nodes.make_unary_node(state['file'], ct, c_node)
 
             [state, node]
         False ->
@@ -272,7 +273,7 @@ def factor(state):
 
             case state["error"]:
                 None ->
-                    node = Core.Parser.Nodes.make_unary_node(ct, _factor)
+                    node = Core.Parser.Nodes.make_unary_node(state['file'], ct, _factor)
                     [state, node]
                 _ -> [state, None]
 
@@ -286,20 +287,20 @@ def atom(state):
 
     case:
         ct_type in ['INT', 'FLOAT'] ->
-            node = Core.Parser.Nodes.make_number_node(ct)
+            node = Core.Parser.Nodes.make_number_node(state['file'], ct)
             [state |> advance(), node]
         ct_type == 'STRING' ->
-            node = Core.Parser.Nodes.make_string_node(ct)
+            node = Core.Parser.Nodes.make_string_node(state['file'], ct)
             [state |> advance(), node]
         ct_type == 'IDENTIFIER' or ct_type == 'PIN' ->
             is_pinned = ct_type == 'PIN'
 
             (state, ct) = (advance(state), Elixir.Map.get(advance(state), 'current_tok')) if is_pinned else (state, ct)
 
-            node = Core.Parser.Nodes.make_varaccess_node(ct, is_pinned)
+            node = Core.Parser.Nodes.make_varaccess_node(state['file'], ct, is_pinned)
             [state |> advance(), node]
         ct_type == 'ATOM' ->
-            node = Core.Parser.Nodes.make_atom_node(ct)
+            node = Core.Parser.Nodes.make_atom_node(state['file'], ct)
             [state |> advance(), node]
         ct_type == 'ECOM' ->
             func_as_var_expr(state)
@@ -385,7 +386,7 @@ def bin_op(state, func_a, ops, func_b):
 
             case state["error"]:
                 None ->
-                    left = Core.Parser.Nodes.make_bin_op_node(left, op_tok, right)
+                    left = Core.Parser.Nodes.make_bin_op_node(state['file'], left, op_tok, right)
                     Elixir.Map.put(state, "_node", left)
                 _ -> state
     )
@@ -428,7 +429,7 @@ def list_expr(state):
 
                     [state, node_to_unpack] = expr(advance(state))
 
-                    node = Core.Parser.Nodes.make_unpack(node_to_unpack, pos_start)
+                    node = Core.Parser.Nodes.make_unpack(state['file'], node_to_unpack, pos_start)
 
                     Elixir.Map.put(
                         state,
@@ -456,7 +457,7 @@ def list_expr(state):
         'RSQUARE' ->
             pos_end = state["current_tok"]["pos_end"]
 
-            node = Core.Parser.Nodes.make_list_node(element_nodes, pos_start, pos_end)
+            node = Core.Parser.Nodes.make_list_node(state['file'], element_nodes, pos_start, pos_end)
 
             state = advance(state)
 
@@ -525,7 +526,7 @@ def map_expr(state):
 
                     [state, node_to_spread] = expr(advance(state))
 
-                    node = Core.Parser.Nodes.make_spread(node_to_spread, pos_start)
+                    node = Core.Parser.Nodes.make_spread(state['file'], node_to_spread, pos_start)
 
                     Elixir.Map.put(state, "_pairs", [*pairs, node])
                 _ ->
@@ -547,7 +548,7 @@ def map_expr(state):
         'RCURLY' ->
             pos_end = state["current_tok"]["pos_end"]
 
-            node = Core.Parser.Nodes.make_map_node(pairs, pos_start, pos_end)
+            node = Core.Parser.Nodes.make_map_node(state['file'], pairs, pos_start, pos_end)
 
             state = state |> Elixir.Map.delete("_break") |> advance()
 
@@ -574,7 +575,7 @@ def if_expr(state, expr_for_true):
             [state, expr_for_false] = expr(state)
 
             node = Core.Parser.Nodes.make_if_node(
-                condition, expr_for_true, expr_for_false
+                state['file'], condition, expr_for_true, expr_for_false
             )
             [state, node]
         False ->
@@ -595,7 +596,7 @@ def pipe_expr(state, left_node):
 
     case state['error']:
         None ->
-            node = Core.Parser.Nodes.make_pipe_node(left_node, right_node)
+            node = Core.Parser.Nodes.make_pipe_node(state['file'], left_node, right_node)
             [state, node]
         _ ->
             state = Core.Parser.Utils.set_error(
@@ -628,7 +629,7 @@ def func_as_var_expr(state):
             state = advance(state)
 
             node = Core.Parser.Nodes.make_funcasvariable_node(
-                var_name_tok, arity, pos_start
+                state['file'], var_name_tok, arity, pos_start
             )
             [state, node]
         ['IDENTIFIER', _, "INT"] ->
@@ -748,7 +749,7 @@ def case_expr(state):
             state = Elixir.Map.delete(state, '_cases')
 
             node = Core.Parser.Nodes.make_case_node(
-                _expr, cases, pos_start, state['current_tok']['pos_start']
+                state['file'], _expr, cases, pos_start, state['current_tok']['pos_start']
             )
 
             [state, node]
@@ -858,7 +859,7 @@ def call_func_expr(state, atom):
 
             state = advance(state)
 
-            node = Core.Parser.Nodes.make_call_node(atom, arg_nodes, keywords, pos_end)
+            node = Core.Parser.Nodes.make_call_node(state['file'], atom, arg_nodes, keywords, pos_end)
 
             [state, node]
         _ ->
@@ -930,7 +931,7 @@ def tuple_expr(state, pos_start, first_expr):
 
             state = advance(state)
 
-            node = Core.Parser.Nodes.make_tuple_node(element_nodes, pos_start, pos_end)
+            node = Core.Parser.Nodes.make_tuple_node(state['file'], element_nodes, pos_start, pos_end)
 
             [state, node]
         _ ->
@@ -957,7 +958,7 @@ def pattern_match(state, left_node <- (left_node_type, _, _), pos_start):
             pos_end = state['current_tok']['pos_start']
 
             node = Core.Parser.Nodes.make_patternmatch_node(
-                left_node, right_node, pos_start, pos_end
+                state['file'], left_node, right_node, pos_start, pos_end
             )
 
             [state, node]
@@ -980,7 +981,7 @@ def static_access_expr(state, left_node):
     case state['error']:
         None ->
             pos_end = state['current_tok']['pos_end']
-            node = Core.Parser.Nodes.make_staticaccess_node(left_node, node_value, pos_end)
+            node = Core.Parser.Nodes.make_staticaccess_node(state['file'], left_node, node_value, pos_end)
 
             state = advance(state)
 
@@ -1090,6 +1091,6 @@ def try_except_expr(state):
 
     pos_end = state['current_tok']['pos_start']
 
-    node = Core.Parser.Nodes.make_try_node(try_statements, except_blocks, finally_block, pos_start, pos_end)
+    node = Core.Parser.Nodes.make_try_node(state['file'], try_statements, except_blocks, finally_block, pos_start, pos_end)
 
     [state, node]
