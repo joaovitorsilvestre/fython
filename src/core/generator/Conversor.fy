@@ -1,6 +1,5 @@
-def convert_meta(_):
-    # TODO
-    []
+def convert_meta({"start": (_coll, line, _index), "file": file}):
+    [(:line, line + 1), (:file, file)]
 
 def convert(node):
     case Elixir.Kernel.elem(node, 0):

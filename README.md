@@ -173,7 +173,7 @@ all call local calls, but call of modules like Map.get(...)
 - [ ] Support to multiline if with elif and else
 - [x] Support to tuples
 - [x] Support to pattern match in variable assign
-- [ ] Support to pattern match in function arguments
+- [x] Support to pattern match in function arguments
 - [x] Create the pos_parser
 - [x] convert the locall function calls to support call function without dot
 - [x] convert a call function of a callfunction into a local call. Its necessary to support:

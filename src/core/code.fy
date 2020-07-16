@@ -1,3 +1,42 @@
+def compile_project(project_path):
+    compile_project(project_path, "_compiled")
+
+def compile_project(project_path, destine):
+    # start elixir compiler
+    Erlang.application.start(:compiler)
+    Erlang.application.start(:elixir)
+
+    compiled_folder = [project_path, destine] |> Elixir.Enum.join('/')
+
+    # Ensure compiled folder is created
+    Elixir.File.mkdir_p!(compiled_folder)
+
+    # Copy elixir beams to folder
+    copy_elixir_beams(compiled_folder)
+
+    [project_path, "**/*.fy"]
+        |> Elixir.Enum.join('/')
+        |> Elixir.Path.wildcard()
+        |> Elixir.Enum.map(lambda file_full_path:
+            compile_project_file(project_path, file_full_path, destine)
+        )
+
+
+def copy_elixir_beams(compiled_folder):
+    elixir_path = '/usr/lib/elixir/lib/elixir/ebin'
+
+    case Elixir.File.exists?(elixir_path):
+        True -> Elixir.Enum.join([elixir_path, '*'], '/')
+            |> Elixir.Path.wildcard()
+            |> Elixir.Enum.each(lambda beam_file:
+                file_name = beam_file
+                    |> Elixir.String.split('/')
+                    |> Elixir.List.last()
+
+                Elixir.File.cp!(beam_file, Elixir.Enum.join([compiled_folder, file_name], '/'))
+            )
+        False -> :error
+
 def compile_project_file(project_root, file_full_path, destine_compiled):
     module_name = get_module_name(project_root, file_full_path)
 
@@ -9,7 +48,7 @@ def compile_project_file(project_root, file_full_path, destine_compiled):
     Elixir.IO.puts(Elixir.Enum.join(["Compiling module: ", module_name]))
 
     [state, quoted] = lexer_parse_convert_file(
-        module_name, Elixir.File.read(file_full_path) |> Elixir.Kernel.elem(1)
+        module_name, file_full_path, Elixir.File.read(file_full_path) |> Elixir.Kernel.elem(1)
     )
 
     case Elixir.Map.get(state, "error"):
@@ -39,13 +78,13 @@ def compile_project_file(project_root, file_full_path, destine_compiled):
             :error
 
 
-def lexer_parse_convert_file(module_name, text):
+def lexer_parse_convert_file(module_name, file_full_path, text):
     lexed = Core.Lexer.execute(text)
 
     state = case Elixir.Map.get(lexed, "error"):
         None ->
             tokens = Elixir.Map.get(lexed, "tokens")
-            Core.Parser.execute(tokens)
+            Core.Parser.execute(file_full_path, tokens)
         _ ->
             lexed
 
@@ -94,3 +133,9 @@ def get_module_name(project_full_path, file_full_path):
         _ -> final |> Elixir.Enum.join('.')
 
     Elixir.Enum.join(["Fython.", final])
+
+
+def parallel_map(collection, func):
+    collection
+        |> Elixir.Enum.map(lambda i: Elixir.Task.async(lambda: func(i)))
+        |> Elixir.Enum.map(lambda i: Elixir.Task.await(i, :infinity))

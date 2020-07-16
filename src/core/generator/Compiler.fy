@@ -40,11 +40,6 @@ def compile_project_to_binary(directory_path, compiled_folder, bootstrap):
     # go to compiled folder and start iex again.
     # Now, you should be able to call any module of this project in iex
 
-    [directory_path, "**/*.fy"]
-            |> Elixir.Enum.join('/')
-            |> Elixir.Path.wildcard()
-            |> Elixir.IO.inspect()
-
     files_path = [directory_path, "**/*.fy"]
         |> Elixir.Enum.join('/')
         |> Elixir.Path.wildcard()
@@ -81,7 +76,7 @@ def compile_project_to_binary(directory_path, compiled_folder, bootstrap):
             Elixir.IO.puts(Elixir.Enum.join(["Compiling module: ", module_name]))
 
             [state, quoted] = lexer_parse_convert_file(
-                module_name, Elixir.File.read(full_path) |> Elixir.Kernel.elem(1)
+                module_name, full_path, Elixir.File.read(full_path) |> Elixir.Kernel.elem(1)
             )
 
             case Elixir.Map.get(state, "error"):
@@ -108,13 +103,13 @@ def compile_project_to_binary(directory_path, compiled_folder, bootstrap):
         )
 
 
-def lexer_parse_convert_file(module_name, text):
+def lexer_parse_convert_file(module_name, files_full_path,  text):
     lexed = Core.Lexer.execute(text)
 
     state = case Elixir.Map.get(lexed, "error"):
         None ->
             tokens = Elixir.Map.get(lexed, "tokens")
-            Core.Parser.execute(tokens)
+            Core.Parser.execute(files_full_path, tokens)
         _ ->
             lexed
 
