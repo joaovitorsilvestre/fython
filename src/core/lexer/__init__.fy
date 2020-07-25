@@ -112,7 +112,8 @@ def advance(state):
     prev_position = state['position']
 
     idx = idx + 1
-    current_char = text |> Elixir.String.at(idx)
+    current_char = Elixir.String.at(text, idx)
+    next_char = Elixir.String.at(text, idx + 1)
 
     new_pos = case current_char == '\n':
         True -> position(idx, ln + 1, -1)
@@ -121,7 +122,8 @@ def advance(state):
     new_state = {
         "position": new_pos,
         "prev_position": prev_position,
-        "current_char": current_char
+        "current_char": current_char,
+        "next_char": next_char
     }
 
     Elixir.Map.merge(state, new_state)
@@ -176,6 +178,7 @@ def parse(state):
                 cc == '<' -> double_maker(state, "LT", [("=", "LTE"), ('-', 'LARROW')])
                 cc == '=' -> double_maker(state, "EQ", [("=", "EE")])
                 cc == '!' -> expected_double_maker(state, "!", "NE", "=")
+                cc == '.' -> expected_double_maker(state, ".", "RANGE", ".")
                 cc == '|' -> expected_double_maker(state, "|", "PIPE", ">")
                 True -> set_error(state, Elixir.Enum.join(["IllegalCharError: ", cc]))
         _ -> state
@@ -211,7 +214,7 @@ def expected_double_maker(st, first, type, expected):
 def make_ident(state):
     first_char = state["current_char"]
 
-    state = loop_while(state, lambda cc:
+    state = loop_while(state, lambda cc, _:
         cc != None and cc == " "
     )
 
@@ -228,7 +231,7 @@ def loop_while(st, func):
     cc = st["current_char"]
     result = Elixir.Map.get(st, "result")
 
-    valid = func(cc)
+    valid = func(cc, st['next_char'])
 
     case valid:
         True -> Elixir.Map.put(st, "result", Elixir.Enum.join([result, cc])) |> loop_while(func)
@@ -279,7 +282,7 @@ def make_do_or_atom(state):
 
             state = state
                 |> Elixir.Map.put("result",  state["current_char"])
-                |> loop_while(lambda cc:
+                |> loop_while(lambda cc, _:
                     case is_atom_of_string:
                         True -> cc != first_char
                         False -> cc != None and Elixir.String.contains?(Core.Lexer.Consts.atom_chars(False), cc)
@@ -321,7 +324,7 @@ def make_string(state):
                     "MULLINESTRING", result, pos_start
                 )
         False ->
-            state = loop_while(state, lambda cc:
+            state = loop_while(state, lambda cc, _:
                 cc != string_char_type and cc != None
             )
 
@@ -345,7 +348,7 @@ def make_string(state):
 def skip_comment(state):
     state = advance(state)
 
-    state = loop_while(state, lambda cc:
+    state = loop_while(state, lambda cc, _:
         cc != '\n' and cc != None
     )
     Elixir.Map.delete(state, "result")
@@ -354,14 +357,16 @@ def make_number(state):
     pos_start = state["position"]
     first_number = state["current_char"]
 
-    state = loop_while(state, lambda cc:
-        cc != None and Elixir.String.contains?(Elixir.Enum.join([Core.Lexer.Consts.digists(), '._']), cc)
+    state = loop_while(state, lambda cc, nc:
+        valid_num_char = case cc:
+            None -> False
+            _ -> Elixir.String.contains?(Elixir.Enum.join([Core.Lexer.Consts.digists(), '._']), cc)
+
+        valid_num_char and cc != "." and nc != "."
     )
     result = Elixir.Enum.join([first_number, Elixir.Map.get(state, "result")])
 
     state = case:
-        (Elixir.String.split(result, ".") |> Elixir.Enum.count()) > 2 ->
-            set_error(state, Elixir.Enum.join(["IllegalCharError: ."]))
         Elixir.String.contains?(result, '.') ->
             state
                 |> Core.Lexer.Tokens.add_token(
@@ -379,8 +384,8 @@ def make_identifier(state):
     pos_start = state["position"]
     first_char = state["current_char"]
 
-    state = loop_while(state, lambda cc:
-        cc != None and Elixir.String.contains?(Core.Lexer.Consts.identifier_chars(False), cc)
+    state = loop_while(state, lambda cc, nc:
+        cc != None and Elixir.String.contains?(Core.Lexer.Consts.identifier_chars(False), cc) and not (cc == "." and nc == ".")
     )
 
     result = Elixir.Enum.join([first_char, Elixir.Map.get(state, "result")])

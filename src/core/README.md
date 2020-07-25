@@ -213,7 +213,6 @@ As the `spread` operator, it is not allowed inside of patterns.
 (:unpack, `meta`, [`node`])
 
 
-
 <hr>
 
 #### Spread
@@ -223,3 +222,9 @@ If the node is not a map, it will break in runtime.
 As the `unpack` operator, it is not allowed inside of patterns.
 
 (:spread, `meta`, [`node`])
+
+#### Range
+1..10
+10..1
+
+(:range, `meta`, [`node`, `node`])

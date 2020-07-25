@@ -197,6 +197,8 @@ def expr(state):
             if_expr(state, node)
         ct['type'] == 'PIPE' ->
             pipe_expr(state, node)
+        ct['type'] == 'RANGE' ->
+            range_expr(state, node)
         True -> [state, node]
 
 
@@ -1092,5 +1094,19 @@ def try_except_expr(state):
     pos_end = state['current_tok']['pos_start']
 
     node = Core.Parser.Nodes.make_try_node(state['file'], try_statements, except_blocks, finally_block, pos_start, pos_end)
+
+    [state, node]
+
+def range_expr(state, left_node <- (_, {"start": pos_start}, _)):
+    [state, right_node] = expr(advance(state))
+    (_, {"end": pos_end}, _) = right_node
+
+    node = Core.Parser.Nodes.make_range_node(
+        state['file'],
+        left_node,
+        right_node,
+        pos_start,
+        pos_end
+    )
 
     [state, node]

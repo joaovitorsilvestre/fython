@@ -248,3 +248,13 @@ def new_resolver((:unpack, meta, [node_to_unpack]), var_names_avaliable):
     (
         :unpack, meta, [new_resolver(node_to_unpack, var_names_avaliable)]
     )
+
+def new_resolver(node <- (:range, meta, [left_node, right_node]), var_names_avaliable):
+    (
+        :range,
+        meta,
+        [
+            new_resolver(left_node, var_names_avaliable),
+            new_resolver(right_node, var_names_avaliable),
+        ]
+    )

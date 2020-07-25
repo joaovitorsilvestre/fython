@@ -21,6 +21,7 @@ expr                : IDENTIFIER EQ expr
                     : if-expr
                     : pipe-expr
                     : static-access-expr
+                    : range
 
 pattern-match       : IDENTIFIER EQ expr
                     : map-expr EQ expr
@@ -61,9 +62,9 @@ atom                : INT|FLOAT|IDENTIFIER|STRING|ATOM|PIN IDENTIFIER
                     : try-expect-expr
                     : func-as-var-expr
 
-list-expr           : LSQUARE (expr (COMMA expr)*)? RSQUARE
+list-expr           : LSQUARE (expr ((COMMA expr)|(MUL expr))*)? RSQUARE
 
-map-expr            : LCURLY ((expr DO expr) (COMMA (expr DO expr))*)? RCURLY
+map-expr            : LCURLY (((expr DO expr)|(POW expr)) (COMMA ((expr DO expr)|(POW expr)))*)? RCURLY
 
 tuple-expr          : LPAREN expr? COMMA (expr COMMA)* RPAREN
 
@@ -90,3 +91,5 @@ func-as-var-expr    : ECOM DIV INT
 try-expect-expr     : KEYWORD:try DO NEWLINE statements
                     (KEYWORD:except expr? KEYWORD:as IDENTIFIER DO NEWLINE)+
                     (KEYWORD:finally DO NEWLINE statements)?
+
+range               : INT RANGE INT

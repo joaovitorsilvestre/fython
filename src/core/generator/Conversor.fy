@@ -24,6 +24,7 @@ def convert(node):
         :case           -> convert_case(node)
         :call           -> convert_call(node)
         :try            -> convert_try(node)
+        :range          -> convert_range_node(node)
 
 def convert_number((:number, _, [value])):
     value
@@ -374,3 +375,14 @@ def convert_try((:try, meta, [try_block, exceptions, finally_block])):
     rescue = (:rescue, each_rescue)
 
     (:try, convert_meta(meta), [[do, rescue]])
+
+def convert_range_node((:range, meta, [left_node, right_node])):
+    (
+        (
+            :".",
+            convert_meta(meta),
+            [(:__aliases__, [(:alias, False)], [Elixir.String.to_atom("Elixir.Range")]), :new]
+        ),
+        convert_meta(meta),
+        [convert(left_node), convert(right_node)]
+    )

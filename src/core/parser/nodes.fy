@@ -25,6 +25,13 @@ def make_number_node(file, tok):
         [tok['value']]
     )
 
+def make_range_node(file, left_node, right_node, pos_start, pos_end):
+    (
+        :range,
+        gen_meta(file, pos_start, pos_end),
+        [left_node, right_node]
+    )
+
 def make_string_node(file, tok):
     (
         :string,
