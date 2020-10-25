@@ -52,4 +52,4 @@ bootstrap:
 	for FILE_PATH in $(ALL_FILES_PATH); do ./functions.sh exec_in_erl ${SRC_DIR} $${FILE_PATH} ${DESTINE_PATH} ${PRE_COMPILER}; done
 
 compress-to-release:
-	cd $(FOLDER_PATH)/ && tar -zcvf $(ROOT_DIR)/_compiled.tgz * && cd -
+	cd $(FOLDER_PATH)/ && tar -zcvf $(ROOT_DIR)/_compiled.tar.gz * && cd -
