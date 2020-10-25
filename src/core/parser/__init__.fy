@@ -1,4 +1,4 @@
-def execute(file, tokens):
+def execute(file, tokens, env):
     state = {
         "file": file,
         "error": None,
@@ -11,7 +11,7 @@ def execute(file, tokens):
         "_tokens": tokens |> Elixir.Enum.filter(lambda i: i["type"] != 'NEWLINE')
     }
 
-    state |> advance() |> parse() |> Core.Parser.Pos.execute()
+    state |> advance() |> parse() |> Core.Parser.Pos.execute(env)
 
 def advance(state):
     # before anything, lets check that the states only contains expected keys

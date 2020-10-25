@@ -357,18 +357,19 @@ def convert_try((:try, meta, [try_block, exceptions, finally_block])):
                     (
                         :"->",
                         convert_meta(meta),
-                        [[
-                            (
-                                :in,
-                                convert_meta(meta),
-                                :Elixir
-                            ),
-                            (
-                                :'__aliases__',
-                                [(:alias, False)],
-                                [Elixir.String.to_atom(except_identifier)]
-                            )
-                        ]]
+                        [
+                            [
+                                (
+                                    :in,
+                                    convert_meta(meta),
+                                    [
+                                        (Elixir.String.to_atom(alias), convert_meta(meta), :Elixir),
+                                        (:'__aliases__', [(:alias, False)], [Elixir.String.to_atom(except_identifier)])
+                                    ]
+                                )
+                            ],
+                            convert(block)
+                        ]
                     )
     )
 

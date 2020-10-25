@@ -40,7 +40,7 @@ def copy_elixir_beams(compiled_folder):
 def compile_project_file(project_root, file_full_path, destine_compiled):
     module_name = get_module_name(project_root, file_full_path)
 
-    destine_compiled = Elixir.Enum.join([project_root, "/", destine_compiled])
+    destine_compiled = Elixir.Enum.join([destine_compiled])
 
     # Ensure compiled folder is created
     Elixir.File.mkdir_p!(destine_compiled)
@@ -77,14 +77,16 @@ def compile_project_file(project_root, file_full_path, destine_compiled):
             Core.Errors.Utils.print_error(module_name, state, text)
             :error
 
+def lexer_parse_convert_file(module_name, files_full_path,  text):
+    lexer_parse_convert_file(module_name, files_full_path,  text, [])
 
-def lexer_parse_convert_file(module_name, file_full_path, text):
+def lexer_parse_convert_file(module_name, files_full_path,  text, env):
     lexed = Core.Lexer.execute(text)
 
     state = case Elixir.Map.get(lexed, "error"):
         None ->
             tokens = Elixir.Map.get(lexed, "tokens")
-            Core.Parser.execute(file_full_path, tokens)
+            Core.Parser.execute(files_full_path, tokens, env)
         _ ->
             lexed
 

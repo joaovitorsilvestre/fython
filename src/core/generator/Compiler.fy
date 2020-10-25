@@ -104,12 +104,15 @@ def compile_project_to_binary(directory_path, compiled_folder, bootstrap):
 
 
 def lexer_parse_convert_file(module_name, files_full_path,  text):
+    lexer_parse_convert_file(module_name, files_full_path,  text, [])
+
+def lexer_parse_convert_file(module_name, files_full_path,  text, env):
     lexed = Core.Lexer.execute(text)
 
     state = case Elixir.Map.get(lexed, "error"):
         None ->
             tokens = Elixir.Map.get(lexed, "tokens")
-            Core.Parser.execute(files_full_path, tokens)
+            Core.Parser.execute(files_full_path, tokens, env)
         _ ->
             lexed
 

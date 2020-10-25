@@ -41,7 +41,6 @@ bootstrap:
 	echo "Bootstraping"
 	echo "pre compiler: "$(PRE_COMPILER)
 	echo "destine folder: "$(DESTINE_PATH)
-	echo ""
 
 	sudo rm -rf $(DESTINE_PATH) || 0
 	sudo mkdir $(DESTINE_PATH)
@@ -52,8 +51,5 @@ bootstrap:
 	# compile all the modules idependitly
 	for FILE_PATH in $(ALL_FILES_PATH); do ./functions.sh exec_in_erl ${SRC_DIR} $${FILE_PATH} ${DESTINE_PATH} ${PRE_COMPILER}; done
 
-	$(eval TEMP_POG := $(ROOT_DIR)/src/opt/fython)
-	sudo mv $(TEMP_POG)/* $(DESTINE_PATH)
-	sudo rm -rf $(ROOT_DIR)/src/opt
-
-
+compress-to-release:
+	cd $(FOLDER_PATH)/ && tar -zcvf $(ROOT_DIR)/_compiled.tgz * && cd -

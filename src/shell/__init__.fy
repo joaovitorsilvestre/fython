@@ -1,7 +1,7 @@
 def start():
-    start(0, {"text_per_line": {}})
+    start(0, {"text_per_line": {}, 'last_output': None}, [])
 
-def start(count, state):
+def start(count, state, env):
     # to make space between lines
     case count:
         0 -> None
@@ -13,9 +13,12 @@ def start(count, state):
     user_input = Elixir.IO.gets(head) |> Elixir.Kernel.to_string()
 
     case Elixir.String.trim(user_input):
-        "" -> start(count, state)
+        "" -> start(count, state, env)
         _ ->
-            state = case user_input |> Elixir.String.at(0):
+            (state, new_env) = case user_input |> Elixir.String.at(0):
+                "_" ->
+                    Elixir.IO.inspect(state['last_output'])
+                    (state, env)
                 "%" ->
                     line_number = Elixir.String.replace_prefix(user_input, "%", "")
                         |> Elixir.String.replace("\n", "")
@@ -24,22 +27,27 @@ def start(count, state):
                     text = state |> Elixir.Map.get("text_per_line") |> Elixir.Map.get(line_number)
                     case text:
                         None -> raise "Line code not found"
-                        _ -> execute(text)
-                    state
+                        _ ->
+                            (result, new_env) = execute(text, env)
+
+                            state = state |> Elixir.Map.merge({"last_output": result})
+
+                            (state, new_env)
                 _ ->
-                    execute(user_input)
+                    (result, new_env) = execute(user_input, env)
                     text_per_line = Elixir.Map.get(state, "text_per_line")
 
-                    state
+                    state = state
                         |> Elixir.Map.merge({
+                            "last_output": result,
                             "text_per_line": Elixir.Map.merge(text_per_line, {count: user_input})
                         })
 
-            start(count + 1, state)
+                    (state, new_env)
 
-def execute(text):
-    result = Core.eval_string('<stdin>', text)
+            start(count + 1, state, new_env)
 
-    case result:
-        None -> None
-        _ -> Elixir.IO.inspect(result)
+def execute(text, env):
+    (result, new_env) = Core.eval_string('<stdin>', text, env)
+    Elixir.IO.inspect(result)
+    (result, new_env)
