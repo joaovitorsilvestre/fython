@@ -24,7 +24,7 @@ compile-source:
 	echo "Destine path: " $(DESTINE_PATH)
 
 	$(eval OUTPUT_ZIP_PATH := $(TEMP_FILES)/fython_$(THIS_GIT_VERSION)_compiled.tar.gz)
-	#wget https://github.com/joaovitorsilvestre/fython/releases/download/$(THIS_GIT_VERSION)/_compiled.tar.gz -O $(OUTPUT_ZIP_PATH)
+	wget https://github.com/joaovitorsilvestre/fython/releases/download/$(THIS_GIT_VERSION)/_compiled.tar.gz -O $(OUTPUT_ZIP_PATH)
 
 	$(eval COMPILED_OUTPUT_PATH := $(TEMP_FILES)/fython_$(THIS_GIT_VERSION)_compiled_local)
 	sudo mkdir -p $(COMPILED_OUTPUT_PATH) 2>/dev/null
