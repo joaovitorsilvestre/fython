@@ -170,7 +170,6 @@ all call local calls, but call of modules like Map.get(...)
 - [x] Define atoms using strings: `:"oii"`. Must work with single and double quotes.
 - [x] Support to range syntax
 - [x] Support to try catch
-- [ ] Support to multiline if with elif and else
 - [x] Support to tuples
 - [x] Support to pattern match in variable assign
 - [x] Support to pattern match in function arguments
@@ -186,7 +185,7 @@ a()()
 - [ ] PosParser -> Add logic to check imports, undefined vars, etc.
 - [x] PosParser -> support for the pin variable in pattern matching: `e = "a""; {^e: 1} = {"a": 1}`
 - [x] Support to dict access: ```a["key"]["nesteddict_key""]```
-- [ ] `and` and `or` operators must work with multiline
+- [x] `and` and `or` operators must work with multiline
 - [ ] `<-` Operator in function params must work inside nested pattern. like:
 ```
 # we want to match the third element of this tuple and still get the entire tuple in the var full
@@ -199,10 +198,5 @@ def convert((:var, _, full <- [False, value])):
 - [ ] use python style keyword params to make elixir optional arguments like // ops
 - [ ] list comprehensions
 - [ ] dict/map comprehensions
-- [ ] support to put a variable as a key in a map and, if theres no key, the key is the variable name and the value is te variable. It must work just like JS ES6. Eg: 
-```
-a = 5
-{"a": a} == {a}
-```
 - [ ] Support to `not in` 
 - [x] Create the error visualizer.

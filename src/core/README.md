@@ -96,6 +96,8 @@ First element means if the variable is pinned
 
 (:binop, `meta`, [`node`, :or, `node`])
 
+(:binop, `meta`, [`node`, :in, `node`])
+
 <hr>
 
 #### Def
