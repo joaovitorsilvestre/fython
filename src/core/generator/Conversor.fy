@@ -343,8 +343,23 @@ def convert_try((:try, meta, [try_block, exceptions, finally_block])):
         lambda i :
             (except_identifier, alias, block) = i
 
-            case alias:
-                None ->
+            is_alias_to_exception = Elixir.Kernel.is_bitstring(except_identifier) and Elixir.String.at(except_identifier, 0) == Elixir.String.upcase(Elixir.String.at(except_identifier, 0))
+
+            case (is_alias_to_exception, alias):
+                (False, None) ->
+                    # Case of:
+                    # > except error:
+                    (
+                        :"->",
+                        convert_meta(meta),
+                        [
+                            [(Elixir.String.to_atom(except_identifier), convert_meta(meta), :Elixir)],
+                            convert(block)
+                        ]
+                    )
+                (False, None) ->
+                    # Case of:
+                    # > except ArithmeticError:
                     (
                         :"->",
                         convert_meta(meta),
@@ -353,7 +368,9 @@ def convert_try((:try, meta, [try_block, exceptions, finally_block])):
                             convert(block)
                         ]
                     )
-                _ ->
+                (True, _) ->
+                    # Case of:
+                    # > except ArithmeticError as error:
                     (
                         :"->",
                         convert_meta(meta),
