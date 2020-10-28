@@ -222,3 +222,20 @@ def make_spread(file, node_to_spread <- (_, {"end": pos_end}, _), pos_start):
         gen_meta(file, pos_start, pos_end),
         [node_to_spread]
     )
+
+def make_protocol_node(file, var_name_tok, functions, pos_start, pos_end):
+    (
+        :protocol,
+        gen_meta(file, pos_start, pos_end),
+        functions
+    )
+
+def make_func_protocol_node(file, var_name_tok, arg_nodes, docstring, pos_start, pos_end):
+    (
+        :protocol_function,
+        Elixir.Map.merge(
+            gen_meta(file, pos_start, pos_end),
+            {"docstring": docstring}
+        ),
+        [var_name_tok['value'], arg_nodes]
+    )

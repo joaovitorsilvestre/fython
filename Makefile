@@ -49,7 +49,9 @@ bootstrap:
 	sudo cp -r $(ELIXIR_PATH)/* $(DESTINE_PATH)
 
 	# compile all the modules idependitly
-	for FILE_PATH in $(ALL_FILES_PATH); do ./functions.sh exec_in_erl ${SRC_DIR} $${FILE_PATH} ${DESTINE_PATH} ${PRE_COMPILER}; done
+	for FILE_PATH in $(ALL_FILES_PATH); do ./functions.sh exec_in_erl ${SRC_DIR} $${FILE_PATH} ${DESTINE_PATH} ${PRE_COMPILER} & done && wait
+
+	sudo chmod -R 777 $(DESTINE_PATH)
 
 compress-to-release:
 	cd $(FOLDER_PATH)/ && tar -zcvf $(ROOT_DIR)/_compiled.tar.gz * && cd -

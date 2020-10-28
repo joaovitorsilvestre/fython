@@ -2,6 +2,9 @@ def advance(state):
     Core.Parser.advance(state)
 
 def func_def_expr(state):
+    func_def_expr(state, False)
+
+def func_def_expr(state, is_impl_function):
     state = case state["current_tok"]['ident'] != 0:
         True -> Core.Parser.Utils.set_error(
             state,
@@ -220,3 +223,77 @@ def resolve_one_param(state):
                 state["current_tok"]["pos_end"]
             )
             (state, node)
+
+
+def protocol_function(state):
+    pos_start = state['current_tok']['pos_start']
+    def_token_ln = pos_start['ln']
+
+    state = advance(state)
+
+    state = case state["current_tok"]['type'] != 'IDENTIFIER':
+        True -> Core.Parser.Utils.set_error(
+            state,
+            "Expected a identifier after 'def'.",
+            state["current_tok"]["pos_start"],
+            state["current_tok"]["pos_end"]
+        )
+        False -> state
+
+    var_name_tok = state['current_tok']
+
+    state = advance(state)
+
+    state = case (state["current_tok"]['type']) != 'LPAREN':
+        True -> Core.Parser.Utils.set_error(
+            state,
+            "Expected '('",
+            state["current_tok"]["pos_start"],
+            state["current_tok"]["pos_end"]
+        )
+        False -> state
+
+    state = advance(state)
+
+    [state, arg_nodes] = resolve_params(state, "RPAREN")
+
+    state = advance(state)
+
+    state = case (state['current_tok']['type']) == 'DO':
+        True -> advance(state)
+        False -> Core.Parser.Utils.set_error(
+            state,
+            "Expected ':'",
+            state["current_tok"]["pos_start"],
+            state["current_tok"]["pos_end"]
+        )
+
+    state = case (state['current_tok']['pos_start']['ln']) > def_token_ln:
+        True -> state
+        False -> Core.Parser.Utils.set_error(
+            state,
+            "Expected a new line after ':'",
+            state["current_tok"]["pos_start"],
+            state["current_tok"]["pos_end"]
+        )
+
+    # Here we check if a doc string exists
+    # but we only consider the MULLINESTRING Token as a docstring
+    # if there's any other statements in the function
+    # otherwise this token is just the return of the function
+
+    ct_type = state["current_tok"]['type']
+
+    (state, docstring) = case ct_type == 'MULLINESTRING' and advance(state)['current_tok']['ident'] > def_token_ln:
+        True -> (advance(state), state["current_tok"])
+        False -> (state, None)
+
+    pos_end = state['current_tok']['pos_end']
+
+    state = advance(state)
+
+    node = Core.Parser.Nodes.make_func_protocol_node(
+        state['file'], var_name_tok, arg_nodes, docstring, pos_start, pos_end
+    )
+
+    [state, node]

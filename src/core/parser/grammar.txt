@@ -8,6 +8,7 @@ statements          : NEWLINE* IDENT* statement (NEWLINE+ statement) NEWLINE*
 
 statement           : import-expr
                     : func-def
+                    : protocol
                     : KEYWORD:raise expr
                     : expr
 
@@ -80,6 +81,13 @@ func-arg-matchable  : INT|FLOAT|IDENTIFIER|STRING|ATOM|tuple-expr|list-expr|map-
 
 func-def            : KEYWORD:def IDENTIFIER
                     LPAREN (func-arg-matchable (COMMA func-arg-matchable)*)? RPAREN DO
+                    (NEWLINE statements)+
+
+protocol            : KEYWORD:protocol IDENTIFIER DO
+                    (NEWLINE statements)+
+
+impl               : KEYWORD:impl IDENTIFIER DO
+                    LPAREN IDENTIFIER RPAREN
                     (NEWLINE statements)+
 
 lambda-def          : KEYWORD:lambda (func-arg-matchable (COMMA func-arg-matchable)*)?

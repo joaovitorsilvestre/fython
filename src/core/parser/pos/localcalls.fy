@@ -258,3 +258,17 @@ def new_resolver(node <- (:range, meta, [left_node, right_node]), var_names_aval
             new_resolver(right_node, var_names_avaliable),
         ]
     )
+
+def new_resolver(node <- (:protocol, meta, functions), var_names_avaliable):
+    (
+        :protocol,
+        meta,
+        Elixir.Enum.map(functions, lambda x: new_resolver(x, var_names_avaliable))
+    )
+
+def new_resolver(node <- (:protocol_function, meta, [var_tok, arg_nodes]), var_names_avaliable):
+    (
+        :protocol_function,
+        meta,
+        [var_tok, arg_nodes]
+    )
