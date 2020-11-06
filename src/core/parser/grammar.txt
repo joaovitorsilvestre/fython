@@ -9,6 +9,7 @@ statements          : NEWLINE* IDENT* statement (NEWLINE+ statement) NEWLINE*
 statement           : import-expr
                     : func-def
                     : protocol
+                    : impl
                     : KEYWORD:raise expr
                     : expr
 
@@ -84,6 +85,9 @@ func-def            : KEYWORD:def IDENTIFIER
                     (NEWLINE statements)+
 
 protocol            : KEYWORD:protocol IDENTIFIER DO
+                    (NEWLINE statements)+
+
+impl                : KEYWORD:protocol IDENTIFIER LPAREN IDENTIFIER RPAREN DO
                     (NEWLINE statements)+
 
 impl               : KEYWORD:impl IDENTIFIER DO

@@ -25,6 +25,9 @@ def convert(node):
         :call           -> convert_call(node)
         :try            -> convert_try(node)
         :range          -> convert_range_node(node)
+        :impl           -> convert_impl(node)
+        :protocol       -> convert_protocol(node)
+        :protocol_function -> convert_protocol_function(node)
 
 def convert_number((:number, _, [value])):
     value
@@ -404,3 +407,46 @@ def convert_range_node((:range, meta, [left_node, right_node])):
         convert_meta(meta),
         [convert(left_node), convert(right_node)]
     )
+
+def convert_protocol((:protocol, meta, [protocol_name, functions])):
+    protocol_name = Elixir.String.to_atom(protocol_name)
+
+    (
+        :defprotocol,
+        convert_meta(meta),
+        [
+            (:'__aliases__', [(:alias, False)], [:Fython, protocol_name]),
+            Elixir.Enum.map(functions, &convert/1)
+        ]
+    )
+
+def convert_protocol_function((:protocol_function, meta, [fn_name, args])):
+    (
+        :do,
+        (
+            :def,
+            convert_meta(meta),
+            [
+                (
+                    Elixir.String.to_atom(fn_name),
+                    convert_meta(meta),
+                    Elixir.Enum.map(args, &convert/1)
+                )
+            ]
+        )
+    )
+
+def convert_impl((:impl, meta, [protocol_name, type, functions])):
+    protocol_name = Elixir.String.to_atom(protocol_name)
+
+    type = Elixir.String.to_atom(type)
+    (
+        :defimpl,
+        convert_meta(meta),
+        [
+            (:'__aliases__', [(:alias, False)], [:Fython, protocol_name]),
+            [(:for, (:'__aliases__', [(:alias, False)], [:Map]))],
+            Elixir.Enum.map(functions, lambda x: (:do, convert(x)))
+        ]
+    )
+

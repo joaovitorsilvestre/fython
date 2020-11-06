@@ -227,7 +227,7 @@ def make_protocol_node(file, var_name_tok, functions, pos_start, pos_end):
     (
         :protocol,
         gen_meta(file, pos_start, pos_end),
-        functions
+        [var_name_tok['value'], functions]
     )
 
 def make_func_protocol_node(file, var_name_tok, arg_nodes, docstring, pos_start, pos_end):
@@ -238,4 +238,11 @@ def make_func_protocol_node(file, var_name_tok, arg_nodes, docstring, pos_start,
             {"docstring": docstring}
         ),
         [var_name_tok['value'], arg_nodes]
+    )
+
+def make_impl_node(file, protocol_name, type, functions, pos_start, pos_end):
+    (
+        :impl,
+        gen_meta(file, pos_start, pos_end),
+        [protocol_name, type, functions]
     )

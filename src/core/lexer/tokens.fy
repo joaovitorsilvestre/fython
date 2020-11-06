@@ -40,7 +40,7 @@ def valid_token_type?(type):
 
 def keywords():
     [
-        'import', 'as', 'and', 'or', 'not', 'if', 'else', 'protocol',
+        'import', 'as', 'and', 'or', 'not', 'if', 'else', 'protocol', 'impl',
         'def', 'lambda', 'case', 'in', 'raise', 'try', 'except', 'finally', 'as'
     ]
 

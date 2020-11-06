@@ -1,18 +1,19 @@
 def advance(state):
     Core.Parser.advance(state)
 
-def func_def_expr(state):
-    func_def_expr(state, False)
-
 def func_def_expr(state, is_impl_function):
-    state = case state["current_tok"]['ident'] != 0:
-        True -> Core.Parser.Utils.set_error(
-            state,
-            "'def' is only allowed in modules scope. TO define functions inside functions use 'lambda' instead.",
-            state["current_tok"]["pos_start"],
-            state["current_tok"]["pos_end"]
-        )
-        False -> state
+    valid_def = state["current_tok"]['ident'] == 0 and is_impl_function == False
+    valid_def_impl = state["current_tok"]['ident'] == 4 and is_impl_function
+
+    state = case:
+        not valid_def and not valid_def_impl->
+            Core.Parser.Utils.set_error(
+                state,
+                "'def' is only allowed in modules scope, protocols and impl. To define functions inside functions use 'lambda' instead.",
+                state["current_tok"]["pos_start"],
+                state["current_tok"]["pos_end"]
+            )
+        True -> state
 
     pos_start = state['current_tok']['pos_start']
     def_token_ln = pos_start['ln']
@@ -44,6 +45,15 @@ def func_def_expr(state, is_impl_function):
     state = advance(state)
 
     [state, arg_nodes] = resolve_params(state, "RPAREN")
+
+    state = case Elixir.Enum.count(arg_nodes) == 0 and is_impl_function:
+        True -> Core.Parser.Utils.set_error(
+            state,
+            "impl functions expect at least one argument",
+            state["current_tok"]["pos_start"],
+            state["current_tok"]["pos_end"]
+        )
+        False -> state
 
     state = advance(state)
 
@@ -256,6 +266,15 @@ def protocol_function(state):
     state = advance(state)
 
     [state, arg_nodes] = resolve_params(state, "RPAREN")
+
+    state = case Elixir.Enum.count(arg_nodes) == 0:
+        True -> Core.Parser.Utils.set_error(
+            state,
+            "Protocol functions expect at least one argument",
+            state["current_tok"]["pos_start"],
+            state["current_tok"]["pos_end"]
+        )
+        False -> state
 
     state = advance(state)
 

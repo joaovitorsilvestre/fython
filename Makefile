@@ -13,8 +13,14 @@ ROOT_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 # fython src folder
 SRC_DIR:="$(ROOT_DIR)/src"
 
-install-from-source:
+
+compile-and-install:
 	$(MAKE) compile-source DESTINE_PATH=$(INSTALATION_PATH)
+
+install-pre-built:
+	$(eval OUTPUT_ZIP_PATH := $(TEMP_FILES)/fython_$(THIS_GIT_VERSION)_compiled.tar.gz)
+	wget https://github.com/joaovitorsilvestre/fython/releases/download/$(THIS_GIT_VERSION)/_compiled.tar.gz -O $(OUTPUT_ZIP_PATH)
+	sudo tar -xf $(OUTPUT_ZIP_PATH) -C $(INSTALATION_PATH)
 
 shell:
 	erl -pa $(INSTALATION_PATH) -s 'Fython.Shell' start -noshell
