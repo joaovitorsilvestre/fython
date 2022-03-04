@@ -1,4 +1,4 @@
-FROM ubuntu:22.04
+FROM ubuntu:18.04
 
 ARG ERLANG_VERSION='24.2'
 ARG ELIXIR_VERSION='1.13.3'
@@ -33,7 +33,7 @@ RUN apt install -y libssl-dev
 WORKDIR /tmp/fython-runtimer/erlang/otp_src_$ERLANG_VERSION
 ENV ERL_TOP=/tmp/fython-runtimer/erlang/otp_src_$ERLANG_VERSION
 ENV LANG=C
-# TODO talvez de para só copiar parte da pasta do erlang para fazer funcioanr
+# TODO talvez dê para só copiar parte da pasta do erlang para fazer funcioanr
 # TODO assim reduzimos o tamanho
 
 RUN ./configure --prefix=/tmp/fython-runtimer/erlang && make && make install
@@ -48,5 +48,17 @@ RUN mv /tmp/fython-runtimer/elixir /tmp/elixir-full
 RUN cp -r /tmp/elixir-full/elixir-1.13.3/lib/elixir/ebin /tmp/fython-runtimer/elixir
 
 ## compressing fython ambiente
-RUN tar -czf /fython-runtimer.tar.gz /tmp/fython-runtimer
+RUN cd /tmp && \
+    tar -czf fython-runtimer.tar.gz fython-runtimer && \
+    mv fython-runtimer.tar.gz /fython-runtimer.tar.gz
 
+## install go
+RUN apt install -y golang-go
+
+COPY main.go main.go
+COPY fython.go fython.go
+COPY go.mod go.mod
+
+RUN go run main.go /fython-runtimer.tar.gz fython_com_ambiente.go
+RUN CGO_ENABLED=0 go build -i -o fython fython_com_ambiente.go && \
+    mv fython /fython
