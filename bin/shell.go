@@ -2,7 +2,7 @@ package main;
 
 import (
     "fmt"
-    "os"
+//     "os"
     "os/exec"
 )
 
@@ -22,10 +22,10 @@ func main() {
     cmd := exec.Command(erl_path, "-pa", compiled, "-pa", elixir_path, "-s", "Fython.Shell", "start", "-noshell")
 
     // Sets standard output to cmd.stdout writer
-    cmd.Stdout = os.Stdout
-
-    // Sets standard input to cmd.stdin reader
-    cmd.Stdin = os.Stdin
+//     cmd.Stdout = os.Stdout
+//
+//     // Sets standard input to cmd.stdin reader
+//     cmd.Stdin = os.Stdin
 
     err := cmd.Run()
     check(err)
