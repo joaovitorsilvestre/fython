@@ -1,9 +1,10 @@
 FROM elixir:1.14.1 as base
 
+# Arguments you can modify
 ARG DESTINE_PATH="/compiled"
-ENV DESTINE_PATH=$DESTINE_PATH
 ARG VERSION_TO_USE_AS_BOOTSTRAPER="v0.5.2"
 
+ENV DESTINE_PATH=$DESTINE_PATH
 ENV PATH_FYTHON_TO_USE_AS_BOOTSTRAPER="/fython_$VERSION_TO_USE_AS_BOOTSTRAPER"
 ENV ELIXIR_BEAMS_PATH="/usr/local/lib/elixir/lib/elixir/ebin/"
 ENV IEX_BEAMS_PATH="/usr/local/lib/elixir/lib/iex/ebin/"
@@ -33,5 +34,18 @@ FROM base as elixir_shell
 # TODO
 # CMD erl -pa $IEX_BEAMS_PATH -noshell -user Elixir.IEx.CLI +iex
 
-FROM base as fython_shell
+FROM base as shell
 CMD erl -pa $DESTINE_PATH -s 'Fython.Shell' start -noshell
+
+FROM base as compile_project
+ENV PROJET_FOLDER=/project
+# TODO só está funcionando quando está dentro da pasta :O arrumar e tomar cuidado
+# TODO se não fizer isso, a pasta _compiled fica vázia por algum motivo
+CMD cd $PROJET_FOLDER \
+    && erl -pa $DESTINE_PATH -noshell -eval "'Fython.Core.Code':compile_project(<<"'"'"$PROJET_FOLDER"'"'">>)." -run init stop
+
+FROM base as tests
+COPY tests tests
+CMD cd /tests \
+    && erl -pa $DESTINE_PATH -noshell -eval "'Fython.Core.Code':compile_project(<<"'"'"/tests"'"'">>)." -run init stop \
+    && erl -pa /tests/_compiled -noshell -eval "'Fython.Math':run_tests()." -run init stop

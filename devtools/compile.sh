@@ -11,6 +11,7 @@ ELIXIR_BEAMS_PATH_COMP=$4
 ALL_FILES_PATH_COMP=$(find $SRC_DIR_COMP -name '*.fy')
 
 echo "Destine folder: $DESTINE_PATH_COMP"
+rm -rf $DESTINE_PATH_COMP
 mkdir $DESTINE_PATH_COMP
 
 cd $ELIXIR_BEAMS_PATH_COMP && cp -r . "$DESTINE_PATH_COMP" && cd /

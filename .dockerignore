@@ -1,2 +1,4 @@
-**/src/_compiled*/
+**/_compiled/
 /bin/
+/Makefile
+**/erl_crash.dump
