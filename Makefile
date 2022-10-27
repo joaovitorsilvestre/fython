@@ -53,3 +53,6 @@ bootstrap:
 
 compress-to-release:
 	cd $(FOLDER_PATH)/ && tar -zcvf $(ROOT_DIR)/_compiled.tar.gz * && cd -
+
+bootstrap-with-docker:
+	docker build -f devtools/Dockerfile -t fython .
