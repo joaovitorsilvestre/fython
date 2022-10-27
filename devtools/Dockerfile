@@ -48,4 +48,4 @@ FROM base as tests
 COPY tests tests
 CMD cd /tests \
     && erl -pa $DESTINE_PATH -noshell -eval "'Fython.Core.Code':compile_project(<<"'"'"/tests"'"'">>)." -run init stop \
-    && erl -pa /tests/_compiled -pa $DESTINE_PATH -noshell -eval "'Fython.Math':run_tests()." -run init stop
+    && erl -pa /tests/_compiled -pa $DESTINE_PATH -noshell -eval "'Fython.Math_tests':run_tests()." -run init stop
