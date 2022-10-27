@@ -6,6 +6,7 @@ ARG VERSION_TO_USE_AS_BOOTSTRAPER="v0.5.2"
 
 ENV PATH_FYTHON_TO_USE_AS_BOOTSTRAPER="/fython_$VERSION_TO_USE_AS_BOOTSTRAPER"
 ENV ELIXIR_BEAMS_PATH="/usr/local/lib/elixir/lib/elixir/ebin/"
+ENV IEX_BEAMS_PATH="/usr/local/lib/elixir/lib/iex/ebin/"
 
 # geting older version to use for bootstrap
 ENV OUTPUT_ZIP_PATH="/fython_$VERSION_TO_USE_AS_BOOTSTRAPER_compiled.tar.gz"
@@ -29,6 +30,8 @@ RUN ./compile.sh /src /test_compiled1 $DESTINE_PATH $ELIXIR_BEAMS_PATH
 RUN ./compile.sh /src /test_compiled2 /test_compiled1
 
 FROM base as elixir_shell
-# TODO elixir shell with fython loaded
+# TODO
+# CMD erl -pa $IEX_BEAMS_PATH -noshell -user Elixir.IEx.CLI +iex
 
 FROM base as fython_shell
+CMD erl -pa $DESTINE_PATH -s 'Fython.Shell' start -noshell
