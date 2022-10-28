@@ -29,8 +29,8 @@ RUN echo "Bootstraping using Fython $VERSION_TO_USE_AS_BOOTSTRAPER" \
 RUN rm -rf $PATH_FYTHON_TO_USE_AS_BOOTSTRAPER
 
 # Check if it can recompile itself (its a good way to test while we dont have proper testing)
-RUN ./bootstrap.sh compile /src /test_compiled1 $DESTINE_PATH $ELIXIR_BEAMS_PATH
-RUN ./bootstrap.sh compile /src /test_compiled2 /test_compiled1
+#RUN ./bootstrap.sh compile /src /test_compiled1 $DESTINE_PATH $ELIXIR_BEAMS_PATH
+#RUN ./bootstrap.sh compile /src /test_compiled2 /test_compiled1
 
 FROM base as elixir_shell
 # TODO
@@ -39,16 +39,13 @@ FROM base as elixir_shell
 FROM base as shell
 CMD /fython exec "Shell.start()" $DESTINE_PATH
 
-FROM base as compile_project
-ENV PROJET_FOLDER=/project
-# TODO só está funcionando quando está dentro da pasta :O arrumar e tomar cuidado
-# TODO se não fizer isso, a pasta _compiled fica vázia por algum motivo
-CMD cd $PROJET_FOLDER \
-    && erl -pa $DESTINE_PATH -noshell -eval "'Fython.Core.Code':compile_project(<<"'"'"$PROJET_FOLDER"'"'">>)." -run init stop
+FROM base as compiler
+ENV PROJET_FOLDER="/project"
+CMD echo "Compiling project: $PROJET_FOLDER" \
+    && /fython exec "Core.Code.compile_project('$PROJET_FOLDER')" $DESTINE_PATH
 
 FROM base as tests
 COPY tests tests
 
-CMD cd /tests \
-    && /fython exec "Core.Code.compile_project('/tests')" $DESTINE_PATH \
+CMD /fython exec "Core.Code.compile_project('/tests')" $DESTINE_PATH \
     && /fython exec "Math_tests.run_tests()" $DESTINE_PATH /tests/_compiled

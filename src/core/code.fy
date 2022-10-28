@@ -18,7 +18,7 @@ def compile_project(project_path, destine):
         |> Elixir.Enum.join('/')
         |> Elixir.Path.wildcard()
         |> Elixir.Enum.map(lambda file_full_path:
-            compile_project_file(project_path, file_full_path, destine)
+            compile_project_file(project_path, file_full_path, compiled_folder)
         )
 
 
@@ -39,8 +39,6 @@ def copy_elixir_beams(compiled_folder):
 
 def compile_project_file(project_root, file_full_path, destine_compiled):
     module_name = get_module_name(project_root, file_full_path)
-
-    destine_compiled = Elixir.Enum.join([destine_compiled])
 
     # Ensure compiled folder is created
     Elixir.File.mkdir_p!(destine_compiled)

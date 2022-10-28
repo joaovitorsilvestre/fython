@@ -151,7 +151,7 @@ b = 'RPAREN'
 case b:
     a -> False   # this is not working
 ```
-- [ ] Some times the error arrow is showing in wrong place. Eg:
+- [ ] Sometimes the error arrow is showing in wrong place. Eg:
 ```
 def add(a)
     a + b
