@@ -1,5 +1,6 @@
 def run_tests():
-    basic_operations()
+    test_numbers()
+    test_basic_operations()
     test_strings()
     test_dicts()
     test_lists()
@@ -9,7 +10,13 @@ def run_tests():
     test_pipe_operator()
     test_case()
 
-def basic_operations():
+def test_numbers():
+    assert_equal(1_000, 1000)
+    assert_equal(1_000_000, 1000000)
+    assert_equal(1_000.5, 1000 + 0.5)
+
+def test_basic_operations():
+    assert_equal(1 / 2, 0.5)
     assert_equal(1 + 2 - 3, 0)
     assert_equal(1 - 2 - 3, -4)
     assert_equal(1 + 2, 3)
