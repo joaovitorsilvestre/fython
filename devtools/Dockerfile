@@ -16,26 +16,28 @@ RUN wget https://github.com/joaovitorsilvestre/fython/releases/download/$VERSION
     && tar -xf $OUTPUT_ZIP_PATH -C $PATH_FYTHON_TO_USE_AS_BOOTSTRAPER
 
 COPY src src
-COPY /devtools/compile.sh /compile.sh
-RUN chmod a+x /compile.sh
+COPY /devtools/bootstrap.sh /bootstrap.sh
+COPY /devtools/fython /fython
+RUN chmod a+x /bootstrap.sh
+RUN chmod a+x /fython
 
 # Execute bootstrap
 RUN echo "Bootstraping using Fython $VERSION_TO_USE_AS_BOOTSTRAPER" \
-    && ./compile.sh /src $DESTINE_PATH $PATH_FYTHON_TO_USE_AS_BOOTSTRAPER $ELIXIR_BEAMS_PATH
+    && ./bootstrap.sh compile /src $DESTINE_PATH $PATH_FYTHON_TO_USE_AS_BOOTSTRAPER $ELIXIR_BEAMS_PATH
 
 # Remove base used for bootstrap (to ensure that we are not using it anymore)
 RUN rm -rf $PATH_FYTHON_TO_USE_AS_BOOTSTRAPER
 
 # Check if it can recompile itself (its a good way to test while we dont have proper testing)
-RUN ./compile.sh /src /test_compiled1 $DESTINE_PATH $ELIXIR_BEAMS_PATH
-RUN ./compile.sh /src /test_compiled2 /test_compiled1
+RUN ./bootstrap.sh compile /src /test_compiled1 $DESTINE_PATH $ELIXIR_BEAMS_PATH
+RUN ./bootstrap.sh compile /src /test_compiled2 /test_compiled1
 
 FROM base as elixir_shell
 # TODO
 # CMD erl -pa $IEX_BEAMS_PATH -noshell -user Elixir.IEx.CLI +iex
 
 FROM base as shell
-CMD erl -pa $DESTINE_PATH -s 'Fython.Shell' start -noshell
+CMD /fython exec "Shell.start()" $DESTINE_PATH
 
 FROM base as compile_project
 ENV PROJET_FOLDER=/project
@@ -46,6 +48,7 @@ CMD cd $PROJET_FOLDER \
 
 FROM base as tests
 COPY tests tests
+
 CMD cd /tests \
-    && erl -pa $DESTINE_PATH -noshell -eval "'Fython.Core.Code':compile_project(<<"'"'"/tests"'"'">>)." -run init stop \
-    && erl -pa /tests/_compiled -pa $DESTINE_PATH -noshell -eval "'Fython.Math_tests':run_tests()." -run init stop
+    && /fython exec "Core.Code.compile_project('/tests')" $DESTINE_PATH \
+    && /fython exec "Math_tests.run_tests()" $DESTINE_PATH /tests/_compiled

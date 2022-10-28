@@ -1,0 +1,16 @@
+#!/bin/bash
+set -e # stop if any error
+
+exec () {
+  FYTHON_CODE=$1
+  ERLANG_PATHS=${@:2}
+
+  ERLANG_PATHS_FORMATED=""
+  for ERL_PATH in $ERLANG_PATHS; do
+    ERLANG_PATHS_FORMATED=$ERLANG_PATHS_FORMATED"-pa $ERL_PATH "
+  done
+  echo $ERLANG_PATHS_FORMATED
+  erl $ERLANG_PATHS_FORMATED -noshell -eval "'Fython.Core':eval_string(<<"'"'"<stdin>"'"'">>, <<"'"'"$FYTHON_CODE"'"'">>)." -run init stop
+}
+
+$*
