@@ -9,8 +9,8 @@ bootstrap-with-docker:
 	docker build -f devtools/Dockerfile -t fython .
 
 shell-current-src:
-	docker build -f devtools/Dockerfile -t fython --target fython_shell .
-	docker run -it fython_shell
+	docker build -f devtools/Dockerfile -t fython --target shell .
+	docker run -it fython
 
 .ONESHELL:
 compile-project:
