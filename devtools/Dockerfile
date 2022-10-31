@@ -37,11 +37,13 @@ FROM base as elixir_shell
 # CMD erl -pa $IEX_BEAMS_PATH -noshell -user Elixir.IEx.CLI +iex
 
 FROM base as shell
-CMD /fython exec "Shell.start()" $DESTINE_PATH
+ENV ADITIONAL_PATHS=""
+CMD /fython exec "Shell.start()" $DESTINE_PATH $ADITIONAL_PATHS
 
 FROM base as compiler
 ENV PROJET_FOLDER="/project"
 CMD echo "Compiling project: $PROJET_FOLDER" \
+    && rm -rf $PROJET_FOLDER/_compiled \
     && /fython exec "Core.Code.compile_project('$PROJET_FOLDER')" $DESTINE_PATH
 
 FROM base as tests

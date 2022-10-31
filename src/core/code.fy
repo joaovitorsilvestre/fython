@@ -11,9 +11,6 @@ def compile_project(project_path, destine):
     # Ensure compiled folder is created
     Elixir.File.mkdir_p!(compiled_folder)
 
-    # Copy elixir beams to folder
-    copy_elixir_beams(compiled_folder)
-
     [project_path, "**/*.fy"]
         |> Elixir.Enum.join('/')
         |> Elixir.Path.wildcard()
@@ -21,21 +18,6 @@ def compile_project(project_path, destine):
             compile_project_file(project_path, file_full_path, compiled_folder)
         )
 
-
-def copy_elixir_beams(compiled_folder):
-    elixir_path = '/usr/lib/elixir/lib/elixir/ebin'
-
-    case Elixir.File.exists?(elixir_path):
-        True -> Elixir.Enum.join([elixir_path, '*'], '/')
-            |> Elixir.Path.wildcard()
-            |> Elixir.Enum.each(lambda beam_file:
-                file_name = beam_file
-                    |> Elixir.String.split('/')
-                    |> Elixir.List.last()
-
-                Elixir.File.cp!(beam_file, Elixir.Enum.join([compiled_folder, file_name], '/'))
-            )
-        False -> :error
 
 def compile_project_file(project_root, file_full_path, destine_compiled):
     module_name = get_module_name(project_root, file_full_path)
@@ -46,7 +28,9 @@ def compile_project_file(project_root, file_full_path, destine_compiled):
     Elixir.IO.puts(Elixir.Enum.join(["Compiling module: ", module_name]))
 
     [state, quoted] = lexer_parse_convert_file(
-        module_name, file_full_path, Elixir.File.read(file_full_path) |> Elixir.Kernel.elem(1)
+        module_name,
+        file_full_path,
+        Elixir.File.read(file_full_path) |> Elixir.Kernel.elem(1),
     )
 
     case Elixir.Map.get(state, "error"):
@@ -55,18 +39,17 @@ def compile_project_file(project_root, file_full_path, destine_compiled):
             # to ensure that our module binary will not have
             # Elixir. in the begin of the module name
             (_, _, binary, _) = Elixir.Module.create(
-                Elixir.String.to_atom(module_name), quoted, Elixir.Macro.Env.location(__ENV__)
+                Elixir.String.to_atom(module_name),
+                quoted,
+                [(:file, file_full_path)]
             )
 
-            Elixir.File.write(
-                Elixir.Enum.join([destine_compiled, "/", module_name, ".beam"]),
-                binary,
-                mode=:binary
-            )
-            Elixir.File.write(
-                Elixir.Enum.join([destine_compiled, "/", module_name, ".ex"]),
-                Elixir.Macro.to_string(quoted),
-            )
+            # just for consulting
+            destine_ex = Elixir.Enum.join([destine_compiled, "/", module_name, ".ex"])
+            destine_beam = Elixir.Enum.join([destine_compiled, "/", module_name, ".beam"])
+
+            Elixir.File.write(destine_ex, Elixir.Macro.to_string(quoted))
+            Elixir.File.write(destine_beam, binary, mode=:binary)
         _ ->
             Elixir.IO.puts("Compilation error:")
             Elixir.IO.puts("file path:")

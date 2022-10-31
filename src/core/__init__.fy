@@ -6,8 +6,11 @@ def eval_file(module_name, file_path):
 def eval_string(module_name, text):
     eval_string(module_name, text, [])
 
-def eval_string(module_name, text, env):
-    state_n_converted = Core.Code.lexer_parse_convert_file(module_name, "<stdin>", text, env)
+def eval_string(module_name, text, bindings):
+    eval_string(module_name, text, bindings, [])
+
+def eval_string(module_name, text, bindings, env):
+    state_n_converted = Core.Code.lexer_parse_convert_file(module_name, "<stdin>", text, bindings)
 
     state = Elixir.Enum.at(state_n_converted, 0)
     converted = Elixir.Enum.at(state_n_converted, 1)
@@ -17,11 +20,12 @@ def eval_string(module_name, text, env):
             Core.Errors.Utils.print_error('<stdin>', state, text)
             (None, env)
         _ ->
-            Elixir.IO.inspect(converted)
-
-            # (result, new_env)
+#            Elixir.IO.inspect(converted)
             try:
-                converted |> Elixir.Code.eval_quoted(env)
-            except Elixir.CompileError as e:
-#                Elixir.IO.inspect(e)
-                (None, env)
+                Elixir.Code.eval_quoted(converted, bindings, env)
+            except error:
+                Elixir.IO.inspect('ennv')
+                Elixir.IO.inspect(env)
+                Exceptions.format_traceback(error, __STACKTRACE__)
+                Elixir.Kernel.reraise(error, __STACKTRACE__)
+

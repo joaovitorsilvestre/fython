@@ -1,4 +1,7 @@
 def start():
+    context = []  # where variables, etc will be saved
+    env = [(:file, '<stdin>')]
+
     start(
         0,
         {
@@ -6,10 +9,11 @@ def start():
             'last_output': None,
             'current_command': '' # multiline command
         },
-        [],
+        context,
+        env
     )
 
-def start(count, state, env):
+def start(count, state, context, env):
     # to make space between lines
     is_multiline_command = state['current_command'] != ''
 
@@ -31,15 +35,15 @@ def start(count, state, env):
         True -> Elixir.Enum.join([state['current_command'], '\n', user_input])
 
     case:
-        user_input == "" -> start(count, state, env)
+        user_input == "" -> start(count, state, context, env)
         True ->
             first_char = Elixir.String.at(user_input, 0)
             last_char = Elixir.String.last(user_input)
 
-            (count, state, new_env) = case:
+            (count, state, new_context) = case:
                 first_char == '_' and not is_multiline_command ->
                     Elixir.IO.inspect(state['last_output'])
-                    (count + 1, state, env)
+                    (count + 1, state, context)
                 first_char == "%" and not is_multiline_command ->
                     line_number = Elixir.String.replace_prefix(user_input, "%", "")
                         |> Elixir.String.replace("\n", "")
@@ -49,16 +53,16 @@ def start(count, state, env):
                     case text:
                         None -> raise "Line code not found"
                         _ ->
-                            (result, new_env) = execute(text, env)
+                            (result, new_context) = execute(text, context, env)
 
                             state = state |> Elixir.Map.merge({"last_output": result})
 
-                            (count + 1, state, new_env)
+                            (count + 1, state, new_context)
                 last_char == ':' ->
                     state = Elixir.Map.merge(state, {'current_command': user_input})
-                    (count, state, env)
+                    (count, state, context)
                 (not is_multiline_command) or (is_multiline_command and current_line == '') ->
-                    (result, new_env) = execute(user_input, env)
+                    (result, new_context) = execute(user_input, context, env)
 
                     state = state
                         |> Elixir.Map.merge({
@@ -67,21 +71,21 @@ def start(count, state, env):
                             "text_per_line": Elixir.Map.merge(state['text_per_line'], {count: user_input})
                         })
 
-                    (count + 1, state, new_env)
+                    (count + 1, state, new_context)
                 is_multiline_command ->
                     state = Elixir.Map.merge(state, {'current_command': user_input})
-                    (count, state, env)
+                    (count, state, context)
 
-            start(count, state, new_env)
+            start(count, state, new_context, env)
 
-def execute(text, env):
+def execute(text, context, env):
     try:
-        (result, new_env) = Core.eval_string('<stdin>', text, env)
+        (result, new_context) = Core.eval_string('<stdin>', text, context, env)
         Elixir.IO.inspect(result)
-        (result, new_env)
+        (result, new_context)
     except error:
-        # TODO this global handler for errors must be in the eval string code
-        Elixir.IO.puts("Exception")
-        Elixir.IO.puts(Elixir.Exception.format_stacktrace(__STACKTRACE__))
-        Elixir.IO.inspect(__STACKTRACE__)
-        (None, env)
+        # usefull for debuggind
+        Elixir.IO.inspect("Shell recebeu o erro:")
+        Elixir.IO.inspect(error)
+#        Elixir.Kernel.reraise(error, __STACKTRACE__)
+        (None, context)
