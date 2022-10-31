@@ -236,6 +236,7 @@ def loop_while(st, func):
     case valid:
         True -> Elixir.Map.put(st, "result", Elixir.Enum.join([result, cc])) |> loop_while(func)
         False -> st
+        _ -> set_error(st, valid)
 
 
 def loop_until_sequence(state, expected_seq):
@@ -362,9 +363,15 @@ def make_number(state):
             None -> False
             _ -> Elixir.String.contains?(Elixir.Enum.join([Core.Lexer.Consts.digists(), '._']), cc)
 
-        valid_num_char and cc != "." and nc != "."
+        case (valid_num_char, cc, nc):
+            (False, _, _) -> False
+            (True, ".", ".") -> False  # Range
+            (True, _, _) -> True
+            _ -> False
     )
+
     result = Elixir.Enum.join([first_number, Elixir.Map.get(state, "result")])
+    result = Elixir.String.replace(result, "_", "")
 
     state = case:
         Elixir.String.contains?(result, '.') ->

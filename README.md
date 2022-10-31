@@ -151,7 +151,7 @@ b = 'RPAREN'
 case b:
     a -> False   # this is not working
 ```
-- [ ] Some times the error arrow is showing in wrong place. Eg:
+- [ ] Sometimes the error arrow is showing in wrong place. Eg:
 ```
 def add(a)
     a + b
@@ -181,6 +181,15 @@ a = lambda:
     lambda : ""
 a()()
 ```
+- [ ] Support of 'pass' keyword
+- [ ] Create function to use for operator +
+  - this will allow us to create multiple functions depending on params
+  - if its two strings, concatenate, if is lists, merge them, etc
+  - today elixir has diferent functions, to merge lists is ++ and strings <>
+- [ ] Improve way to access tuples elements, today we need to use Elixir.Kernel.elem
+  - Would be great if our Enum module worked with tuples too!
+- [ ] Create simple lib of testing that collect functions in folder and run them
+- [ ] Print function
 - [ ] Support to struct
 - [ ] PosParser -> Add logic to check imports, undefined vars, etc.
 - [x] PosParser -> support for the pin variable in pattern matching: `e = "a""; {^e: 1} = {"a": 1}`
