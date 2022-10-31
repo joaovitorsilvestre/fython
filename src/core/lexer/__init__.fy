@@ -363,17 +363,10 @@ def make_number(state):
             None -> False
             _ -> Elixir.String.contains?(Elixir.Enum.join([Core.Lexer.Consts.digists(), '._']), cc)
 
-        is_nc_digit = case nc:
-            None -> False
-            _ -> Elixir.String.contains?(Core.Lexer.Consts.digists(), cc)
-
-        case (valid_num_char, cc, nc, is_nc_digit):
-            (False, _, _, _) -> False
-            (True, ".", ".", _) -> False  # Range
-            (True, "_", "_", _) -> "Wrong definition of number"
-            (True, "_", ".", _) -> "Wrong definition of number"
-            (True, ".", "_", _) -> "Wrong definition of number"
-            (True, _, _, _) -> True
+        case (valid_num_char, cc, nc):
+            (False, _, _) -> False
+            (True, ".", ".") -> False  # Range
+            (True, _, _) -> True
             _ -> False
     )
 
