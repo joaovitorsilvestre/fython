@@ -162,9 +162,6 @@ def convert_lambda((:lambda, meta, [args, statements])):
     (:fn, meta, [(:"->", meta, [args, convert(statements)])])
 
 def convert_def((:def, meta, [name, args, statements])):
-    Elixir.IO.inspect((:def, meta, [name, args, statements]))
-    Elixir.IO.inspect("^^^^^^^^^^^^^^^^")
-
     args = Elixir.Enum.map(args, &convert/1)
 
     (

@@ -1,4 +1,4 @@
-def add_statements_refs(node):
+def run(node, filename):
     # TODO examplain why this module exists and its job
     state = {
         "node_count": 0,
@@ -6,11 +6,12 @@ def add_statements_refs(node):
     }
     [node, state] = add_statements_refs(node, state)
 
-#    inject_into_node_quoted_function(
-#        node,
-#        generate_code_refs(state['refs_per_line'])
-#    )
-    node
+    com = inject_into_node_quoted_function(
+        node,
+        generate_code_refs(state['refs_per_line'], filename),
+    )
+    Elixir.IO.inspect(com)
+    com
 
 def iterate_items(nodes, state):
     acc = {"nodes": [], "state": state}
@@ -75,52 +76,25 @@ def increase_node_count(meta, state <- {"node_count": node_count}):
 
 
 def inject_into_node_quoted_function((:statements, meta, body), function_quoted):
-    body = Elixir.Enum.concat(body, [function_quoted])
-    r = (:statements, meta, body)
+    (:statements, meta, [*body, function_quoted])
 
 
-#def generate_code_refs(refs):
-#    code = [
-#        "def __fython_get_node_ref__(key):",
-#        "   ref = {1: 10}",
-#        "   Elixir.Map.get(ref, key)",
-#    ]
-#    code = "def __fython_get_node_ref__(key):\n    ref = {1: 10}\n    Elixir.Map.get(ref, ref)"
-#
-#    code
-##        |> Elixir.Enum.join("\n")
-#        |> Core.Code.quote_fython([(:skip_pos_parser, True)])
-
-def generate_code_refs(refs):
+def generate_code_refs(refs, filename):
     # return quoted verson of the folowing code:
     # def __fython_get_node_ref__(key):
     #     refs = {1: (0, 0, 0)}
     #     Elixir.Map.get(regs, key)
 
     meta = {
-        "node_count": 0
+        "node_count": 0,
+        "start": (0, 0, 0),
+        "end": (0, 0, 0),
+        "file": filename,
     }
-
-#    keys_quoted = refs
-#        |> Elixir.Map.keys()
-#        |> Elixir.Enum.map(lambda x: (:number, meta, [x]))
-#
-#    values_quoted = refs
-#        |> Elixir.Map.values()
-#        |> Elixir.Enum.map(
-#            lambda x:
-#                (:tuple, meta, [69]) # TODO
-#        )
-#
-#    refs_quoted = Elixir.Enum.zip(keys_quoted, values_quoted)
-#        |> Elixir.Enum.flat_map(lambda (a, b): [a, b])
-#
-#    Elixir.IO.inspect('refs quoted')
-#    Elixir.IO.inspect(refs_quoted)
 
     (
         :def,
-        meta,
+        Elixir.Map.put(meta, "docstring", None),
         [
             "__fython_get_node_ref__",
             [

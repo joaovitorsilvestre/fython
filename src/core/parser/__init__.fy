@@ -20,7 +20,7 @@ def execute(file, tokens, env):
 
     case Elixir.Enum.member?(env, (:skip_pos_parser, True)):
         True -> result
-        False -> Core.Parser.Pos.execute(result, env)
+        False -> Core.Parser.Pos.execute(result, env, file)
 
 def advance(state):
     # before anything, lets check that the states only contains expected keys
