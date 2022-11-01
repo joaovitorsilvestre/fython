@@ -22,8 +22,8 @@ compile-project:
 
 .ONESHELL:
 run-tests:
-	docker build -f devtools/Dockerfile -t $$DOCKER_TAG --target tests .
-	docker run $(SHELL_DOCKER_TAG)
+	docker build -f devtools/Dockerfile -t $(TESTS_DOCKER_TAG) --target tests .
+	docker run $(TESTS_DOCKER_TAG)
 
 .ONESHELL:
 build-shell:

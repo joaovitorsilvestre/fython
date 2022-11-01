@@ -8,6 +8,7 @@ compile () {
   DESTINE_PATH_COMP=$2
   PATH_FYTHON_TO_USE_AS_BOOTSTRAPER_COMP=$3
   ELIXIR_BEAMS_PATH_COMP=$4
+  COMPILE_IN_PARALEL=true
 
   ALL_FILES_PATH_COMP=$(find $SRC_DIR_COMP -name '*.fy')
 
@@ -19,8 +20,13 @@ compile () {
 
   for FILE_PATH in $ALL_FILES_PATH_COMP; do
       ERL_COMMAND_CALL="application:start(compiler), application:start(elixir), 'Elixir.Code':compiler_options(#{ignore_module_conflict => true}), 'Fython.Core.Code':compile_project_file(<<"'"'$SRC_DIR_COMP'"'">>, <<"'"'${FILE_PATH}'"'">>, "'"'$DESTINE_PATH_COMP'"'"), init:stop().";
-      erl -pa $PATH_FYTHON_TO_USE_AS_BOOTSTRAPER_COMP  -noshell -eval "$ERL_COMMAND_CALL";
+      if [ "$COMPILE_IN_PARALEL" = true ] ; then
+        erl -pa $PATH_FYTHON_TO_USE_AS_BOOTSTRAPER_COMP  -noshell -eval "$ERL_COMMAND_CALL" &
+      else
+        erl -pa $PATH_FYTHON_TO_USE_AS_BOOTSTRAPER_COMP  -noshell -eval "$ERL_COMMAND_CALL"
+      fi
   done
+  wait
 }
 
 $*

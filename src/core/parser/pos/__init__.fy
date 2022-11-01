@@ -9,6 +9,7 @@ def execute(state, env):
             node = state
                 |> Elixir.Map.get('node')
                 |> Core.Parser.Pos.Localcalls.convert_local_function_calls(var_names_avaliable)
+                |> Core.Parser.Pos.Statementsrefs.add_statements_refs()
 
             Elixir.Map.put(state, 'node', node)
         _ -> state
