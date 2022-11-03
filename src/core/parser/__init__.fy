@@ -2,7 +2,7 @@ def execute(tokens, config):
     # config: {
     #   "file": path,
     #   "env": [],          # (optional) current defined variables, used for pos parser
-    #   "skip_pos_parser": bool  # (optional)
+    #   "compiling_module": bool  # (optional)
     # }
 
     state = {

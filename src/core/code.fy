@@ -30,22 +30,19 @@ def compile_project_file(project_root, file_full_path, destine_compiled):
     (state, quoted) = lexer_parse_convert_file(
         module_name,
         Elixir.File.read(file_full_path) |> Elixir.Kernel.elem(1),
-        {"file": file_full_path}
+        {"file": file_full_path, "compiling_module": True}
     )
-    Elixir.IO.inspect('quoted com sucesso')
 
     case Elixir.Map.get(state, "error"):
         None ->
             # Its super important to use this Module.create function
             # to ensure that our module binary will not have
             # Elixir. in the begin of the module name
-            Elixir.IO.inspect('antes de criar o modulo')
             (_, _, binary, _) = Elixir.Module.create(
                 Elixir.String.to_atom(module_name),
                 quoted,
                 [(:file, file_full_path)]
             )
-            Elixir.IO.inspect('depois de criar o modulo')
 
             # we save .ex just to help debugging
             destine_ex = Elixir.Enum.join([destine_compiled, "/", module_name, ".ex"])

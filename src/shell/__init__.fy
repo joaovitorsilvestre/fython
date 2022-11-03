@@ -2,7 +2,7 @@ def start():
     env = []  # where variables, etc will be saved
     config = {
         "file": "stdin",
-        "skip_pos_parser": True
+        "compiling_module": True
     }
 
     start(

@@ -7,10 +7,10 @@ def execute(state, config):
         )
 
     state_error = Elixir.Map.get(state, 'error')
-    skip_pos_parser = Elixir.Map.get(config, "skip_pos_parser", False)
+    compiling_module = Elixir.Map.get(config, "compiling_module", False)
 
-    case [state_error, skip_pos_parser]:
-        [None, False] ->
+    case [state_error, compiling_module]:
+        [None, True] ->
             node = state
                 |> Elixir.Map.get('node')
                 |> Core.Parser.Pos.Localcalls.convert_local_function_calls(var_names_avaliable)
