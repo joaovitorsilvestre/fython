@@ -21,3 +21,29 @@ def set_error(state, msg, pos_start, pos_end):
             )
             state
         _ -> state
+
+def nodes_types():
+    [
+        :number,
+        :atom,
+        :var,
+        :string,
+        :unary,
+        :list,
+        :tuple,
+        :binop,
+        :pattern,
+        :if,
+        :func,
+        :statements,
+        :lambda,
+        :def,
+        :static_access,
+        :raise,
+        :pipe,
+        :map,
+        :case,
+        :call,
+        :try,
+        :range,
+    ]

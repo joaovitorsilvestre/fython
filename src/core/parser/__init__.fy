@@ -1,11 +1,12 @@
-def execute(file, tokens, env):
-    # env: [
-    #   (:file: path,
-    #   (:skip_pos_parser, bool)  # (optional) only intend for pos_parser itself use
-    # ]
+def execute(tokens, config):
+    # config: {
+    #   "file": path,
+    #   "env": [],          # (optional) current defined variables, used for pos parser
+    #   "skip_pos_parser": bool  # (optional)
+    # }
 
     state = {
-        "file": file,
+        "file": config['file'],
         "error": None,
         "prev_tok": None,
         "current_tok": None,
@@ -16,11 +17,8 @@ def execute(file, tokens, env):
         "_tokens": tokens |> Elixir.Enum.filter(lambda i: i["type"] != 'NEWLINE')
     }
 
-    result = state |> advance() |> parse()
+    result = state |> advance() |> parse() |> Core.Parser.Pos.execute(config)
 
-    case Elixir.Enum.member?(env, (:skip_pos_parser, True)):
-        True -> result
-        False -> Core.Parser.Pos.execute(result, env, file)
 
 def advance(state):
     # before anything, lets check that the states only contains expected keys

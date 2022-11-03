@@ -3,10 +3,11 @@ def run(node, filename):
 
     [node, state] = add_statements_refs(node, state)
 
-    inject_into_node_quoted_function(
+    sem = inject_into_node_quoted_function(
         node,
         generate_code_refs(state['refs_per_line'], filename)
     )
+    node
 
 def iterate_items(nodes, state):
     acc = {"nodes": [], "state": state}
@@ -37,7 +38,7 @@ def add_statements_refs(None, state):
     [None, state]
 
 def add_statements_refs((nodetype, meta, body), state):
-    case Elixir.Kernel.is_atom(nodetype):
+    case Elixir.Enum.member?(Core.Parser.Utils.nodes_types(), nodetype):
         False -> [(nodetype, meta, body), state]
         True ->
             [body, state] = case:
@@ -83,7 +84,7 @@ def increase_node_count(meta, state <- {"node_count": node_count}):
 
 
 def inject_into_node_quoted_function((:statements, meta, body), function_quoted):
-    (:statements, meta, [*body, function_quoted])
+    (:statements, meta, Elixir.Enum.concat(body, [function_quoted]))
 
 
 def generate_code_refs(refs, filename):
