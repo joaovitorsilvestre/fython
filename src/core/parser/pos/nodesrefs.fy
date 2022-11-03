@@ -7,7 +7,7 @@ def run(node, filename):
         node,
         generate_code_refs(state['refs_per_line'], filename)
     )
-    node
+#    node
 
 def iterate_items(nodes, state):
     acc = {"nodes": [], "state": state}
