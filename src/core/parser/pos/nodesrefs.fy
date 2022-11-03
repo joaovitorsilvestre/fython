@@ -1,7 +1,12 @@
-def run(node):
+def run(node, filename):
     state = {"node_count": 0, "refs_per_line": {}}
+
     [node, state] = add_statements_refs(node, state)
-    node
+
+    inject_into_node_quoted_function(
+        node,
+        generate_code_refs(state['refs_per_line'], filename)
+    )
 
 def iterate_items(nodes, state):
     acc = {"nodes": [], "state": state}
@@ -10,6 +15,7 @@ def iterate_items(nodes, state):
         {"nodes": Elixir.Enum.concat(acc['nodes'], [x]), "state": state}
     )
     [acc['nodes'], acc['state']]
+    [nodes, state]
 
 
 def add_statements_refs((left, right), state):
@@ -31,16 +37,19 @@ def add_statements_refs(None, state):
     [None, state]
 
 def add_statements_refs((nodetype, meta, body), state):
-    [body, state] = case:
-        Elixir.Enumerable.impl_for(body)    -> iterate_items(body, state)
-        True                                -> add_statements_refs(body, state)
+    case Elixir.Kernel.is_atom(nodetype):
+        False -> [(nodetype, meta, body), state]
+        True ->
+            [body, state] = case:
+                Elixir.Enumerable.impl_for(body)    -> iterate_items(body, state)
+                True                                -> add_statements_refs(body, state)
+                True -> [body, state]
 
-    [meta, state] = increase_node_count(meta, state)
-    [(nodetype, meta, body), state]
+            [meta, state] = increase_node_count(meta, state)
+            [(nodetype, meta, body), state]
 
 def add_statements_refs(body, state):
     [body, state] = case:
-        body == True                        -> [body, state]
         body == True                        -> [body, state]
         body == False                       -> [body, state]
         body == None                        -> [body, state]
@@ -70,3 +79,66 @@ def increase_node_count(meta, state <- {"node_count": node_count}):
         |> Elixir.Map.put("refs_per_line", refs_per_line)
 
     [meta, state]
+
+
+
+def inject_into_node_quoted_function((:statements, meta, body), function_quoted):
+    (:statements, meta, [*body, function_quoted])
+
+
+def generate_code_refs(refs, filename):
+    # return quoted verson of the folowing code:
+    # def __fython_get_node_ref__(key):
+    #     refs = {1: (0, 0, 0)}
+    #     Elixir.Map.get(regs, key)
+
+    meta = {
+        "node_count": 0,
+        "start": (0, 0, 0),
+        "end": (0, 0, 0),
+        "file": filename,
+    }
+
+    (
+        :def,
+        Elixir.Map.put(meta, "docstring", None),
+        [
+            "__fython_get_node_ref__",
+            [
+                (:var, meta, [False, "key"])
+            ],
+            (
+                :statements,
+                meta,
+                [
+                    (
+                        :pattern,
+                        meta,
+                        [
+                            (:var, meta, [False, "refs"]),
+                            (
+                                :map,
+                                meta,
+                                [
+                                    ((:number, meta, [1]), (:number, meta, [10]))
+                                ]
+                            )
+                        ]
+                    ),
+                    (
+                        :call,
+                        meta,
+                        [
+                            (:var, meta, [False, "Elixir.Map.get"]),
+                            [
+                                (:var, meta, [False, "refs"]),
+                                (:var, meta, [False, "key"])
+                            ],
+                            [],
+                            False
+                        ]
+                    )
+                ]
+            )
+        ]
+    )

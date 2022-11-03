@@ -1,7 +1,7 @@
 def convert_meta((nodetype, meta, args)):
-    meta = case Elixir.Map.has_key?(meta, 'node_count'):
-        False   -> raise Elixir.Enum.join([nodetype, " op missing 'node_count'"])
-        True    -> [(:line, meta['node_count'])]
+#    meta = case Elixir.Map.has_key?(meta, 'node_count'):
+#        False   -> raise Elixir.Enum.join([nodetype, " op missing 'node_count'"])
+#        True    -> [(:line, meta['node_count'])]
 #
 #    (nodetype, meta, args)
     (nodetype, [(:line, 20)], args)
