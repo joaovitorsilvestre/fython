@@ -1,11 +1,16 @@
-def convert_meta((nodetype, meta, args)):
-#    meta = case Elixir.Map.has_key?(meta, 'node_count'):
-#        False   -> raise Elixir.Enum.join([nodetype, " op missing 'node_count'"])
-#        True    -> [(:line, meta['node_count'])]
-#
-#    (nodetype, meta, args)
-    (nodetype, [(:line, 20)], args)
+def convert_meta((nodetype, {"ref_line": line}, body)):
+    # We are compiling a module
+    # Se we will use line numbers as keys, that we can later
+    # get the full meta of the node.
+    # We need this because elixir __STACKTRACE__ only inform us the line
+    # and to give users better errors messages, we need
+    # the position of tokens (eg. column in the curent line, etc)
+    # that we have in original meta
+    (nodetype, [(:line, line)], body)
 
+def convert_meta((nodetype, {"start": (_coll, line, _index)}, body)):
+    meta = [(:line, line + 1)]
+    (nodetype, meta, body)
 
 def convert(node):
     case Elixir.Kernel.elem(node, 0):
@@ -54,6 +59,7 @@ def convert_var((:var, meta, [False, value])):
     (Elixir.String.to_atom(value), meta, :Elixir)
 
 def convert_string((:string, meta, [value])):
+    # TODO eval??, temos q rever o scaping
     value = Elixir.Enum.join(['"', value,'"']) |> Elixir.Code.eval_string() |> Elixir.Kernel.elem(0)
     (:"<<>>", meta, [value])
 

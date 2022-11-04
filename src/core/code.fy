@@ -61,6 +61,7 @@ def compile_project_file(project_root, file_full_path, destine_compiled):
 def lexer_parse_convert_file(module_name, text, config):
     lexed = Core.Lexer.execute(text)
 
+    # 1º Convert each node from Fython AST to Elixir AST
     state = case Elixir.Map.get(lexed, "error"):
         None ->
             tokens = Elixir.Map.get(lexed, "tokens")
@@ -68,7 +69,19 @@ def lexer_parse_convert_file(module_name, text, config):
         _ ->
             lexed
 
-    # 2º Convert each node from Fython AST to Elixir AST
+    state_error = Elixir.Map.get(state, 'error')
+    compiling_module = Elixir.Map.get(config, "compiling_module", False)
+
+    # 2º Inject usefull functions into the module
+    state = case [state_error, compiling_module]:
+        [None, True] ->
+            node = Core.Parser.Pos.Nodesrefs.run(state['node'], text)
+            Elixir.Map.put(state, 'node', node)
+        _ -> state
+
+    Elixir.IO.inspect(state['node'])
+
+    # 3º Convert each node from Fython AST to Elixir AST
     case Elixir.Map.get(state, 'error'):
         None ->
             ast = Elixir.Map.get(state, 'node')

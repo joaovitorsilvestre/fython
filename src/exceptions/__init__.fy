@@ -10,6 +10,13 @@ def format_traceback(error, stacktrace):
     Elixir.IO.inspect(error)
 
 def format_line_stacktrace((module, func_name, _, [(:file, file), (:line, line)])):
+    format_line_stacktrace((module, func_name, None, [(:file, file), (:line, line), (:error_info, None)]))
+
+def format_line_stacktrace((module, func_name, _, [(:file, file), (:line, line), (:error_info, _error_info)])):
+    module = module
+        |> Elixir.Atom.to_string()
+        |> Elixir.String.replace_prefix("Fython.", "")
+
     Elixir.Enum.join(["  file: ", file, ", line: ", line, "\n", "    ",  module, ".", func_name, "\n"], "")
 
 def is_fython_stack(stack):
