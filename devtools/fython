@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e # stop if any error
+set -eo pipefail # stop if any error
 
 exec () {
   FYTHON_CODE=$1

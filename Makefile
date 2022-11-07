@@ -31,12 +31,12 @@ build-shell:
 
 .ONESHELL:
 shell-current-src:
-	$(MAKE) build-shell
+	$(MAKE) build-shell || exit 1
 	DOCKER_BUILDKIT=1 docker run -it $(SHELL_DOCKER_TAG)
 
 .ONESHELL:
 project-shell:
 	# > compile-project-and-open-shell path=/home/joao/fython/example
-	$(MAKE) compile-project path=$(path)
-	$(MAKE) build-shell
+	$(MAKE) compile-project path=$(path) || exit 1
+	$(MAKE) build-shell || exit 1
 	DOCKER_BUILDKIT=1 docker run -it --env ADITIONAL_PATHS=/project$(path)/_compiled -v $(path):/project$(path) $(SHELL_DOCKER_TAG)
