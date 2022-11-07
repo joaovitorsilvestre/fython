@@ -60,8 +60,11 @@ def convert_var((:var, meta, [False, value])):
 
 def convert_string((:string, meta, [value])):
     # TODO eval??, temos q rever o scaping
-    value = Elixir.Enum.join(['"', value,'"']) |> Elixir.Code.eval_string() |> Elixir.Kernel.elem(0)
-    (:"<<>>", meta, [value])
+#    Elixir.IO.inspect('convertendooo')
+#    Elixir.IO.inspect(value)
+#    value = Elixir.Enum.join(['"', value,'"']) |> Elixir.Code.eval_string() |> Elixir.Kernel.elem(0)
+#    (:"<<>>", meta, [value])
+    value
 
 def convert_unary((:unary, meta, [:minus, node])):
     (:"-", meta, [convert(node)])

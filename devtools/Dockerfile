@@ -30,8 +30,8 @@ RUN rm -rf $PATH_FYTHON_TO_USE_AS_BOOTSTRAPER
 
 FROM base as bootstrap
 # Check if it can recompile itself (its a good way to test while we dont have proper testing)
-#RUN ./bootstrap.sh compile /src /test_compiled1 $DESTINE_PATH $ELIXIR_BEAMS_PATH
-#RUN ./bootstrap.sh compile /src /test_compiled2 /test_compiled1
+RUN ./bootstrap.sh compile /src /test_compiled1 $DESTINE_PATH $ELIXIR_BEAMS_PATH
+RUN ./bootstrap.sh compile /src /test_compiled2 /test_compiled1
 
 FROM base as elixir_shell
 # TODO

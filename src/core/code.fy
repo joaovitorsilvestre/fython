@@ -79,7 +79,7 @@ def lexer_parse_convert_file(module_name, text, config):
             Elixir.Map.put(state, 'node', node)
         _ -> state
 
-    Elixir.IO.inspect(state['node'])
+#    Elixir.IO.inspect(state['node'])
 
     # 3º Convert each node from Fython AST to Elixir AST
     case Elixir.Map.get(state, 'error'):

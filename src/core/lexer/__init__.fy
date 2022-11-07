@@ -6,7 +6,8 @@ def execute(text):
         "current_ident_level": 0,
         "error": None,
         "current_char": None,
-        "tokens": []
+        "tokens": [],
+        "being_scaped": False
     }
 
     # Theres tokens that are multiline, like multiline string
@@ -108,13 +109,15 @@ def advance(state):
     ln = state["position"]["ln"]
     col = state["position"]["col"]
     text = state["text"]
+    being_scaped = state["being_scaped"]
 
     prev_position = state['position']
+
+    being_scaped = being_scaped == False and idx > 0 and Elixir.String.at(text, idx) == "\\"
 
     idx = idx + 1
     current_char = Elixir.String.at(text, idx)
     next_char = Elixir.String.at(text, idx + 1)
-
     new_pos = case current_char == '\n':
         True -> position(idx, ln + 1, -1)
         False -> position(idx, ln, col + 1)
@@ -123,7 +126,8 @@ def advance(state):
         "position": new_pos,
         "prev_position": prev_position,
         "current_char": current_char,
-        "next_char": next_char
+        "next_char": next_char,
+        "being_scaped": being_scaped
     }
 
     Elixir.Map.merge(state, new_state)
@@ -214,7 +218,7 @@ def expected_double_maker(st, first, type, expected):
 def make_ident(state):
     first_char = state["current_char"]
 
-    state = loop_while(state, lambda cc, _:
+    state = loop_while(state, lambda cc, _, _:
         cc != None and cc == " "
     )
 
@@ -229,14 +233,36 @@ def make_ident(state):
 def loop_while(st, func):
     st = advance(st)
     cc = st["current_char"]
+    being_scaped = st["being_scaped"]
     result = Elixir.Map.get(st, "result")
 
-    valid = func(cc, st['next_char'])
+    result_callback = func(cc, st['next_char'], being_scaped)
 
-    case valid:
+    case result_callback:
         True -> Elixir.Map.put(st, "result", Elixir.Enum.join([result, cc])) |> loop_while(func)
         False -> st
-        _ -> set_error(st, valid)
+        :skip_cc -> loop_while(st, func)
+        _ -> set_error(st, result_callback)
+
+def loop_while_new(st, func):
+    st = advance(st)
+    cc = st["current_char"]
+    being_scaped = st["being_scaped"]
+    result = Elixir.Map.get(st, "result")
+
+    [continue, value] = func(cc, st['next_char'], being_scaped)
+
+    case [continue, value]:
+        [True, None] ->
+            loop_while_new(st, func)
+        [:skip_next, _] ->
+            st = Elixir.Map.put(st, "result", Elixir.Enum.join([result, value]))
+            loop_while_new(advance(st), func)
+        [True, _] ->
+            st = Elixir.Map.put(st, "result", Elixir.Enum.join([result, value]))
+            loop_while_new(st, func)
+        [False, _] -> st
+        _ -> set_error(st, value)
 
 
 def loop_until_sequence(state, expected_seq):
@@ -283,7 +309,7 @@ def make_do_or_atom(state):
 
             state = state
                 |> Elixir.Map.put("result",  state["current_char"])
-                |> loop_while(lambda cc, _:
+                |> loop_while(lambda cc, _, _:
                     case is_atom_of_string:
                         True -> cc != first_char
                         False -> cc != None and Elixir.String.contains?(Core.Lexer.Consts.atom_chars(False), cc)
@@ -325,8 +351,14 @@ def make_string(state):
                     "MULLINESTRING", result, pos_start
                 )
         False ->
-            state = loop_while(state, lambda cc, _:
-                cc != string_char_type and cc != None
+            state = loop_while_new(state, lambda cc, nc, being_scaped:
+                case:
+                    cc == "\\" and being_scaped -> [True, None]
+                    nc == "n" and cc == "\\" and being_scaped == False -> [:skip_next, "\n"]
+                    nc == '"' and cc == "\\" and being_scaped == False -> [:skip_next, '"']
+                    cc == string_char_type and being_scaped == True -> [True, cc]
+                    cc == string_char_type and being_scaped == False -> [False, cc]
+                    True -> [True, cc]
             )
 
             # to advance the end string char
@@ -334,11 +366,11 @@ def make_string(state):
 
             string = state
                 |> Elixir.Map.get("result", "")
-                |> Elixir.String.graphemes()
-                |> Elixir.Enum.map(lambda i:
-                    Elixir.Enum.join(['\\', '"']) if i == '"' else i
-                )
-                |> Elixir.Enum.join()
+#                |> Elixir.String.graphemes()
+#                |> Elixir.Enum.map(lambda i:
+#                    Elixir.Enum.join(['\\', '"']) if i == '"' else i
+#                )
+#                |> Elixir.Enum.join()
 
             state
                 |> Core.Lexer.Tokens.add_token(
@@ -349,7 +381,7 @@ def make_string(state):
 def skip_comment(state):
     state = advance(state)
 
-    state = loop_while(state, lambda cc, _:
+    state = loop_while(state, lambda cc, _, _:
         cc != '\n' and cc != None
     )
     Elixir.Map.delete(state, "result")
@@ -358,7 +390,7 @@ def make_number(state):
     pos_start = state["position"]
     first_number = state["current_char"]
 
-    state = loop_while(state, lambda cc, nc:
+    state = loop_while(state, lambda cc, nc, _:
         valid_num_char = case cc:
             None -> False
             _ -> Elixir.String.contains?(Elixir.Enum.join([Core.Lexer.Consts.digists(), '._']), cc)
@@ -391,7 +423,7 @@ def make_identifier(state):
     pos_start = state["position"]
     first_char = state["current_char"]
 
-    state = loop_while(state, lambda cc, nc:
+    state = loop_while(state, lambda cc, nc, _:
         cc != None and Elixir.String.contains?(Core.Lexer.Consts.identifier_chars(False), cc) and not (cc == "." and nc == ".")
     )
 

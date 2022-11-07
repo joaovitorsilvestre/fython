@@ -198,7 +198,7 @@ def quoted_source_code_func(source_code):
             (
                 :statements,
                 meta,
-                [(:string, meta, ["source code"])]
+                [(:string, meta, [source_code])]
             )
         ]
     )
