@@ -4,12 +4,14 @@ SHELL := /bin/bash
 ROOT_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 # fython src folder
 SRC_DIR:="$(ROOT_DIR)/src"
+TESTS_PATH:="$(ROOT_DIR)/tests"
 
 BOOTSTRAP_DOCKER_TAG:="fython:bootstrap"
 COMPILER_DOCKER_TAG:="fython:compiler"
 SHELL_DOCKER_TAG:="fython:shell"
 FYTEST_DOCKER_TAG:="fython:fytest"
 TESTS_DOCKER_TAG:="fython:tests"
+
 
 bootstrap-with-docker:
 	DOCKER_BUILDKIT=1 docker build -f devtools/Dockerfile -t $(BOOTSTRAP_DOCKER_TAG) --target bootstrap . || exit 1
@@ -23,9 +25,9 @@ compile-project:
 
 .ONESHELL:
 run-tests:
-	# > make run-tests path=/home/joao/fython/tests
+	# > make run-tests
 	$(MAKE) build-fytest
-	DOCKER_BUILDKIT=1 docker run -e FOLDER=$(path) -v $(path):$(path) $(FYTEST_DOCKER_TAG) || exit 1
+	DOCKER_BUILDKIT=1 docker run -e FOLDER=$(TESTS_PATH) -v $(TESTS_PATH):$(TESTS_PATH) $(FYTEST_DOCKER_TAG) || exit 1
 
 .ONESHELL:
 build-shell:

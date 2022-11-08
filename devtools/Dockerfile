@@ -65,6 +65,6 @@ ENV FYTEST_PATH_COMPILED="/libs/fytest/_compiled"
 COPY libs/fytest $FYTEST_PATH
 RUN /fython exec "Core.Code.compile_project('$FYTEST_PATH')" $DESTINE_PATH
 
-CMD /fython exec "Core.Code.compile_project('$FOLDER')" $DESTINE_PATH \
-    && /fython exec "Tests.Math_tests.run_tests()" $FOLDER/_compiled $FYTEST_PATH_COMPILED $DESTINE_PATH \
+CMD echo "Compiling $FOLDER" \
+    && /fython exec "Core.Code.compile_project('$FOLDER')" $DESTINE_PATH \
     && /fython exec "Fytest.run('$FOLDER')" $FOLDER/_compiled $FYTEST_PATH_COMPILED $DESTINE_PATH
