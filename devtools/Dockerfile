@@ -17,13 +17,15 @@ RUN wget https://github.com/joaovitorsilvestre/fython/releases/download/$VERSION
 
 COPY src src
 COPY /devtools/bootstrap.sh /bootstrap.sh
+COPY /devtools/bootstrap_old.sh /bootstrap_old.sh
 COPY /devtools/fython /fython
 RUN chmod a+x /bootstrap.sh
+RUN chmod a+x /bootstrap_old.sh
 RUN chmod a+x /fython
 
 # Execute bootstrap
 RUN echo "Bootstraping using Fython $VERSION_TO_USE_AS_BOOTSTRAPER" \
-    && ./bootstrap.sh compile /src $DESTINE_PATH $PATH_FYTHON_TO_USE_AS_BOOTSTRAPER $ELIXIR_BEAMS_PATH
+    && ./bootstrap_old.sh compile /src $DESTINE_PATH $PATH_FYTHON_TO_USE_AS_BOOTSTRAPER $ELIXIR_BEAMS_PATH
 
 # Remove base used for bootstrap (to ensure that we are not using it anymore)
 RUN rm -rf $PATH_FYTHON_TO_USE_AS_BOOTSTRAPER

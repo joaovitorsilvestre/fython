@@ -23,7 +23,7 @@ compile () {
   mkdir $EXIT_CODES_PATH
 
   for FILE_PATH in $ALL_FILES_PATH_COMP; do
-      ERL_COMMAND_CALL="application:start(compiler), application:start(elixir), 'Elixir.Code':compiler_options(#{ignore_module_conflict => true}), 'Fython.Core.Code':compile_project_file(<<"'"'$SRC_DIR_COMP'"'">>, <<"'"'${FILE_PATH}'"'">>, "'"'$DESTINE_PATH_COMP'"'", true), init:stop().";
+      ERL_COMMAND_CALL="application:start(compiler), application:start(elixir), 'Elixir.Code':compiler_options(#{ignore_module_conflict => true}), 'Fython.Core.Code':compile_project_file(<<"'"'$SRC_DIR_COMP'"'">>, <<"'"'${FILE_PATH}'"'">>, "'"'$DESTINE_PATH_COMP'"'"), init:stop().";
       FILE_PATH_SCAPED=$(echo $FILE_PATH | sed 's/\//SEPARATOR/g')
 
       if [ "$COMPILE_IN_PARALEL" = true ] ; then

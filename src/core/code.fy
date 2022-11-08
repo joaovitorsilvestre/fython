@@ -15,12 +15,11 @@ def compile_project(project_path, destine):
         |> Elixir.Enum.join('/')
         |> Elixir.Path.wildcard()
         |> Elixir.Enum.map(lambda file_full_path:
-            compile_project_file(project_path, file_full_path, compiled_folder)
+            compile_project_file(project_path, file_full_path, compiled_folder, False)
         )
 
-
-def compile_project_file(project_root, file_full_path, destine_compiled):
-    module_name = get_module_name(project_root, file_full_path)
+def compile_project_file(project_root, file_full_path, destine_compiled, bootstraping):
+    module_name = get_module_name(project_root, file_full_path, bootstraping)
 
     # Ensure compiled folder is created
     Elixir.File.mkdir_p!(destine_compiled)
@@ -89,10 +88,12 @@ def lexer_parse_convert_file(module_name, text, config):
         _ -> (state, None)
 
 
-def get_module_name(project_full_path, file_full_path):
+def get_module_name(project_full_path, file_full_path, bootstraping):
     # input >
     #    project_full_path = /home/joao/fythonproject
     #    file_full_path = /home/joao/fythonproject/module/utils.fy
+    # bootstraping (when True we will not add the name of marent folder to the module's name
+#                   Otherwise Fython itself would have modules called Src, e.g Fython.Src.Core.func_name)
     # output > Module.Utils
 
     # if file name is __init__.fy
@@ -103,11 +104,14 @@ def get_module_name(project_full_path, file_full_path):
         True -> None
         False -> raise "File fullpath doent match project full path"
 
-    project_parent_path = project_full_path
-        |> Elixir.String.replace_suffix('/', '')
-        |> Elixir.String.split('/')
-        |> Elixir.Enum.slice(0..-2)
-        |> Elixir.Enum.join('/')
+    project_parent_path = case bootstraping:
+        False ->
+            project_full_path
+                |> Elixir.String.replace_suffix('/', '')
+                |> Elixir.String.split('/')
+                |> Elixir.Enum.slice(0..-2)
+                |> Elixir.Enum.join('/')
+        True -> project_full_path
 
     name = Elixir.String.replace_prefix(file_full_path, project_parent_path, "")
 
