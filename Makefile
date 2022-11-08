@@ -14,7 +14,7 @@ TESTS_DOCKER_TAG:="fython:tests"
 
 
 bootstrap-with-docker:
-	docker build -f devtools/Dockerfile -t $(BOOTSTRAP_DOCKER_TAG) --target bootstrap . || exit 1
+	DOCKER_BUILDKIT=1 docker build -f devtools/Dockerfile -t $(BOOTSTRAP_DOCKER_TAG) --target bootstrap . || exit 1
 
 .ONESHELL:
 compile-project:
