@@ -35,6 +35,7 @@ def test_basic_operations():
 
 def test_strings():
     assert_equal('a', "a")
+    assert_equal('"', "\"")
 
 def test_lists():
     a = [1, 2, 3]

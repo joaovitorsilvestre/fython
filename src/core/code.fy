@@ -56,7 +56,7 @@ def compile_project_file(project_root, file_full_path, destine_compiled):
             Elixir.IO.puts(file_full_path)
             text = Elixir.File.read(file_full_path) |> Elixir.Kernel.elem(1)
             Core.Errors.Utils.print_error(module_name, state, text)
-            :error
+            raise "Compilation failed"
 
 def lexer_parse_convert_file(module_name, text, config):
     lexed = Core.Lexer.execute(text)
