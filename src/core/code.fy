@@ -88,6 +88,10 @@ def lexer_parse_convert_file(module_name, text, config):
         _ -> (state, None)
 
 
+def get_module_name(project_full_path, file_full_path):
+    get_module_name(project_full_path, file_full_path, False)
+
+
 def get_module_name(project_full_path, file_full_path, bootstraping):
     # input >
     #    project_full_path = /home/joao/fythonproject
