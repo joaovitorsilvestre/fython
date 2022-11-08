@@ -90,8 +90,10 @@ def lexer_parse_convert_file(module_name, text, config):
 
 
 def get_module_name(project_full_path, file_full_path):
-    # input > /home/joao/fythonproject/module/utils.fy
-    # output > ModuleA.Utils
+    # input >
+    #    project_full_path = /home/joao/fythonproject
+    #    file_full_path = /home/joao/fythonproject/module/utils.fy
+    # output > Module.Utils
 
     # if file name is __init__.fy
     # we wil remove this name and the module name passes to be
@@ -101,7 +103,13 @@ def get_module_name(project_full_path, file_full_path):
         True -> None
         False -> raise "File fullpath doent match project full path"
 
-    name = Elixir.String.replace_prefix(file_full_path, project_full_path, "")
+    project_parent_path = project_full_path
+        |> Elixir.String.replace_suffix('/', '')
+        |> Elixir.String.split('/')
+        |> Elixir.Enum.slice(0..-2)
+        |> Elixir.Enum.join('/')
+
+    name = Elixir.String.replace_prefix(file_full_path, project_parent_path, "")
 
     # remove / from the start of the name
     name = case Elixir.String.graphemes(name) |> Elixir.Enum.at(0):

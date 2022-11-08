@@ -8,35 +8,46 @@ SRC_DIR:="$(ROOT_DIR)/src"
 BOOTSTRAP_DOCKER_TAG:="fython:bootstrap"
 COMPILER_DOCKER_TAG:="fython:compiler"
 SHELL_DOCKER_TAG:="fython:shell"
+FYTEST_DOCKER_TAG:="fython:fytest"
 TESTS_DOCKER_TAG:="fython:tests"
 
 bootstrap-with-docker:
-	DOCKER_BUILDKIT=1 docker build -f devtools/Dockerfile -t $(BOOTSTRAP_DOCKER_TAG) --target bootstrap .
+	DOCKER_BUILDKIT=1 docker build -f devtools/Dockerfile -t $(BOOTSTRAP_DOCKER_TAG) --target bootstrap . || exit 1
 
 .ONESHELL:
 compile-project:
 	# USAGE:
 	# > make compile-project path=/home/joao/fython/example
-	DOCKER_BUILDKIT=1 docker build -f devtools/Dockerfile -t $(COMPILER_DOCKER_TAG) --target compiler .
-	DOCKER_BUILDKIT=1 docker run --env PROJET_FOLDER=/project$(path) -v $(path):/project$(path) $(COMPILER_DOCKER_TAG)
+	DOCKER_BUILDKIT=1 docker build -f devtools/Dockerfile -t $(COMPILER_DOCKER_TAG) --target compiler . || exit 1
+	DOCKER_BUILDKIT=1 docker run --env PROJET_FOLDER=/project$(path) -v $(path):/project$(path) $(COMPILER_DOCKER_TAG) || exit 1
 
 .ONESHELL:
 run-tests:
-	DOCKER_BUILDKIT=1 docker build -f devtools/Dockerfile -t $(TESTS_DOCKER_TAG) --target tests .
-	DOCKER_BUILDKIT=1 docker run $(TESTS_DOCKER_TAG)
+	# > make run-tests path=/home/joao/fython/tests
+	$(MAKE) build-fytest
+	DOCKER_BUILDKIT=1 docker run -e FOLDER=$(path) -v $(path):$(path) $(FYTEST_DOCKER_TAG) || exit 1
 
 .ONESHELL:
 build-shell:
-	DOCKER_BUILDKIT=1 docker build -f devtools/Dockerfile -t $(SHELL_DOCKER_TAG) --target shell .
+	DOCKER_BUILDKIT=1 docker build -f devtools/Dockerfile -t $(SHELL_DOCKER_TAG) --target shell .  || exit 1
+
+.ONESHELL:
+build-fytest:
+	DOCKER_BUILDKIT=1 docker build -f devtools/Dockerfile -t $(FYTEST_DOCKER_TAG) --target fytest .  || exit 1
 
 .ONESHELL:
 shell-current-src:
-	$(MAKE) build-shell || exit 1
-	DOCKER_BUILDKIT=1 docker run -it $(SHELL_DOCKER_TAG)
+	$(MAKE) build-shell
+	DOCKER_BUILDKIT=1 docker run -it $(SHELL_DOCKER_TAG) || exit 1
 
 .ONESHELL:
 project-shell:
-	# > compile-project-and-open-shell path=/home/joao/fython/example
-	$(MAKE) compile-project path=$(path) || exit 1
-	$(MAKE) build-shell || exit 1
-	DOCKER_BUILDKIT=1 docker run -it --env ADITIONAL_PATHS=/project$(path)/_compiled -v $(path):/project$(path) $(SHELL_DOCKER_TAG)
+	# > project-shell path=/home/joao/fython/example
+	$(MAKE) compile-project path=$(path)
+	$(MAKE) build-shell
+	DOCKER_BUILDKIT=1 docker run -it --env ADITIONAL_PATHS=/project$(path)/_compiled -v $(path):/project$(path) $(SHELL_DOCKER_TAG) || exit 1
+
+project-bash:
+	# > project-bash path=/home/joao/fython/example
+	$(MAKE) compile-project path=$(path)
+	DOCKER_BUILDKIT=1 docker run -it --env ADITIONAL_PATHS=/project$(path)/_compiled -v $(path):/project$(path) $(SHELL_DOCKER_TAG) bash  || exit 1

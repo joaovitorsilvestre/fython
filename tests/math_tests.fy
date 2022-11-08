@@ -84,7 +84,7 @@ def test_pipe_operator():
 
 def test_range():
     assert_equal(Elixir.Enum.to_list(1..5), [1, 2, 3, 4, 5])
-    assert_equal(Elixir.Enum.to_list(5..0), [5, 4, 3, 2, 1])
+    assert_equal(Elixir.Enum.to_list(5..1), [5, 4, 3, 2, 1])
 
 def test_case():
     a = case True:

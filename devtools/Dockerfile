@@ -33,13 +33,15 @@ FROM base as bootstrap
 RUN ./bootstrap.sh compile /src /test_compiled1 $DESTINE_PATH $ELIXIR_BEAMS_PATH
 RUN ./bootstrap.sh compile /src /test_compiled2 /test_compiled1
 
-FROM base as elixir_shell
-# TODO
-# CMD erl -pa $IEX_BEAMS_PATH -noshell -user Elixir.IEx.CLI +iex
-
 FROM base as shell
 ENV ADITIONAL_PATHS=""
-CMD /fython exec "Shell.start()" $DESTINE_PATH $ADITIONAL_PATHS
+ENV SHELL_PATH="/libs/shell"
+ENV SHELL_PATH_COMPILED="/libs/shell/_compiled"
+
+COPY libs/shell $SHELL_PATH
+RUN /fython exec "Core.Code.compile_project('$SHELL_PATH')" $DESTINE_PATH
+
+CMD /fython exec "Shell.start()" $SHELL_PATH_COMPILED $DESTINE_PATH $ADITIONAL_PATHS
 
 FROM base as compiler
 ENV PROJET_FOLDER="/project"
@@ -51,4 +53,18 @@ FROM base as tests
 COPY tests tests
 
 CMD /fython exec "Core.Code.compile_project('/tests')" $DESTINE_PATH \
-    && /fython exec "Math_tests.run_tests()" $DESTINE_PATH /tests/_compiled
+    && /fython exec "Tests.Math_tests.run_tests()" $DESTINE_PATH /tests/_compiled
+
+FROM base as fytest
+
+ENV FOLDER="MUST_BE_GIVEN"
+
+ENV FYTEST_PATH="/libs/fytest"
+ENV FYTEST_PATH_COMPILED="/libs/fytest/_compiled"
+
+COPY libs/fytest $FYTEST_PATH
+RUN /fython exec "Core.Code.compile_project('$FYTEST_PATH')" $DESTINE_PATH
+
+CMD /fython exec "Core.Code.compile_project('$FOLDER')" $DESTINE_PATH \
+    && /fython exec "Tests.Math_tests.run_tests()" $FOLDER/_compiled $FYTEST_PATH_COMPILED $DESTINE_PATH \
+    && /fython exec "Fytest.run('$FOLDER')" $FOLDER/_compiled $FYTEST_PATH_COMPILED $DESTINE_PATH
