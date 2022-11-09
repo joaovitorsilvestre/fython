@@ -48,9 +48,9 @@ def func_def_expr(state):
         True -> advance(state)
         False -> Core.Parser.Utils.set_error(
             state,
-            "Expected ':'",
-            state["current_tok"]["pos_start"],
-            state["current_tok"]["pos_end"]
+            "Missing ':' after function definition",
+            state["prev_tok"]["pos_end"],
+            state["prev_tok"]["pos_end"]
         )
 
     state = case (state['current_tok']['pos_start']['ln']) > def_token_ln:
@@ -79,7 +79,6 @@ def func_def_expr(state):
     case [arg_nodes, body]:
         [_, None] ->    [state, None]
         [None, _] ->    [state, None]
-        [None, None] -> [state, None]
         _ ->
             node = Core.Parser.Nodes.make_funcdef_node(
                 state['file'], var_name_tok, arg_nodes, body, docstring, pos_start
@@ -113,7 +112,6 @@ def lambda_expr(state):
     case [arg_nodes, body]:
         [_, None] ->    [state, None]
         [None, _] ->    [state, None]
-        [None, None] -> [state, None]
         _ ->
             node = Core.Parser.Nodes.make_lambda_node(
                 state['file'], None, arg_nodes, body, pos_start

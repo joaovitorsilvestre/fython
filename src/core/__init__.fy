@@ -1,27 +1,19 @@
-def eval_file(module_name, file_path):
-    text = Elixir.File.read(file_path) |> Elixir.Kernel.elem(1)
+def eval_string(text):
+    eval_string('<stdin>', text, {"file": '<stdin>'})
 
-    eval_string(module_name, text)
+def eval_string(module_name, text, config):
+    (state, converted) = Core.Code.lexer_parse_convert_file(module_name, text, config)
 
-def eval_string(module_name, text):
-    eval_string(module_name, text, [])
-
-def eval_string(module_name, text, env):
-    state_n_converted = Core.Code.lexer_parse_convert_file(module_name, "<stdin>", text, env)
-
-    state = Elixir.Enum.at(state_n_converted, 0)
-    converted = Elixir.Enum.at(state_n_converted, 1)
+    file = Elixir.Map.get(config, 'file')
+    env = Elixir.Map.get(config, 'env', [])
 
     case converted:
         None ->
-            Core.Errors.Utils.print_error('<stdin>', state, text)
+            Core.Errors.Utils.print_error(file, state, text)
             (None, env)
         _ ->
-            Elixir.IO.inspect(converted)
-
-            # (result, new_env)
             try:
-                converted |> Elixir.Code.eval_quoted(env)
-            except Elixir.CompileError as e:
-#                Elixir.IO.inspect(e)
-                (None, env)
+                Elixir.Code.eval_quoted(converted, env, [])
+            except error:
+#                Exceptions.format_traceback(error, __STACKTRACE__)
+                Elixir.Kernel.reraise(error, __STACKTRACE__)

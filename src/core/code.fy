@@ -11,42 +11,25 @@ def compile_project(project_path, destine):
     # Ensure compiled folder is created
     Elixir.File.mkdir_p!(compiled_folder)
 
-    # Copy elixir beams to folder
-    copy_elixir_beams(compiled_folder)
-
     [project_path, "**/*.fy"]
         |> Elixir.Enum.join('/')
         |> Elixir.Path.wildcard()
         |> Elixir.Enum.map(lambda file_full_path:
-            compile_project_file(project_path, file_full_path, compiled_folder)
+            compile_project_file(project_path, file_full_path, compiled_folder, False)
         )
 
-
-def copy_elixir_beams(compiled_folder):
-    elixir_path = '/usr/lib/elixir/lib/elixir/ebin'
-
-    case Elixir.File.exists?(elixir_path):
-        True -> Elixir.Enum.join([elixir_path, '*'], '/')
-            |> Elixir.Path.wildcard()
-            |> Elixir.Enum.each(lambda beam_file:
-                file_name = beam_file
-                    |> Elixir.String.split('/')
-                    |> Elixir.List.last()
-
-                Elixir.File.cp!(beam_file, Elixir.Enum.join([compiled_folder, file_name], '/'))
-            )
-        False -> :error
-
-def compile_project_file(project_root, file_full_path, destine_compiled):
-    module_name = get_module_name(project_root, file_full_path)
+def compile_project_file(project_root, file_full_path, destine_compiled, bootstraping):
+    module_name = get_module_name(project_root, file_full_path, bootstraping)
 
     # Ensure compiled folder is created
     Elixir.File.mkdir_p!(destine_compiled)
 
     Elixir.IO.puts(Elixir.Enum.join(["Compiling module: ", module_name]))
 
-    [state, quoted] = lexer_parse_convert_file(
-        module_name, file_full_path, Elixir.File.read(file_full_path) |> Elixir.Kernel.elem(1)
+    (state, quoted) = lexer_parse_convert_file(
+        module_name,
+        Elixir.File.read(file_full_path) |> Elixir.Kernel.elem(1),
+        {"file": file_full_path, "compiling_module": True}
     )
 
     case Elixir.Map.get(state, "error"):
@@ -55,50 +38,67 @@ def compile_project_file(project_root, file_full_path, destine_compiled):
             # to ensure that our module binary will not have
             # Elixir. in the begin of the module name
             (_, _, binary, _) = Elixir.Module.create(
-                Elixir.String.to_atom(module_name), quoted, Elixir.Macro.Env.location(__ENV__)
+                Elixir.String.to_atom(module_name),
+                quoted,
+                [(:file, file_full_path)]
             )
 
-            Elixir.File.write(
-                Elixir.Enum.join([destine_compiled, "/", module_name, ".beam"]),
-                binary,
-                mode=:binary
-            )
-            Elixir.File.write(
-                Elixir.Enum.join([destine_compiled, "/", module_name, ".ex"]),
-                Elixir.Macro.to_string(quoted),
-            )
+            # we save .ex just to help debugging
+            destine_ex = Elixir.Enum.join([destine_compiled, "/", module_name, ".ex"])
+            destine_beam = Elixir.Enum.join([destine_compiled, "/", module_name, ".beam"])
+
+            Elixir.File.write(destine_ex, Elixir.Macro.to_string(quoted))
+            Elixir.File.write(destine_beam, binary, mode=:binary)
         _ ->
             Elixir.IO.puts("Compilation error:")
             Elixir.IO.puts("file path:")
             Elixir.IO.puts(file_full_path)
             text = Elixir.File.read(file_full_path) |> Elixir.Kernel.elem(1)
             Core.Errors.Utils.print_error(module_name, state, text)
-            :error
+            raise "Compilation failed"
 
-def lexer_parse_convert_file(module_name, files_full_path,  text):
-    lexer_parse_convert_file(module_name, files_full_path,  text, [])
-
-def lexer_parse_convert_file(module_name, files_full_path,  text, env):
+def lexer_parse_convert_file(module_name, text, config):
     lexed = Core.Lexer.execute(text)
 
+    # 1º Convert each node from Fython AST to Elixir AST
     state = case Elixir.Map.get(lexed, "error"):
         None ->
             tokens = Elixir.Map.get(lexed, "tokens")
-            Core.Parser.execute(files_full_path, tokens, env)
+            Core.Parser.execute(tokens, config)
         _ ->
             lexed
 
-    # 2º Convert each node from json to Fython format
+    state_error = Elixir.Map.get(state, 'error')
+    compiling_module = Elixir.Map.get(config, "compiling_module", False)
+
+    # 2º Inject usefull functions into the module
+    state = case [state_error, compiling_module]:
+        [None, True] ->
+            node = Core.Parser.Pos.Nodesrefs.run(state['node'], text)
+            Elixir.Map.put(state, 'node', node)
+        _ -> state
+
+#    Elixir.IO.inspect(state['node'])
+
+    # 3º Convert each node from Fython AST to Elixir AST
     case Elixir.Map.get(state, 'error'):
         None ->
             ast = Elixir.Map.get(state, 'node')
-            [state, Core.Generator.Conversor.convert(ast)]
-        _ -> [state, None]
+            (state, Core.Generator.Conversor.convert(ast))
+        _ -> (state, None)
 
 
 def get_module_name(project_full_path, file_full_path):
-    # input > /home/joao/fythonproject/module/utils.fy
-    # output > ModuleA.Utils
+    get_module_name(project_full_path, file_full_path, False)
+
+
+def get_module_name(project_full_path, file_full_path, bootstraping):
+    # input >
+    #    project_full_path = /home/joao/fythonproject
+    #    file_full_path = /home/joao/fythonproject/module/utils.fy
+    # bootstraping (when True we will not add the name of marent folder to the module's name
+#                   Otherwise Fython itself would have modules called Src, e.g Fython.Src.Core.func_name)
+    # output > Module.Utils
 
     # if file name is __init__.fy
     # we wil remove this name and the module name passes to be
@@ -108,7 +108,16 @@ def get_module_name(project_full_path, file_full_path):
         True -> None
         False -> raise "File fullpath doent match project full path"
 
-    name = Elixir.String.replace_prefix(file_full_path, project_full_path, "")
+    project_parent_path = case bootstraping:
+        False ->
+            project_full_path
+                |> Elixir.String.replace_suffix('/', '')
+                |> Elixir.String.split('/')
+                |> Elixir.Enum.slice(0..-2)
+                |> Elixir.Enum.join('/')
+        True -> project_full_path
+
+    name = Elixir.String.replace_prefix(file_full_path, project_parent_path, "")
 
     # remove / from the start of the name
     name = case Elixir.String.graphemes(name) |> Elixir.Enum.at(0):
@@ -133,9 +142,3 @@ def get_module_name(project_full_path, file_full_path):
         _ -> final |> Elixir.Enum.join('.')
 
     Elixir.Enum.join(["Fython.", final])
-
-
-def parallel_map(collection, func):
-    collection
-        |> Elixir.Enum.map(lambda i: Elixir.Task.async(lambda: func(i)))
-        |> Elixir.Enum.map(lambda i: Elixir.Task.await(i, :infinity))

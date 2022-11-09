@@ -1,4 +1,5 @@
 def run_tests():
+    Elixir.IO.puts("Running tests")
     test_numbers()
     test_basic_operations()
     test_strings()
@@ -9,6 +10,8 @@ def run_tests():
     test_pattern_matching()
     test_pipe_operator()
     test_case()
+    test_function_call()
+    Elixir.IO.puts("All passed")
 
 def test_numbers():
     assert_equal(1_000, 1000)
@@ -32,6 +35,7 @@ def test_basic_operations():
 
 def test_strings():
     assert_equal('a', "a")
+    assert_equal('"', "\"")
 
 def test_lists():
     a = [1, 2, 3]
@@ -80,7 +84,7 @@ def test_pipe_operator():
 
 def test_range():
     assert_equal(Elixir.Enum.to_list(1..5), [1, 2, 3, 4, 5])
-    assert_equal(Elixir.Enum.to_list(5..0), [5, 4, 3, 2, 1])
+    assert_equal(Elixir.Enum.to_list(5..1), [5, 4, 3, 2, 1])
 
 def test_case():
     a = case True:
@@ -98,7 +102,22 @@ def test_case():
         _ -> False
     assert_equal(a, True)
 
+def test_function_call():
+    assert_equal(sum_function(10, 15), 25)
+    assert_equal(sum_function([10, 15]), 25)
+    assert_equal(sum_function({"a": 10, "b": 15}), 25)
+
+def sum_function(a, b):
+    a + b
+
+def sum_function([a, b]):
+    a + b
+
+def sum_function({"a": a, "b": b}):
+    a + b
+
 def assert_equal(a, b):
     case a == b:
         False -> raise "It's not equal"
         True -> None
+

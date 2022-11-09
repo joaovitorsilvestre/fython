@@ -152,19 +152,6 @@ def new_resolver((:statements, meta, nodes), var_names_avaliable):
         )
     )
 
-def get_vars_defined_def_or_lambda(args, statements,var_names_avaliable):
-    received_arguments = args
-        |> Elixir.Enum.filter(lambda (node_type, _, _):
-            node_type in Core.Parser.Nodes.node_types_accept_pattern()
-        )
-        |> Elixir.Enum.map(&get_variables_bound_in_pattern/1)
-
-    statements = convert_local_function_calls(
-        statements,
-        Elixir.List.flatten(var_names_avaliable, received_arguments)
-    )
-
-    [args, statements]
 
 def new_resolver((:def, meta, [name, args, statements]), var_names_avaliable):
     [args, statements] = get_vars_defined_def_or_lambda(
@@ -197,17 +184,6 @@ def new_resolver((:pipe, meta, [left_node, right_node]), var_names_avaliable):
             convert_local_function_calls(left_node, var_names_avaliable),
             convert_local_function_calls(right_node, var_names_avaliable)
         ]
-    )
-
-def resolve_map_pair((key, value), var_names_avaliable):
-    (
-        convert_local_function_calls(key, var_names_avaliable),
-        convert_local_function_calls(value, var_names_avaliable)
-    )
-
-def resolve_map_pair((:spread, meta, [node_to_spread]), var_names_avaliable):
-    (
-        :spread, meta, [new_resolver(node_to_spread, var_names_avaliable)]
     )
 
 def new_resolver((:map, meta, pairs), var_names_avaliable):
@@ -258,3 +234,29 @@ def new_resolver(node <- (:range, meta, [left_node, right_node]), var_names_aval
             new_resolver(right_node, var_names_avaliable),
         ]
     )
+
+def resolve_map_pair((key, value), var_names_avaliable):
+    (
+        convert_local_function_calls(key, var_names_avaliable),
+        convert_local_function_calls(value, var_names_avaliable)
+    )
+
+def resolve_map_pair((:spread, meta, [node_to_spread]), var_names_avaliable):
+    (
+        :spread, meta, [new_resolver(node_to_spread, var_names_avaliable)]
+    )
+
+
+def get_vars_defined_def_or_lambda(args, statements,var_names_avaliable):
+    received_arguments = args
+        |> Elixir.Enum.filter(lambda (node_type, _, _):
+            node_type in Core.Parser.Nodes.node_types_accept_pattern()
+        )
+        |> Elixir.Enum.map(&get_variables_bound_in_pattern/1)
+
+    statements = convert_local_function_calls(
+        statements,
+        Elixir.List.flatten(var_names_avaliable, received_arguments)
+    )
+
+    [args, statements]

@@ -10,15 +10,11 @@ compile () {
   ELIXIR_BEAMS_PATH_COMP=$4
   COMPILE_IN_PARALEL=true
 
-  [[ -z "$SRC_DIR_COMP" ]] && echo "Missing src dir of fython" && exit 1
-  [[ -z "$DESTINE_PATH_COMP" ]] && echo "Missing destine path of bootstrap" && exit 1
-  [[ -z "$PATH_FYTHON_TO_USE_AS_BOOTSTRAPER_COMP" ]] && echo "Missing path of previous fython to use as bootstraper" && exit 1
-  [[ -z "$ELIXIR_BEAMS_PATH_COMP" ]] && echo "Missing elixir beams path" && exit 1
-
   ALL_FILES_PATH_COMP=$(find $SRC_DIR_COMP -name '*.fy')
 
   echo "Destine folder: $DESTINE_PATH_COMP"
-  rm -rf $DESTINE_PATH_COMP/*
+  rm -rf $DESTINE_PATH_COMP
+  mkdir $DESTINE_PATH_COMP
 
   cd $ELIXIR_BEAMS_PATH_COMP && cp -r . "$DESTINE_PATH_COMP" && cd /
 
@@ -27,7 +23,7 @@ compile () {
   mkdir $EXIT_CODES_PATH
 
   for FILE_PATH in $ALL_FILES_PATH_COMP; do
-      ERL_COMMAND_CALL="application:start(compiler), application:start(elixir), 'Elixir.Code':compiler_options(#{ignore_module_conflict => true}), 'Fython.Core.Code':compile_project_file(<<"'"'$SRC_DIR_COMP'"'">>, <<"'"'${FILE_PATH}'"'">>, "'"'$DESTINE_PATH_COMP'"'", true), init:stop().";
+      ERL_COMMAND_CALL="application:start(compiler), application:start(elixir), 'Elixir.Code':compiler_options(#{ignore_module_conflict => true}), 'Fython.Core.Code':compile_project_file(<<"'"'$SRC_DIR_COMP'"'">>, <<"'"'${FILE_PATH}'"'">>, "'"'$DESTINE_PATH_COMP'"'"), init:stop().";
       FILE_PATH_SCAPED=$(echo $FILE_PATH | sed 's/\//SEPARATOR/g')
 
       if [ "$COMPILE_IN_PARALEL" = true ] ; then

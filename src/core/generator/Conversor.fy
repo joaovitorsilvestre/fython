@@ -1,30 +1,41 @@
-def convert_meta({"start": (_coll, line, _index), "file": file}):
-    [(:line, line + 1), (:file, file)]
+def convert_meta((nodetype, {"ref_line": line}, body)):
+    # We are compiling a module
+    # Se we will use line numbers as keys, that we can later
+    # get the full meta of the node.
+    # We need this because elixir __STACKTRACE__ only inform us the line
+    # and to give users better errors messages, we need
+    # the position of tokens (eg. column in the curent line, etc)
+    # that we have in original meta
+    (nodetype, [(:line, line)], body)
+
+def convert_meta((nodetype, {"start": (_coll, line, _index)}, body)):
+    meta = [(:line, line + 1)]
+    (nodetype, meta, body)
 
 def convert(node):
     case Elixir.Kernel.elem(node, 0):
-        :number         -> convert_number(node)
-        :atom           -> convert_atom(node)
-        :var            -> convert_var(node)
-        :string         -> convert_string(node)
-        :unary          -> convert_unary(node)
-        :list           -> convert_list(node)
-        :tuple          -> convert_tuple(node)
-        :binop          -> convert_binop(node)
-        :pattern        -> convert_pattern(node)
-        :if             -> convert_if(node)
-        :func           -> convert_func(node)
-        :statements     -> convert_statements(node)
-        :lambda         -> convert_lambda(node)
-        :def            -> convert_def(node)
-        :static_access  -> convert_static_access(node)
-        :raise          -> convert_raise(node)
-        :pipe           -> convert_pipe(node)
-        :map            -> convert_map(node)
-        :case           -> convert_case(node)
-        :call           -> convert_call(node)
-        :try            -> convert_try(node)
-        :range          -> convert_range_node(node)
+        :number         -> node |> convert_meta() |> convert_number()
+        :atom           -> node |> convert_meta() |> convert_atom()
+        :var            -> node |> convert_meta() |> convert_var()
+        :string         -> node |> convert_meta() |> convert_string()
+        :unary          -> node |> convert_meta() |> convert_unary()
+        :list           -> node |> convert_meta() |> convert_list()
+        :tuple          -> node |> convert_meta() |> convert_tuple()
+        :binop          -> node |> convert_meta() |> convert_binop()
+        :pattern        -> node |> convert_meta() |> convert_pattern()
+        :if             -> node |> convert_meta() |> convert_if()
+        :func           -> node |> convert_meta() |> convert_func()
+        :statements     -> node |> convert_meta() |> convert_statements()
+        :lambda         -> node |> convert_meta() |> convert_lambda()
+        :def            -> node |> convert_meta() |> convert_def()
+        :static_access  -> node |> convert_meta() |> convert_static_access()
+        :raise          -> node |> convert_meta() |> convert_raise()
+        :pipe           -> node |> convert_meta() |> convert_pipe()
+        :map            -> node |> convert_meta() |> convert_map()
+        :case           -> node |> convert_meta() |> convert_case()
+        :call           -> node |> convert_meta() |> convert_call()
+        :try            -> node |> convert_meta() |> convert_try()
+        :range          -> node |> convert_meta() |> convert_range_node()
 
 def convert_number((:number, _, [value])):
     value
@@ -42,23 +53,22 @@ def convert_var((:var, _, [_pinned, "None"])):
     None
 
 def convert_var((:var, meta, [True, value])):
-    (:"^", convert_meta(meta), [(Elixir.String.to_atom(value), convert_meta(meta), :Elixir)])
+    (:"^", meta, [(Elixir.String.to_atom(value), meta, :Elixir)])
 
 def convert_var((:var, meta, [False, value])):
-    (Elixir.String.to_atom(value), convert_meta(meta), :Elixir)
+    (Elixir.String.to_atom(value), meta, :Elixir)
 
 def convert_string((:string, meta, [value])):
-    value = Elixir.Enum.join(['"', value,'"']) |> Elixir.Code.eval_string() |> Elixir.Kernel.elem(0)
-    (:"<<>>", convert_meta(meta), [value])
+    value
 
 def convert_unary((:unary, meta, [:minus, node])):
-    (:"-", convert_meta(meta), [convert(node)])
+    (:"-", meta, [convert(node)])
 
 def convert_unary((:unary, meta, [:plus, node])):
-    (:"+", convert_meta(meta), [convert(node)])
+    (:"+", meta, [convert(node)])
 
 def convert_unary((:unary, meta, [:not, node])):
-    (:"__block__", convert_meta(meta), [(:"!", convert_meta(meta), [convert(node)])])
+    (:"__block__", meta, [(:"!", meta, [convert(node)])])
 
 def is_unpack((:unpack, _, _)):
     True
@@ -94,10 +104,10 @@ def convert_list_with_unpack((:list, meta, elements)):
                 (
                     (
                         :".",
-                        convert_meta(meta),
+                        meta,
                         [(:__aliases__, [(:alias, False)], [Elixir.String.to_atom("Elixir.Enum")]), :concat]
                     ),
-                    convert_meta(meta),
+                    meta,
                     [acc, item]
                 )
         )
@@ -108,19 +118,19 @@ def convert_list(node <- (:list, meta, elements)):
         _ -> convert_list_with_unpack(node)
 
 def convert_tuple((:tuple, meta, elements)):
-    (:"{}", convert_meta(meta), Elixir.Enum.map(elements, &convert/1))
+    (:"{}", meta, Elixir.Enum.map(elements, &convert/1))
 
 def convert_binop((:binop, meta, [left, :or, right])):
-    (:or, convert_meta(meta), [convert(left), convert(right)])
+    (:or, meta, [convert(left), convert(right)])
 
 def convert_binop((:binop, meta, [left, :and, right])):
-    (:and, convert_meta(meta), [convert(left), convert(right)])
+    (:and, meta, [convert(left), convert(right)])
 
 def convert_binop((:binop, meta, [left, :in, right])):
-    (:in, convert_meta(meta), [convert(left), convert(right)])
+    (:in, meta, [convert(left), convert(right)])
 
 def convert_binop((:binop, meta, [left, :pow, right])):
-    ((:".", convert_meta(meta), [:math, :pow]), convert_meta(meta), [convert(left), convert(right)])
+    ((:".", meta, [:math, :pow]), meta, [convert(left), convert(right)])
 
 def convert_binop((:binop, meta, [left, op, right])):
     elixir_op = {
@@ -129,19 +139,19 @@ def convert_binop((:binop, meta, [left, op, right])):
         :ee: '==', :ne: '!=', :in: 'in'
     }
 
-    (Elixir.String.to_atom(elixir_op[op]), convert_meta(meta), [convert(left), convert(right)])
+    (Elixir.String.to_atom(elixir_op[op]), meta, [convert(left), convert(right)])
 
 def convert_pattern((:pattern, meta, [left, right])):
-    (:"=", convert_meta(meta), [convert(left), convert(right)])
+    (:"=", meta, [convert(left), convert(right)])
 
 def convert_if((:if, meta, [comp_expr, true_case, false_case])):
-    (:if, convert_meta(meta), [convert(comp_expr), [(:do, convert(true_case)), (:else, convert(false_case))]])
+    (:if, meta, [convert(comp_expr), [(:do, convert(true_case)), (:else, convert(false_case))]])
 
 def convert_func((:func, meta, [name, arity])):
     (
         :"&",
-        convert_meta(meta),
-        [(:"/", convert_meta(meta), [(Elixir.String.to_atom(name), convert_meta(meta), :Elixir), arity])]
+        meta,
+        [(:"/", meta, [(Elixir.String.to_atom(name), meta, :Elixir), arity])]
     )
 
 def convert_statements((:statements, meta, nodes)):
@@ -149,34 +159,34 @@ def convert_statements((:statements, meta, nodes)):
 
     case Elixir.Enum.count(content):
         1 -> Elixir.Enum.at(content, 0)
-        _ -> (:"__block__", convert_meta(meta), content)
+        _ -> (:"__block__", meta, content)
 
 def convert_lambda((:lambda, meta, [args, statements])):
     args = args |> Elixir.Enum.map(&convert/1)
 
-    (:fn, convert_meta(meta), [(:"->", convert_meta(meta), [args, convert(statements)])])
+    (:fn, meta, [(:"->", meta, [args, convert(statements)])])
 
 def convert_def((:def, meta, [name, args, statements])):
     args = Elixir.Enum.map(args, &convert/1)
 
     (
         :def,
-        convert_meta(meta),
+        meta,
         [
-            (Elixir.String.to_atom(name), convert_meta(meta), args),
+            (Elixir.String.to_atom(name), meta, args),
             [(:do, convert(statements))]
         ]
     )
 
 def convert_static_access((:static_access, meta, [node_to_access, node_key])):
     (
-        (:".", convert_meta(meta), [(:"__aliases__", [(:alias, False)], [:Map]), :fetch!]),
-        convert_meta(meta),
+        (:".", meta, [(:"__aliases__", [(:alias, False)], [:Map]), :fetch!]),
+        meta,
         [convert(node_to_access), convert(node_key)]
     )
 
 def convert_raise((:raise, meta, [expr])):
-    (:raise, convert_meta(meta), [convert(expr)])
+    (:raise, meta, [convert(expr)])
 
 def get_childs((:pipe, _, [left_node, right_node])):
     [get_childs(left_node), get_childs(right_node)]
@@ -237,7 +247,7 @@ def convert_map_with_spread((:map, meta, pairs)):
                     (:spread, meta, [node_to_spread]) -> convert(node_to_spread)
                     _ -> (
                         :'%{}',
-                        convert_meta(meta),
+                        meta,
                         Elixir.Enum.map(
                             pairs_or_spread,
                             lambda (key, value): (convert(key), convert(value))
@@ -249,10 +259,10 @@ def convert_map_with_spread((:map, meta, pairs)):
                 (
                     (
                         :".",
-                        convert_meta(meta),
+                        meta,
                         [(:__aliases__, [(:alias, False)], [Elixir.String.to_atom("Elixir.Map")]), :merge]
                     ),
-                    convert_meta(meta),
+                    meta,
                     [acc, item]
                 )
         )
@@ -265,19 +275,19 @@ def convert_map(node <- (:map, meta, pairs)):
                     (convert(key), convert(value))
                 )
 
-            (:'%{}', convert_meta(meta), pairs)
+            (:'%{}', meta, pairs)
         _ -> convert_map_with_spread(node)
 
 def convert_case((:case, meta, [expr, pairs])):
 
     pairs = pairs
         |> Elixir.Enum.map(lambda (left, right):
-            (:"->", convert_meta(meta), [[convert(left)], convert(right)])
+            (:"->", meta, [[convert(left)], convert(right)])
         )
 
     case expr:
-        None -> (:cond, convert_meta(meta), [[(:do, pairs)]])
-        _ -> (:case, convert_meta(meta), [convert(expr), [(:do, pairs)]])
+        None -> (:cond, meta, [[(:do, pairs)]])
+        _ -> (:case, meta, [convert(expr), [(:do, pairs)]])
 
 
 def convert_call_args(args, keywords):
@@ -295,8 +305,8 @@ def convert_call((:call, meta, [node_to_call, args, keywords, True])):
     arguments = convert_call_args(args, keywords)
 
     (
-        (:".", convert_meta(meta), [convert(node_to_call)]),
-        convert_meta(meta),
+        (:".", meta, [convert(node_to_call)]),
+        meta,
         arguments
     )
 
@@ -326,14 +336,14 @@ def convert_call(full <- (:call, meta, [(:var, _, [_, func_name]), args, keyword
 
             module = Elixir.String.to_atom(module)
             (
-                (:".", convert_meta(meta), [module, Elixir.String.to_atom(function)]),
-                convert_meta(meta),
+                (:".", meta, [module, Elixir.String.to_atom(function)]),
+                meta,
                 arguments
             )
         False ->
             # this is for call a function that is defined in
             # the same module
-            (Elixir.String.to_atom(func_name), convert_meta(meta), arguments)
+            (Elixir.String.to_atom(func_name), meta, arguments)
 
 def convert_try((:try, meta, [try_block, exceptions, finally_block])):
     do = (:do, convert(try_block))
@@ -351,20 +361,9 @@ def convert_try((:try, meta, [try_block, exceptions, finally_block])):
                     # > except error:
                     (
                         :"->",
-                        convert_meta(meta),
+                        meta,
                         [
-                            [(Elixir.String.to_atom(except_identifier), convert_meta(meta), :Elixir)],
-                            convert(block)
-                        ]
-                    )
-                (False, None) ->
-                    # Case of:
-                    # > except ArithmeticError:
-                    (
-                        :"->",
-                        convert_meta(meta),
-                        [
-                            [(:'__aliases__', [(:alias, False)], [Elixir.String.to_atom(except_identifier)])],
+                            [(Elixir.String.to_atom(except_identifier), meta, :Elixir)],
                             convert(block)
                         ]
                     )
@@ -373,14 +372,14 @@ def convert_try((:try, meta, [try_block, exceptions, finally_block])):
                     # > except ArithmeticError as error:
                     (
                         :"->",
-                        convert_meta(meta),
+                        meta,
                         [
                             [
                                 (
                                     :in,
-                                    convert_meta(meta),
+                                    meta,
                                     [
-                                        (Elixir.String.to_atom(alias), convert_meta(meta), :Elixir),
+                                        (Elixir.String.to_atom(alias), meta, :Elixir),
                                         (:'__aliases__', [(:alias, False)], [Elixir.String.to_atom(except_identifier)])
                                     ]
                                 )
@@ -392,15 +391,15 @@ def convert_try((:try, meta, [try_block, exceptions, finally_block])):
 
     rescue = (:rescue, each_rescue)
 
-    (:try, convert_meta(meta), [[do, rescue]])
+    (:try, meta, [[do, rescue]])
 
 def convert_range_node((:range, meta, [left_node, right_node])):
     (
         (
             :".",
-            convert_meta(meta),
+            meta,
             [(:__aliases__, [(:alias, False)], [Elixir.String.to_atom("Elixir.Range")]), :new]
         ),
-        convert_meta(meta),
+        meta,
         [convert(left_node), convert(right_node)]
     )
