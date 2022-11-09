@@ -84,7 +84,10 @@ def execute(text, env, config):
     try:
         config = Elixir.Map.put(config, 'env', env)
         (result, new_env) = Core.eval_string('<stdin>', text, config)
-        Elixir.IO.inspect(result)
+        case result:
+            None -> None
+            _ -> Elixir.IO.inspect(result)
+
         (result, new_env)
     except error:
         # usefull for debuggind

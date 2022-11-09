@@ -59,11 +59,6 @@ def convert_var((:var, meta, [False, value])):
     (Elixir.String.to_atom(value), meta, :Elixir)
 
 def convert_string((:string, meta, [value])):
-    # TODO eval??, temos q rever o scaping
-#    Elixir.IO.inspect('convertendooo')
-#    Elixir.IO.inspect(value)
-#    value = Elixir.Enum.join(['"', value,'"']) |> Elixir.Code.eval_string() |> Elixir.Kernel.elem(0)
-#    (:"<<>>", meta, [value])
     value
 
 def convert_unary((:unary, meta, [:minus, node])):
@@ -369,17 +364,6 @@ def convert_try((:try, meta, [try_block, exceptions, finally_block])):
                         meta,
                         [
                             [(Elixir.String.to_atom(except_identifier), meta, :Elixir)],
-                            convert(block)
-                        ]
-                    )
-                (False, None) ->
-                    # Case of:
-                    # > except ArithmeticError:
-                    (
-                        :"->",
-                        meta,
-                        [
-                            [(:'__aliases__', [(:alias, False)], [Elixir.String.to_atom(except_identifier)])],
                             convert(block)
                         ]
                     )

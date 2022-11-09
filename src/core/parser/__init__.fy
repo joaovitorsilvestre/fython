@@ -677,7 +677,7 @@ def case_expr(state):
 
     is_cond = (state["current_tok"]["type"]) == "DO"
 
-    [state, _expr] = case is_cond:
+    [state, case_expr] = case is_cond:
         True -> [state, None]
         False -> expr(state)
 
@@ -716,8 +716,25 @@ def case_expr(state):
 
                     [state, left_expr] = expr(state)
 
-                    case (state['current_tok']['type']) == 'ARROW':
-                        True ->
+                    state = case [case_expr, left_expr]:
+                        [None, (:var, _, [_, "_"])] ->
+                            Core.Parser.Utils.set_error(
+                                state,
+                                "If you want a clause to always match, you should use: True",
+                                state["prev_tok"]["pos_start"],
+                                state["prev_tok"]["pos_start"],
+                            )
+                        [None, (:var, _, [_, "False"])] ->
+                            Core.Parser.Utils.set_error(
+                                state,
+                                "False is not allowed here as it will never matchs",
+                                state["prev_tok"]["pos_start"],
+                                state["prev_tok"]["pos_end"],
+                            )
+                        _ -> state
+
+                    case [state['error'],(state['current_tok']['type']) == 'ARROW']:
+                        [None, True] ->
                             state = advance(state)
 
                             [state, right_expr] = case (state['current_tok']['ident']) == this_ident:
@@ -727,13 +744,14 @@ def case_expr(state):
                             cases = [*cases, (left_expr, right_expr)]
 
                             state |> Elixir.Map.put('_cases', cases)
-                        False ->
+                        [None, False] ->
                             Core.Parser.Utils.set_error(
                                 state,
                                 "Expected '->'",
                                 state["current_tok"]["pos_start"],
                                 state["current_tok"]["pos_end"]
                             )
+                        [_, _] -> state
             )
         False ->
             Core.Parser.Utils.set_error(
@@ -758,7 +776,7 @@ def case_expr(state):
             state = Elixir.Map.delete(state, '_cases')
 
             node = Core.Parser.Nodes.make_case_node(
-                state['file'], _expr, cases, pos_start, state['current_tok']['pos_start']
+                state['file'], case_expr, cases, pos_start, state['current_tok']['pos_start']
             )
 
             [state, node]

@@ -26,7 +26,7 @@ state = {
 
 
 def get_lines_above(state):
-    HOW_MANY_LINES_SHOW_ABOVE = 3
+    HOW_MANY_LINES_SHOW_ABOVE = 5
 
     source_code_lines = [(num, line) for num, line in enumerate(state['source_code_lines'])]
 
@@ -42,16 +42,12 @@ def draw_pointers(state):
     start, end = state['start'][1], state['end'][1]
 
     pointer = " " * (get_need_size_numbers(state) + 3)
-    below = ""
     for i in range(0, start):
-        pointer += ' '
-        below += "="
+        pointer += '~'
 
     for i in range(start, end):
         pointer += "^"
-        below += "="
-
-    return [pointer + " erro aconteceu aq", below]
+    return [pointer]
 
 
 def get_lines_to_print(state):
@@ -73,7 +69,7 @@ def get_need_size_numbers(state):
 def add_line_numbers(meta, list_of_lines_indexed):
     size = get_need_size_numbers(meta)
     return [
-        f"{str(i + 1).rjust(size)} | {l}" for i, l in list_of_lines_indexed
+        f"{str(i + 1).rjust(size)} ǁ {l}" for i, l in list_of_lines_indexed
     ]
 
 
