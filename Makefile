@@ -53,3 +53,6 @@ project-bash:
 	# > project-bash path=/home/joao/fython/example
 	$(MAKE) compile-project path=$(path) \
 		&& DOCKER_BUILDKIT=1 docker run -it --env ADITIONAL_PATHS=/project$(path)/_compiled -v $(path):/project$(path) $(SHELL_DOCKER_TAG) bash
+
+compress-to-release:
+	cd bootstraped/ && tar -zcvf $(ROOT_DIR)/_compiled.tar.gz * && cd -
