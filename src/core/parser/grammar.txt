@@ -79,7 +79,9 @@ pipe-expr           : expr (PIPE expr)+
 func-arg-matchable  : INT|FLOAT|IDENTIFIER|STRING|ATOM|tuple-expr|list-expr|map-expr|IDENTIFIER LARROW func-arg-matchable
 
 func-def            : KEYWORD:def IDENTIFIER
-                    LPAREN (func-arg-matchable (COMMA func-arg-matchable)*)? RPAREN DO
+                    LPAREN (func-arg-matchable (COMMA func-arg-matchable)*)? RPAREN
+                    KEYWORD:if? expr*
+                    DO
                     (NEWLINE statements)+
 
 lambda-def          : KEYWORD:lambda (func-arg-matchable (COMMA func-arg-matchable)*)?

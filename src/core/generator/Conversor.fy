@@ -166,7 +166,7 @@ def convert_lambda((:lambda, meta, [args, statements])):
 
     (:fn, meta, [(:"->", meta, [args, convert(statements)])])
 
-def convert_def((:def, meta, [name, args, statements])):
+def convert_def((:def, meta, [name, args, guards, statements])):
     args = Elixir.Enum.map(args, &convert/1)
 
     (

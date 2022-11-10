@@ -73,6 +73,9 @@ def new_resolver(node <- (:call, meta, [node_to_call, args, keywords, _]), var_n
 def new_resolver(node <- (:number, _, _), _):
     node
 
+def new_resolver(node <- (:guard, _, _), _):
+    node
+
 def new_resolver(node <- (:atom, _, _), _):
     node
 
@@ -153,12 +156,12 @@ def new_resolver((:statements, meta, nodes), var_names_avaliable):
     )
 
 
-def new_resolver((:def, meta, [name, args, statements]), var_names_avaliable):
+def new_resolver((:def, meta, [name, args, guards, statements]), var_names_avaliable):
     [args, statements] = get_vars_defined_def_or_lambda(
         args, statements, var_names_avaliable
     )
 
-    (:def, meta, [name, args, statements])
+    (:def, meta, [name, args, guards, statements])
 
 def new_resolver((:lambda, meta, [args, statements]), var_names_avaliable):
     (:lambda, meta, get_vars_defined_def_or_lambda(args, statements, var_names_avaliable))
