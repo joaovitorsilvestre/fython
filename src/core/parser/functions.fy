@@ -46,10 +46,7 @@ def func_def_expr(state):
 
     [state, guards] = case Core.Parser.Utils.tok_matchs(state['current_tok'], 'KEYWORD', 'if'):
         True -> parse_if_guards(state)
-        False -> [state, None]
-
-    Elixir.IO.inspect('guards')
-    Elixir.IO.inspect(guards)
+        False -> [state, []]
 
     state = case (state['current_tok']['type']) == 'DO':
         True -> advance(state)

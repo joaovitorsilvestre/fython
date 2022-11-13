@@ -139,6 +139,16 @@ def make_raise_node(file, expr, pos_start):
     )
 
 
+def make_assert_node(file, expr, pos_start):
+    (_, {"end": pos_end}, _) = expr
+
+    (
+        :assert,
+        gen_meta(file, pos_start, pos_end),
+        [expr]
+    )
+
+
 def make_funcdef_node(file, var_name_tok, arg_nodes, guards, body_node, docstring, pos_start):
     (_, {"end": pos_end}, _) = body_node
 

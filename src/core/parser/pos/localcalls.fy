@@ -179,6 +179,9 @@ def new_resolver((:static_access, meta, [node_to_access, node_key]), var_names_a
 def new_resolver((:raise, meta, [expr]), var_names_avaliable):
     (:raise, meta, [convert_local_function_calls(expr, var_names_avaliable)])
 
+def new_resolver((:assert, meta, [expr]), var_names_avaliable):
+    (:assert, meta, [convert_local_function_calls(expr, var_names_avaliable)])
+
 def new_resolver((:pipe, meta, [left_node, right_node]), var_names_avaliable):
     (
         :pipe,

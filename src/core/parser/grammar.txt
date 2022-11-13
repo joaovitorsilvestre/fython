@@ -9,6 +9,7 @@ statements          : NEWLINE* IDENT* statement (NEWLINE+ statement) NEWLINE*
 statement           : import-expr
                     : func-def
                     : KEYWORD:raise expr
+                    : KEYWORD:assert expr
                     : expr
 
 # not implemented yet
@@ -80,7 +81,7 @@ func-arg-matchable  : INT|FLOAT|IDENTIFIER|STRING|ATOM|tuple-expr|list-expr|map-
 
 func-def            : KEYWORD:def IDENTIFIER
                     LPAREN (func-arg-matchable (COMMA func-arg-matchable)*)? RPAREN
-                    KEYWORD:if? expr*
+                    (KEYWORD:if expr)?
                     DO
                     (NEWLINE statements)+
 
