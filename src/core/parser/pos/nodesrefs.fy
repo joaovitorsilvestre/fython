@@ -152,6 +152,7 @@ def quoted_get_refs_func(meta_per_line_ref):
             [
                 (:var, meta, [False, "key"])
             ],
+            [],
             (
                 :statements,
                 meta,
@@ -194,6 +195,7 @@ def quoted_source_code_func(source_code):
         Elixir.Map.put(meta, "docstring", None),
         [
             "__fython_get_file_source_code__",
+            [],
             [],
             (
                 :statements,

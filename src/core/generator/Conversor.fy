@@ -30,6 +30,7 @@ def convert(node):
         :def            -> node |> convert_meta() |> convert_def()
         :static_access  -> node |> convert_meta() |> convert_static_access()
         :raise          -> node |> convert_meta() |> convert_raise()
+        :assert         -> node |> convert_meta() |> convert_assert()
         :pipe           -> node |> convert_meta() |> convert_pipe()
         :map            -> node |> convert_meta() |> convert_map()
         :case           -> node |> convert_meta() |> convert_case()
@@ -166,14 +167,30 @@ def convert_lambda((:lambda, meta, [args, statements])):
 
     (:fn, meta, [(:"->", meta, [args, convert(statements)])])
 
-def convert_def((:def, meta, [name, args, statements])):
+
+def convert_def((:def, meta, [name, args, guards, statements])):
     args = Elixir.Enum.map(args, &convert/1)
+
+    func_name_quoted = case guards:
+        (:guard, guards_meta, [guard_expr]) ->
+            # TODO seria bom que o guards já estivese convertido
+            # TODO vamos poder fazer isso quando tivermos os guards haha (tendo uma função para tratar diferentes defs)
+            (_, guards_meta, _) = convert_meta(guards)
+            (
+                :when,
+                guards_meta,
+                [
+                    (Elixir.String.to_atom(name), meta, args),
+                    convert(guard_expr)
+                ]
+            )
+        [] -> (Elixir.String.to_atom(name), meta, args)
 
     (
         :def,
         meta,
         [
-            (Elixir.String.to_atom(name), meta, args),
+            func_name_quoted,
             [(:do, convert(statements))]
         ]
     )
@@ -187,6 +204,29 @@ def convert_static_access((:static_access, meta, [node_to_access, node_key])):
 
 def convert_raise((:raise, meta, [expr])):
     (:raise, meta, [convert(expr)])
+
+def convert_assert((:assert, meta, [expr])):
+    # Doesnt exist assert in Elixir
+    raise_error = (:raise, meta, ["Assertion error"])
+
+    is_false = (:"==", meta, [convert(expr), False])
+    is_none = (:"==", meta, [convert(expr), None])
+    is_zero = (:"==", meta, [convert(expr), 0])
+
+    (
+        :cond,
+        meta,
+        [[
+            (:do, [
+                # TODO vamos ter que ter um protocolo para saber se algo o valor boleano
+                # TODO por enquanto vai ser assim
+                (:"->", meta, [[is_false], raise_error]),
+                (:"->", meta, [[is_none], raise_error]),
+                (:"->", meta, [[is_zero], raise_error]),
+                (:"->", meta, [[True], None])
+            ])
+        ]]
+    )
 
 def get_childs((:pipe, _, [left_node, right_node])):
     [get_childs(left_node), get_childs(right_node)]

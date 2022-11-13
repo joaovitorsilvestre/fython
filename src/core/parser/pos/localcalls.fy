@@ -73,6 +73,9 @@ def new_resolver(node <- (:call, meta, [node_to_call, args, keywords, _]), var_n
 def new_resolver(node <- (:number, _, _), _):
     node
 
+def new_resolver(node <- (:guard, _, _), _):
+    node
+
 def new_resolver(node <- (:atom, _, _), _):
     node
 
@@ -153,12 +156,12 @@ def new_resolver((:statements, meta, nodes), var_names_avaliable):
     )
 
 
-def new_resolver((:def, meta, [name, args, statements]), var_names_avaliable):
+def new_resolver((:def, meta, [name, args, guards, statements]), var_names_avaliable):
     [args, statements] = get_vars_defined_def_or_lambda(
         args, statements, var_names_avaliable
     )
 
-    (:def, meta, [name, args, statements])
+    (:def, meta, [name, args, guards, statements])
 
 def new_resolver((:lambda, meta, [args, statements]), var_names_avaliable):
     (:lambda, meta, get_vars_defined_def_or_lambda(args, statements, var_names_avaliable))
@@ -175,6 +178,9 @@ def new_resolver((:static_access, meta, [node_to_access, node_key]), var_names_a
 
 def new_resolver((:raise, meta, [expr]), var_names_avaliable):
     (:raise, meta, [convert_local_function_calls(expr, var_names_avaliable)])
+
+def new_resolver((:assert, meta, [expr]), var_names_avaliable):
+    (:assert, meta, [convert_local_function_calls(expr, var_names_avaliable)])
 
 def new_resolver((:pipe, meta, [left_node, right_node]), var_names_avaliable):
     (

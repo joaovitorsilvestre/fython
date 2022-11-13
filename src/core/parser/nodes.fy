@@ -139,7 +139,17 @@ def make_raise_node(file, expr, pos_start):
     )
 
 
-def make_funcdef_node(file, var_name_tok, arg_nodes, body_node, docstring, pos_start):
+def make_assert_node(file, expr, pos_start):
+    (_, {"end": pos_end}, _) = expr
+
+    (
+        :assert,
+        gen_meta(file, pos_start, pos_end),
+        [expr]
+    )
+
+
+def make_funcdef_node(file, var_name_tok, arg_nodes, guards, body_node, docstring, pos_start):
     (_, {"end": pos_end}, _) = body_node
 
     (
@@ -148,7 +158,7 @@ def make_funcdef_node(file, var_name_tok, arg_nodes, body_node, docstring, pos_s
             gen_meta(file, pos_start, pos_end),
             {"docstring": docstring}
         ),
-        [var_name_tok['value'], arg_nodes, body_node]
+        [var_name_tok['value'], arg_nodes, guards, body_node]
     )
 
 def make_lambda_node(file, var_name_tok, arg_nodes, body_node, pos_start):
@@ -221,4 +231,11 @@ def make_spread(file, node_to_spread <- (_, {"end": pos_end}, _), pos_start):
         :spread,
         gen_meta(file, pos_start, pos_end),
         [node_to_spread]
+    )
+
+def make_guard_node(file, node <- (_, {"end": pos_end}, _), pos_start):
+    (
+        :guard,
+        gen_meta(file, pos_start, pos_end),
+        [node]
     )

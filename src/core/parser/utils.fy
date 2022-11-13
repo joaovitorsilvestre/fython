@@ -40,6 +40,7 @@ def nodes_types():
         :def,
         :static_access,
         :raise,
+        :assert,
         :pipe,
         :map,
         :case,

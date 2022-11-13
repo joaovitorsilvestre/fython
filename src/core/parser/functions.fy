@@ -44,6 +44,10 @@ def func_def_expr(state):
 
     state = advance(state)
 
+    [state, guards] = case Core.Parser.Utils.tok_matchs(state['current_tok'], 'KEYWORD', 'if'):
+        True -> parse_if_guards(state)
+        False -> [state, []]
+
     state = case (state['current_tok']['type']) == 'DO':
         True -> advance(state)
         False -> Core.Parser.Utils.set_error(
@@ -81,7 +85,7 @@ def func_def_expr(state):
         [None, _] ->    [state, None]
         _ ->
             node = Core.Parser.Nodes.make_funcdef_node(
-                state['file'], var_name_tok, arg_nodes, body, docstring, pos_start
+                state['file'], var_name_tok, arg_nodes, guards, body, docstring, pos_start
             )
 
             [state, node]
@@ -118,6 +122,17 @@ def lambda_expr(state):
             )
 
             [state, node]
+
+def parse_if_guards(state):
+    state = advance(state)
+    pos_start = state['current_tok']['pos_start']
+    [state, guards] = Core.Parser.expr(state)
+
+    node = Core.Parser.Nodes.make_guard_node(
+        state['file'], guards, pos_start
+    )
+
+    [state, node]
 
 def resolve_params(state, end_tok):
     state = Core.Parser.loop_while(

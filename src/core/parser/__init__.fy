@@ -159,6 +159,11 @@ def statement(state):
     [state, node] = case:
         Core.Parser.Utils.tok_matchs(ct, "KEYWORD", "def") ->
             Core.Parser.Functions.func_def_expr(state)
+        Core.Parser.Utils.tok_matchs(ct, 'KEYWORD', 'assert') ->
+            [state, assert_expr] = state |> advance() |> expr()
+
+            node = Core.Parser.Nodes.make_assert_node(state['file'], assert_expr, pos_start)
+            [state, node]
         Core.Parser.Utils.tok_matchs(ct, 'KEYWORD', 'raise') ->
             [state, _expr] = state |> advance() |> expr()
 
