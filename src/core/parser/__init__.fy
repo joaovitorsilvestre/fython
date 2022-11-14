@@ -156,9 +156,14 @@ def statement(state):
 
     state = Elixir.Map.put(state, 'inside_pattern', line_with_pattern_match)
 
+    Elixir.IO.inspect('statement')
+    Elixir.IO.inspect(ct)
+
     [state, node] = case:
         Core.Parser.Utils.tok_matchs(ct, "KEYWORD", "def") ->
-            Core.Parser.Functions.func_def_expr(state)
+            Core.Parser.Functions.func_def_expr(state, False)
+        Core.Parser.Utils.tok_matchs(ct, "KEYWORD", "protocol") ->
+            protocol_expr(state)
         Core.Parser.Utils.tok_matchs(ct, 'KEYWORD', 'assert') ->
             [state, assert_expr] = state |> advance() |> expr()
 
@@ -1140,3 +1145,68 @@ def range_expr(state, left_node <- (_, {"start": pos_start}, _)):
     )
 
     [state, node]
+
+def protocol_expr(state):
+    pos_start = state['current_tok']['pos_start']
+    base_line = pos_start['ln']
+
+    state = advance(state)
+
+    state = case state["current_tok"]['type'] != 'IDENTIFIER':
+        True -> Core.Parser.Utils.set_error(
+            state,
+            "Expected a identifier after 'protocol'",
+            state["current_tok"]["pos_start"],
+            state["current_tok"]["pos_end"]
+        )
+        False -> state
+
+    var_name_tok = state['current_tok']
+
+    state = state |> advance() |> handle_do_new_line(base_line)
+
+    state = loop_while(
+        state,
+        lambda state, ct:
+            case:
+                ct["type"] == "EOF" -> False
+                state["error"] != None -> False
+                state['current_tok']['ident'] != 4 -> False
+                True -> True
+        ,
+        lambda state, ct:
+            functions = Elixir.Map.get(state, '_functions', [])
+            (_, state) = Elixir.Map.pop(state, '_functions')
+
+            [state, node] = Core.Parser.Functions.protocol_function(state)
+
+            state = Elixir.Map.put(
+                state,
+                "_functions",
+                [*functions, node]
+            )
+    )
+
+    (functions, state) = Elixir.Map.pop(state, "_functions")
+
+    case (state['error'], Elixir.Enum.count(functions)):
+        (None, 0) ->
+            state = Core.Parser.Utils.set_error(
+                state,
+                "Protocols are expected to have at least one function defined'.",
+                state["current_tok"]["pos_start"],
+                state["current_tok"]["pos_end"]
+            )
+            [state, None]
+        (None, _) ->
+            pos_end = state['current_tok']['pos_end']
+
+            Elixir.IO.inspect('acabouuu o protocolo')
+            Elixir.IO.inspect('ct')
+            Elixir.IO.inspect(state['current_tok'])
+
+            node = Core.Parser.Nodes.make_protocol_node(state['file'], var_name_tok, functions, pos_start, pos_end)
+
+            [state, node]
+        _ ->
+            [state, None]

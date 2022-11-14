@@ -239,3 +239,17 @@ def make_guard_node(file, node <- (_, {"end": pos_end}, _), pos_start):
         gen_meta(file, pos_start, pos_end),
         [node]
     )
+
+def make_protocol_node(file, var_name_tok, functions, pos_start, pos_end):
+    (
+        :protocol,
+        gen_meta(file, pos_start, pos_end),
+        [var_name_tok['value'], functions]
+    )
+
+def make_func_protocol_node(file, function_name, func_arg_name, pos_start, pos_end):
+    (
+        :protocol_fn,
+        gen_meta(file, pos_start, pos_end),
+        [function_name['value'], func_arg_name]
+    )

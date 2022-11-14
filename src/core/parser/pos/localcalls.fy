@@ -241,6 +241,12 @@ def new_resolver(node <- (:range, meta, [left_node, right_node]), var_names_aval
         ]
     )
 
+def new_resolver(node <- (:protocol, meta, [protocol_name, functions]), var_names_avaliable):
+    node
+
+def new_resolver(node <- (:protocol_fn, meta, _), var_names_avaliable):
+    node
+
 def resolve_map_pair((key, value), var_names_avaliable):
     (
         convert_local_function_calls(key, var_names_avaliable),

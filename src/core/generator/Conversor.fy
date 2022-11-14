@@ -37,6 +37,8 @@ def convert(node):
         :call           -> node |> convert_meta() |> convert_call()
         :try            -> node |> convert_meta() |> convert_try()
         :range          -> node |> convert_meta() |> convert_range_node()
+        :protocol       -> node |> convert_meta() |> convert_protocol()
+        :protocol_fn    -> node |> convert_meta() |> convert_protocol_fn()
 
 def convert_number((:number, _, [value])):
     value
@@ -173,7 +175,7 @@ def convert_def((:def, meta, [name, args, guards, statements])):
 
     func_name_quoted = case guards:
         (:guard, guards_meta, [guard_expr]) ->
-            # TODO seria bom que o guards já estivese convertido
+            # TODO seria bom que o guards já estivese convertido (na hora de criar o node vamos passar o nome da func)
             # TODO vamos poder fazer isso quando tivermos os guards haha (tendo uma função para tratar diferentes defs)
             (_, guards_meta, _) = convert_meta(guards)
             (
@@ -442,4 +444,32 @@ def convert_range_node((:range, meta, [left_node, right_node])):
         ),
         meta,
         [convert(left_node), convert(right_node)]
+    )
+
+def convert_protocol((:protocol, meta, [protocol_name, functions])):
+    protocol_name = Elixir.String.to_atom(protocol_name)
+
+    final = (
+        :defprotocol,
+        meta,
+        [
+            (:'__aliases__', [(:alias, False)], [:Fython, protocol_name]),
+            Elixir.Enum.map(functions, &convert/1)
+        ]
+    )
+
+def convert_protocol_fn((:protocol_fn, meta, [func_name, argument_node])):
+    (
+        :do,
+        (
+            :def,
+            meta,
+            [
+                (
+                    Elixir.String.to_atom(func_name),
+                    meta,
+                    [convert(argument_node)]
+                )
+            ]
+        )
     )

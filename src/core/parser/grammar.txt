@@ -96,3 +96,6 @@ try-expect-expr     : KEYWORD:try DO NEWLINE statements
                     (KEYWORD:finally DO NEWLINE statements)?
 
 range               : INT RANGE INT
+
+protocol            : KEYWORD:protocol IDENTIFIER DO
+                    (NEWLINE KEYWORD:def LPAREN IDENTIFIER RPAREN)+

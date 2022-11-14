@@ -1,15 +1,19 @@
 def advance(state):
     Core.Parser.advance(state)
 
-def func_def_expr(state):
-    state = case state["current_tok"]['ident'] != 0:
-        True -> Core.Parser.Utils.set_error(
-            state,
-            "'def' is only allowed in modules scope. TO define functions inside functions use 'lambda' instead.",
-            state["current_tok"]["pos_start"],
-            state["current_tok"]["pos_end"]
-        )
-        False -> state
+def func_def_expr(state, is_impl_function):
+    valid_def = state["current_tok"]['ident'] == 0 and is_impl_function == False
+    valid_def_impl = state["current_tok"]['ident'] == 4 and is_impl_function
+
+    state = case:
+        not valid_def and not valid_def_impl->
+            Core.Parser.Utils.set_error(
+                state,
+                "'def' is only allowed in modules scope, protocols and impl. To define functions inside functions use 'lambda' instead.",
+                state["current_tok"]["pos_start"],
+                state["current_tok"]["pos_end"]
+            )
+        True -> state
 
     pos_start = state['current_tok']['pos_start']
     def_token_ln = pos_start['ln']
@@ -233,3 +237,77 @@ def resolve_one_param(state):
                 state["current_tok"]["pos_end"]
             )
             (state, node)
+
+def protocol_function(state):
+    pos_start = state['current_tok']['pos_start']
+    def_token_ln = pos_start['ln']
+
+    state = advance(state)
+
+    state = case state["current_tok"]['type'] != 'IDENTIFIER':
+        True -> Core.Parser.Utils.set_error(
+            state,
+            "Expected a identifier after 'def'.",
+            state["current_tok"]["pos_start"],
+            state["current_tok"]["pos_end"]
+        )
+        False -> state
+
+    function_name = state['current_tok']
+
+    state = advance(state)
+
+    state = case (state["current_tok"]['type']) != 'LPAREN':
+        True -> Core.Parser.Utils.set_error(
+            state,
+            "Expected '('",
+            state["current_tok"]["pos_start"],
+            state["current_tok"]["pos_end"]
+        )
+        False -> state
+
+    state = advance(state)
+
+    [state, func_arg_name] = case state["current_tok"]['type'] != 'IDENTIFIER':
+        True ->
+            state = Core.Parser.Utils.set_error(
+                state,
+                "Expected a identifier after '('",
+                state["current_tok"]["pos_start"],
+                state["current_tok"]["pos_end"]
+            )
+            [state, None]
+        False ->
+            func_arg_name = Core.Parser.Nodes.make_varaccess_node(state['file'], state['current_tok'], False)
+            [state, func_arg_name]
+
+    state = advance(state)
+
+    state = case (state["current_tok"]['type']) != 'RPAREN':
+        True ->
+            Core.Parser.Utils.set_error(
+                state,
+                "Expected ')'. Remember that functions in protocols only have one parameter",
+                state["current_tok"]["pos_start"],
+                state["current_tok"]["pos_end"]
+            )
+        False -> state
+
+    state = advance(state)
+
+    state = case (state['current_tok']['pos_start']['ln']) > def_token_ln:
+        True -> state
+        False -> Core.Parser.Utils.set_error(
+            state,
+            "Expected a new line after ')'",
+            state["current_tok"]["pos_start"],
+            state["current_tok"]["pos_end"]
+        )
+
+    pos_end = state['current_tok']['pos_end']
+
+    node = Core.Parser.Nodes.make_func_protocol_node(
+        state['file'], function_name, func_arg_name, pos_start, pos_end
+    )
+
+    [state, node]
