@@ -42,7 +42,7 @@ def keywords():
     [
         'import', 'as', 'and', 'or', 'not', 'if', 'else',
         'def', 'lambda', 'case', 'in', 'raise', 'assert', 'try', 'except', 'finally', 'as',
-        'protocol', 'impl'
+        'protocol', 'impl', 'for'
     ]
 
 def add_eof_token(state):

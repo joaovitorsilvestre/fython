@@ -47,6 +47,7 @@ def nodes_types():
         :call,
         :try,
         :range,
+        :impl,
         :protocol,
         :protocol_fn
     ]

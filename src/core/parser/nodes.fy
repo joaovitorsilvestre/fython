@@ -253,3 +253,10 @@ def make_func_protocol_node(file, function_name, func_arg_name, pos_start, pos_e
         gen_meta(file, pos_start, pos_end),
         [function_name['value'], func_arg_name]
     )
+
+def make_impl_node(file, protocol_name, type, functions, pos_start, pos_end):
+    (
+        :impl,
+        gen_meta(file, pos_start, pos_end),
+        [protocol_name, type, functions]
+    )

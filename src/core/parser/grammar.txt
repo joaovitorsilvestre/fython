@@ -97,5 +97,8 @@ try-expect-expr     : KEYWORD:try DO NEWLINE statements
 
 range               : INT RANGE INT
 
+impl                : KEYWORD:impl IDENTIFIER DO
+                    (NEWLINE func-def)+
+
 protocol            : KEYWORD:protocol IDENTIFIER DO
                     (NEWLINE KEYWORD:def LPAREN IDENTIFIER RPAREN)+

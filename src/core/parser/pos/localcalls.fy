@@ -247,6 +247,13 @@ def new_resolver(node <- (:protocol, meta, [protocol_name, functions]), var_name
 def new_resolver(node <- (:protocol_fn, meta, _), var_names_avaliable):
     node
 
+def new_resolver(node <- (:impl, meta, [protocol_name, type, functions]), var_names_avaliable):
+    (
+        :impl,
+        meta,
+        [protocol_name, type, Elixir.Enum.map(functions, lambda x: new_resolver(x, var_names_avaliable))]
+    )
+
 def resolve_map_pair((key, value), var_names_avaliable):
     (
         convert_local_function_calls(key, var_names_avaliable),

@@ -37,6 +37,7 @@ def convert(node):
         :call           -> node |> convert_meta() |> convert_call()
         :try            -> node |> convert_meta() |> convert_try()
         :range          -> node |> convert_meta() |> convert_range_node()
+        :impl           -> node |> convert_meta() |> convert_impl()
         :protocol       -> node |> convert_meta() |> convert_protocol()
         :protocol_fn    -> node |> convert_meta() |> convert_protocol_fn()
 
@@ -473,3 +474,20 @@ def convert_protocol_fn((:protocol_fn, meta, [func_name, argument_node])):
             ]
         )
     )
+
+def convert_impl((:impl, meta, [protocol_name, type, functions])):
+    protocol_name = Elixir.String.to_atom(protocol_name)
+    type = Elixir.String.to_atom(type)
+
+    my = (
+        :defimpl,
+        meta,
+        [
+            (:'__aliases__', [(:alias, False)], [:Fython, protocol_name]),
+            [(:for, (:'__aliases__', [(:alias, False)], [type]))],
+            Elixir.Enum.map(functions, lambda x: (:do, convert(x)))
+        ]
+    )
+
+    Elixir.IO.inspect(my)
+    my
