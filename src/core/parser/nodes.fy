@@ -239,3 +239,11 @@ def make_guard_node(file, node <- (_, {"end": pos_end}, _), pos_start):
         gen_meta(file, pos_start, pos_end),
         [node]
     )
+
+
+def make_struct_node(file, struct_name, struct_fields, functions_struct, pos_start, pos_end):
+    (
+        :struct,
+        gen_meta(file, pos_start, pos_end),
+        [struct_name, struct_fields, functions_struct]
+    )

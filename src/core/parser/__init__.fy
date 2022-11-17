@@ -158,7 +158,9 @@ def statement(state):
 
     [state, node] = case:
         Core.Parser.Utils.tok_matchs(ct, "KEYWORD", "def") ->
-            Core.Parser.Functions.func_def_expr(state)
+            Core.Parser.Functions.func_def_expr(state, False)
+        Core.Parser.Utils.tok_matchs(ct, 'KEYWORD', 'struct') ->
+            struct_expr(state)
         Core.Parser.Utils.tok_matchs(ct, 'KEYWORD', 'assert') ->
             [state, assert_expr] = state |> advance() |> expr()
 
@@ -1137,6 +1139,107 @@ def range_expr(state, left_node <- (_, {"start": pos_start}, _)):
         right_node,
         pos_start,
         pos_end
+    )
+
+    [state, node]
+
+def struct_expr(state):
+    pos_start = state['current_tok']['pos_start']
+    base_line = pos_start['ln']
+
+    state = advance(state)
+
+    (state, struct_name) = case state['current_tok']['type'] != 'IDENTIFIER':
+        True ->
+            state = Core.Parser.Utils.set_error(
+                state, "Expected identifier",
+                state["current_tok"]["pos_start"],
+                state["current_tok"]["pos_end"]
+            )
+            (state, None)
+        False ->
+            (advance(state), state['current_tok']['value'])
+
+    state = case (state['current_tok']['type']) == 'DO':
+        True -> state
+        False -> Core.Parser.Utils.set_error(
+            state,
+            "Missing ':' after function definition",
+            state["prev_tok"]["pos_end"],
+            state["prev_tok"]["pos_end"]
+        )
+
+    state = handle_do_new_line(state, base_line)
+
+    state = loop_while(
+        state,
+        lambda state, ct:
+            case:
+                ct["type"] == "EOF" -> False
+                ct["ident"] != 4 -> False
+                state["error"] != None -> False
+                Core.Parser.Utils.tok_matchs(ct, "KEYWORD", "def") -> False
+                True -> True
+        ,
+        lambda state, ct:
+            fields_struct = Elixir.Map.get(state, '_fields_struct', [])
+            state = Elixir.Map.delete(state, '_fields_struct')
+
+            (state, field_name) = case state['current_tok']['type'] != 'IDENTIFIER':
+                True ->
+                    state = Core.Parser.Utils.set_error(
+                        state, "Expected identifier",
+                        state["current_tok"]["pos_start"],
+                        state["current_tok"]["pos_end"]
+                    )
+                    (state, None)
+                False ->
+                    (advance(state), state['current_tok']['value'])
+
+            state = case state['current_tok']['type'] == 'EQ':
+                True ->
+                    advance(state)
+                False ->
+                    Core.Parser.Utils.set_error(
+                        state, "Expected '='",
+                        state["current_tok"]["pos_start"],
+                        state["current_tok"]["pos_end"]
+                    )
+
+            [state, field_default] = expr(state)
+
+            Elixir.Map.put(state, '_fields_struct', [*fields_struct, (field_name, field_default)])
+    )
+
+    fields_struct = Elixir.Map.get(state, '_fields_struct', [])
+    state = Elixir.Map.delete(state, '_fields_struct')
+
+    state = loop_while(
+        state,
+        lambda state, ct:
+            case:
+                ct["type"] == "EOF" -> False
+                state["error"] != None -> False
+                state['current_tok']['ident'] == 4 -> True
+                True -> False
+        ,
+        lambda state, ct:
+            functions = Elixir.Map.get(state, '_functions', [])
+            (_, state) = Elixir.Map.pop(state, '_functions')
+
+            [state, node] = Core.Parser.Functions.func_def_expr(state, True)
+
+            state = Elixir.Map.put(
+                state,
+                "_functions",
+                [*functions, node]
+            )
+    )
+
+    (functions_struct, state) = Elixir.Map.pop(state, "_functions", [])
+
+    node = Core.Parser.Nodes.make_struct_node(
+        state['file'], struct_name, fields_struct, functions_struct, pos_start, state["prev_tok"]["pos_end"]
     )
 
     [state, node]

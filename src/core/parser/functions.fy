@@ -1,15 +1,20 @@
 def advance(state):
     Core.Parser.advance(state)
 
-def func_def_expr(state):
-    state = case state["current_tok"]['ident'] != 0:
-        True -> Core.Parser.Utils.set_error(
-            state,
-            "'def' is only allowed in modules scope. TO define functions inside functions use 'lambda' instead.",
-            state["current_tok"]["pos_start"],
-            state["current_tok"]["pos_end"]
-        )
-        False -> state
+def func_def_expr(state, allow_funct_inside_block):
+    valid_def = state["current_tok"]['ident'] == 0 and allow_funct_inside_block == False
+    valid_def_impl = state["current_tok"]['ident'] == 4 and allow_funct_inside_block
+    base_ident = state["current_tok"]['ident']
+
+    state = case:
+        not valid_def and not valid_def_impl->
+            Core.Parser.Utils.set_error(
+                state,
+                "'def' is only allowed in modules scope and structs. To define functions inside functions use 'lambda' instead.",
+                state["current_tok"]["pos_start"],
+                state["current_tok"]["pos_end"]
+            )
+        True -> state
 
     pos_start = state['current_tok']['pos_start']
     def_token_ln = pos_start['ln']
@@ -78,7 +83,7 @@ def func_def_expr(state):
         False -> (state, None)
 
     # evaluates body of function
-    [state, body] = Core.Parser.statements(state, 4)
+    [state, body] = Core.Parser.statements(state, base_ident + 4)
 
     case [arg_nodes, body]:
         [_, None] ->    [state, None]

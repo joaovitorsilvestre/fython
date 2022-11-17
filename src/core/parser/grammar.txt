@@ -96,3 +96,7 @@ try-expect-expr     : KEYWORD:try DO NEWLINE statements
                     (KEYWORD:finally DO NEWLINE statements)?
 
 range               : INT RANGE INT
+
+struct              : KEYWORD:struct DO NEWLINE
+                    (IDENTIFIER DO expr)+
+                    (func-def NEWLINE)*

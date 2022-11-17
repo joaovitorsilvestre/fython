@@ -47,4 +47,5 @@ def nodes_types():
         :call,
         :try,
         :range,
+        :struct
     ]

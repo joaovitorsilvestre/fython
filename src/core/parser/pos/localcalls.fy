@@ -166,6 +166,18 @@ def new_resolver((:def, meta, [name, args, guards, statements]), var_names_avali
 def new_resolver((:lambda, meta, [args, statements]), var_names_avaliable):
     (:lambda, meta, get_vars_defined_def_or_lambda(args, statements, var_names_avaliable))
 
+def new_resolver((:struct, meta, [struct_name, struct_fields, functions_struct]), var_names_avaliable):
+    (
+        :struct,
+        meta,
+        [
+            struct_name,
+            struct_fields,
+            Elixir.Enum.map(functions_struct, lambda x: new_resolver(x, var_names_avaliable))
+        ]
+    )
+
+
 def new_resolver((:static_access, meta, [node_to_access, node_key]), var_names_avaliable):
     (
         :static_access,
