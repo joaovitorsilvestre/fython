@@ -253,15 +253,28 @@ def new_resolver(node <- (:range, meta, [left_node, right_node]), var_names_aval
         ]
     )
 
+def new_resolver(node <- (:struct_call, meta, [struct_name, keywords]), var_names_avaliable):
+    (
+        :struct_call,
+        meta,
+        [
+            struct_name,
+            Elixir.Enum.map(keywords, lambda (key, value):
+                (key, convert_local_function_calls(value, var_names_avaliable))
+            ),
+        ]
+    )
+
+def new_resolver((:spread, meta, [node_to_spread]), var_names_avaliable):
+    (
+        :spread, meta, [new_resolver(node_to_spread, var_names_avaliable)]
+    )
+
+
 def resolve_map_pair((key, value), var_names_avaliable):
     (
         convert_local_function_calls(key, var_names_avaliable),
         convert_local_function_calls(value, var_names_avaliable)
-    )
-
-def resolve_map_pair((:spread, meta, [node_to_spread]), var_names_avaliable):
-    (
-        :spread, meta, [new_resolver(node_to_spread, var_names_avaliable)]
     )
 
 

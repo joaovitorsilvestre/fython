@@ -247,3 +247,12 @@ def make_struct_node(file, struct_name, struct_fields, functions_struct, pos_sta
         gen_meta(file, pos_start, pos_end),
         [struct_name, struct_fields, functions_struct]
     )
+
+def make_struct_call(file, node_to_call, keywords, pos_end):
+    (:var, {"start": pos_start}, [_, struct_name]) = node_to_call
+
+    (
+        :struct_call,
+        gen_meta(file, pos_start, pos_end),
+        [struct_name, keywords]
+    )

@@ -2,7 +2,7 @@ def eval_string(text):
     eval_string('<stdin>', text, {"file": '<stdin>'})
 
 def eval_string(module_name, text, config):
-    (state, converted) = Core.Code.lexer_parse_convert_file(module_name, text, config)
+    (state, converted, _structs_converted) = Core.Code.lexer_parse_convert_file(module_name, text, config)
 
     file = Elixir.Map.get(config, 'file')
     env = Elixir.Map.get(config, 'env', [])

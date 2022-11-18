@@ -37,6 +37,7 @@ def convert(node):
         :call           -> node |> convert_meta() |> convert_call()
         :try            -> node |> convert_meta() |> convert_try()
         :range          -> node |> convert_meta() |> convert_range_node()
+        :struct_call    -> node |> convert_meta() |> convert_struct_call_node()
 
 def convert_number((:number, _, [value])):
     value
@@ -442,4 +443,56 @@ def convert_range_node((:range, meta, [left_node, right_node])):
         ),
         meta,
         [convert(left_node), convert(right_node)]
+    )
+
+def convert_struct_node(
+    node <- (:statements, _, body)
+):
+    # Structs will be converted to a Elixir module
+    # So we need to return the struct name because it will be the module's name
+    ([struct], other_statements) = Elixir.Enum.split_with(
+        body, lambda (node_type, _, _): node_type == :struct
+    )
+    (:struct, meta, [struct_name, _, _]) = struct
+    struct_statements = convert_struct_node(struct)
+
+    # these are the helper functions that we inject
+    other_statements = Elixir.Enum.map(other_statements, &convert/1)
+
+    (:statements, meta, _) = convert_meta(node)
+
+    (struct_name, (:"__block__", meta, [*struct_statements, *other_statements]))
+
+
+def convert_struct_node(
+    node <- (:struct, _, _)
+):
+    (:struct, meta, [struct_name, struct_fields, functions_struct]) = convert_meta(node)
+
+    functions_struct = Elixir.Enum.map(functions_struct, &convert/1)
+
+    [
+        (
+            :defstruct,
+            meta,
+            [Elixir.Enum.map(
+                struct_fields,
+                lambda (n, d):
+                    (Elixir.String.to_atom(n), convert(d))
+            )]
+        ),
+        *functions_struct
+    ]
+
+def convert_struct_call_node((:struct_call, meta, [struct_name, keywords])):
+    struct_name = Elixir.String.to_atom(Elixir.Enum.join(["Fython", ".", struct_name]))
+
+    keywords_converted = Elixir.Enum.map(keywords, lambda (key, value):
+        (Elixir.String.to_atom(key), convert(value))
+    )
+
+    (
+        (:".", meta, [struct_name, :__struct__]),
+        meta,
+        [(:"%{}", [], keywords_converted)]
     )

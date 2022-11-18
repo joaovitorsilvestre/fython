@@ -14,9 +14,6 @@ def execute(state, config):
             node = state
                 |> Elixir.Map.get('node')
                 |> Core.Parser.Pos.Localcalls.convert_local_function_calls(var_names_avaliable)
-                # TODO remover isso do pos parser, isso só se aplica para compilação de módulos
-                # TODO pos parser deveria rodar sempre após o lex e parser
-                # |> Core.Parser.Pos.Nodesrefs.run(config)
 
             Elixir.Map.put(state, 'node', node)
         _ -> state
