@@ -11,22 +11,52 @@ def compile_project(project_path, destine):
     # Ensure compiled folder is created
     Elixir.File.mkdir_p!(compiled_folder)
 
-    [project_path, "**/*.fy"]
+    # Ensure compiled folder is created
+    Elixir.File.mkdir_p!(compiled_folder)
+
+    modules_ready_to_be_saved = [project_path, "**/*.fy"]
         |> Elixir.Enum.join('/')
         |> Elixir.Path.wildcard()
-        |> Elixir.Enum.map(lambda file_full_path:
-            compile_project_file(project_path, file_full_path, compiled_folder, False)
+        |> Elixir.Enum.map(lambda file:
+            (child_modules, parent_module) = compile_project_file(project_path, file, compiled_folder, False)
+            (
+                file,
+                (child_modules, parent_module)
+            )
         )
 
-def compile_project_file(project_root, file_full_path, destine_compiled, bootstraping):
-    module_name = get_module_name(project_root, file_full_path, bootstraping)
+    child_modules = modules_ready_to_be_saved
+        |> Elixir.Enum.map(lambda (file, (childs, _parent)): (file, childs))
+        |> Elixir.Enum.filter(lambda (file, childs): Elixir.Enum.count(childs) > 0)
 
-    # Ensure compiled folder is created
-    Elixir.File.mkdir_p!(destine_compiled)
+    parent_modules = modules_ready_to_be_saved
+        |> Elixir.Enum.map(lambda (file, (_childs, parent)): (file, parent))
+
+    # We need to compile child modules first. Child modules are structs, protocols, etc
+    child_modules
+        |> Elixir.List.flatten()
+        |> Elixir.Enum.each(
+            lambda (file, childs):
+                Elixir.Enum.each(
+                    childs,
+                    lambda (m_name, ast):
+                        save_module(m_name, file, compiled_folder, ast)
+                )
+        )
+
+    parent_modules
+        |> Elixir.List.flatten()
+        |> Elixir.Enum.each(
+            lambda (file, (m_name, ast)): save_module(m_name, file, compiled_folder, ast)
+        )
+
+
+def compile_project_file(project_root, file_full_path, compiled_folder, bootstraping):
+    module_name = get_module_name(project_root, file_full_path, bootstraping)
 
     Elixir.IO.puts(Elixir.Enum.join(["Compiling module: ", module_name]))
 
-    (state, quoted, structs_quoted) = lexer_parse_convert_file(
+    (state, modules_converted) = lexer_parse_convert_file(
         module_name,
         Elixir.File.read(file_full_path) |> Elixir.Kernel.elem(1),
         {"file": file_full_path, "compiling_module": True}
@@ -34,12 +64,9 @@ def compile_project_file(project_root, file_full_path, destine_compiled, bootstr
 
     case Elixir.Map.get(state, "error"):
         None ->
-            save_module(module_name, file_full_path, destine_compiled, quoted)
-            structs_quoted
-                |> Elixir.Enum.each(lambda (struc_name, quoted):
-                    module_name = Elixir.Enum.join([module_name, ".", struc_name])
-                    save_module(module_name, file_full_path, destine_compiled, quoted)
-                )
+            # Child modules consist of structs, protocols, etc
+            (child_modules, [parent_module]) = Elixir.Enum.split(modules_converted, -1)
+            (child_modules, parent_module)
         _ ->
             Elixir.IO.puts("Compilation error:")
             Elixir.IO.puts("file path:")
@@ -48,7 +75,7 @@ def compile_project_file(project_root, file_full_path, destine_compiled, bootstr
             Core.Errors.Utils.print_error(module_name, state, text)
             raise "Compilation failed"
 
-def save_module(module_name, file_full_path, destine_compiled, quoted):
+def save_module(module_name, file_full_path, compiled_folder, quoted):
     # Its super important to use this Module.create function
     # to ensure that our module binary will not have
     # Elixir. in the begin of the module name
@@ -59,8 +86,8 @@ def save_module(module_name, file_full_path, destine_compiled, quoted):
     )
 
     # we save .ex just to help debugging
-    destine_ex = Elixir.Enum.join([destine_compiled, "/", module_name, ".ex"])
-    destine_beam = Elixir.Enum.join([destine_compiled, "/", module_name, ".beam"])
+    destine_ex = Elixir.Enum.join([compiled_folder, "/", module_name, ".ex"])
+    destine_beam = Elixir.Enum.join([compiled_folder, "/", module_name, ".beam"])
 
     Elixir.File.write(destine_ex, Elixir.Macro.to_string(quoted))
     Elixir.File.write(destine_beam, binary, mode=:binary)
@@ -80,54 +107,46 @@ def lexer_parse_convert_file(module_name, text, config):
             lexed
 
     # Just for when theres a error
-    state = Elixir.Map.put(state, 'structs', [])
+#    state = Elixir.Map.put(state, 'structs', [])
 
     state_error = Elixir.Map.get(state, 'error')
     compiling_module = Elixir.Map.get(config, "compiling_module", False)
 
-    # 2º Split structs. They have their own modules.
-    state = case [state_error, compiling_module]:
-        [None, True] ->
-            node = state["node"]
-            (structs, node) = Core.Parser.Utils.extract_module_structs(node)
-            state
-                |> Elixir.Map.put('node', node)
-                |> Elixir.Map.put('structs', structs)
-        _ -> state
-
-    # 3º Inject functions with metadata info into the module
-    state = case [state_error, compiling_module]:
-        [None, True] ->
-            node = Core.Parser.Pos.Nodesrefs.run(state['node'], text)
-
-            structs = Elixir.Enum.map(
-                state['structs'],
-                lambda node: node
-#                lambda node: Core.Parser.Pos.Nodesrefs.run(node, text)
-            )
-
-            state
-                |> Elixir.Map.put('node', node)
-                |> Elixir.Map.put('structs', structs)
-        _ -> state
+#    # 2º Split structs. They have their own modules.
+#    state = case [state_error, compiling_module]:
+#        [None, True] ->
+#            node = state["node"]
+#            (structs, node) = Core.Parser.Utils.extract_module_structs(node)
+#            state
+#                |> Elixir.Map.put('node', node)
+#                |> Elixir.Map.put('structs', structs)
+#        _ -> state
+#
+#    # 3º Inject functions with metadata info into the module
+#    state = case [state_error, compiling_module]:
+#        [None, True] ->
+#            node = Core.Parser.Pos.Nodesrefs.run(state['node'], text)
+#
+#            structs = Elixir.Enum.map(
+#                state['structs'],
+#                lambda node: node
+##                lambda node: Core.Parser.Pos.Nodesrefs.run(node, text)
+#            )
+#
+#            state
+#                |> Elixir.Map.put('node', node)
+#                |> Elixir.Map.put('structs', structs)
+#        _ -> state
+    # TODO add funções de ref de linha na conversão de cada módulo
 
     # 4º Convert each node from Fython AST to Elixir AST
     case Elixir.Map.get(state, 'error'):
         None ->
             ast = state['node']
-            module_converted = Core.Generator.Conversor.convert(ast)
+            modules_converted = Core.Generator.Conversor.run_conversor(module_name, ast)
 
-            ast_structs = state['structs']
-            structs_converted = Elixir.Enum.map(
-                ast_structs, lambda x: Core.Generator.Conversor.convert_struct_node(x)
-            )
-
-#            Elixir.IO.inspect('wtffffffffffff')
-#            Elixir.IO.inspect(structs_converted)
-#            Elixir.IO.inspect('fim wattt')
-
-            (state, module_converted, structs_converted)
-        _ -> (state, None, None)
+            (state, modules_converted)
+        _ -> (state, None)
 
 
 def get_module_name(project_full_path, file_full_path):

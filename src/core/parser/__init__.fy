@@ -1271,7 +1271,6 @@ def struct_expr(state):
 
 def struct_call_expr(state, atom):
     pos_start = state["current_tok"]["pos_start"]
-    Elixir.IO.inspect('parsing struct')
 
     state = advance(state)
 

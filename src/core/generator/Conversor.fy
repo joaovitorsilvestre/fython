@@ -12,6 +12,32 @@ def convert_meta((nodetype, {"start": (_coll, line, _index)}, body)):
     meta = [(:line, line + 1)]
     (nodetype, meta, body)
 
+def run_conversor(module_name, (:statements, meta, nodes)):
+    # Return modules procuded by the statements
+    # returns: [
+    #    (:ModuleName, elixir_ast_of_module)
+    # ]
+    # structs, protocols are their own modules and
+    # they must be the first ones of the list
+    # TODO create way to detect circular deps
+
+    (separated_modules, current_module) = Elixir.Enum.split_with(
+        nodes,
+        lambda (node_type, _, _): Elixir.Enum.member?([:struct, :protocol], node_type)
+    )
+
+    current_module = (module_name, convert((:statements, meta, current_module)))
+
+    separated_modules = separated_modules
+        |> Elixir.Enum.map(lambda x:
+            case x:
+                (:struct, _, _) -> convert_struct_node(module_name, convert_meta(x))
+                True -> raise "Should not get here"
+        )
+
+    [*separated_modules, current_module]
+
+
 def convert(node):
     case Elixir.Kernel.elem(node, 0):
         :number         -> node |> convert_meta() |> convert_number()
@@ -446,32 +472,11 @@ def convert_range_node((:range, meta, [left_node, right_node])):
     )
 
 def convert_struct_node(
-    node <- (:statements, _, body)
+    module_name, (:struct, meta, [struct_name, struct_fields, functions_struct])
 ):
-    # Structs will be converted to a Elixir module
-    # So we need to return the struct name because it will be the module's name
-    ([struct], other_statements) = Elixir.Enum.split_with(
-        body, lambda (node_type, _, _): node_type == :struct
-    )
-    (:struct, meta, [struct_name, _, _]) = struct
-    struct_statements = convert_struct_node(struct)
-
-    # these are the helper functions that we inject
-    other_statements = Elixir.Enum.map(other_statements, &convert/1)
-
-    (:statements, meta, _) = convert_meta(node)
-
-    (struct_name, (:"__block__", meta, [*struct_statements, *other_statements]))
-
-
-def convert_struct_node(
-    node <- (:struct, _, _)
-):
-    (:struct, meta, [struct_name, struct_fields, functions_struct]) = convert_meta(node)
-
     functions_struct = Elixir.Enum.map(functions_struct, &convert/1)
 
-    [
+    struct_statements = [
         (
             :defstruct,
             meta,
@@ -484,15 +489,31 @@ def convert_struct_node(
         *functions_struct
     ]
 
+    struct_name = Elixir.Enum.join(['Elixir.', module_name, '.', struct_name])
+
+    (struct_name, (:"__block__", meta, struct_statements))
+
+
 def convert_struct_call_node((:struct_call, meta, [struct_name, keywords])):
     struct_name = Elixir.String.to_atom(Elixir.Enum.join(["Fython", ".", struct_name]))
+#    struct_name = Elixir.String.to_atom(struct_name)
 
     keywords_converted = Elixir.Enum.map(keywords, lambda (key, value):
         (Elixir.String.to_atom(key), convert(value))
     )
 
     (
-        (:".", meta, [struct_name, :__struct__]),
+        :"%",
         meta,
-        [(:"%{}", [], keywords_converted)]
+        [
+            (:__aliases__, [(:alias, False)], [struct_name]),
+#            (:"%{}", meta, test)
+            (:"%{}", meta, keywords_converted)
+        ]
     )
+
+#    (
+#        (:".", meta, [struct_name, :__struct__]),
+#        meta,
+#        [(:"%{}", [], keywords_converted)]
+#    )
