@@ -81,10 +81,33 @@ def convert_var((:var, _, [_pinned, "None"])):
     None
 
 def convert_var((:var, meta, [True, value])):
-    (:"^", meta, [(Elixir.String.to_atom(value), meta, :Elixir)])
+    case Elixir.String.contains?(value, "."):
+        False -> (:"^", meta, [(Elixir.String.to_atom(value), meta, :Elixir)])
+        True -> convert_var_with_dots(value)
 
 def convert_var((:var, meta, [False, value])):
-    (Elixir.String.to_atom(value), meta, :Elixir)
+    case Elixir.String.contains?(value, "."):
+        False -> (Elixir.String.to_atom(value), meta, :Elixir)
+        True -> convert_var_with_dots(value)
+
+
+def convert_var_with_dots(value):
+    value
+        |> Elixir.String.split('.')
+        |> Elixir.Enum.reduce(lambda x, acc:
+            prev = case acc:
+                (_, _, _) -> acc
+                _ -> (Elixir.String.to_atom(acc), [(:if_undefined, :apply)], :Elixir)
+
+            x = Elixir.String.to_atom(x)
+
+            (
+                (:".", [], [prev, x]),
+                [(:no_parens, True)],
+                []
+            )
+        )
+
 
 def convert_string((:string, meta, [value])):
     value

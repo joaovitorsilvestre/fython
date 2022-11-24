@@ -13,7 +13,7 @@ def eval_string(module_name, text, config):
             (None, env)
         _ ->
             try:
-                Elixir.IO.inspect(converted)
+#                Elixir.IO.inspect(converted)
                 Elixir.Code.eval_quoted(converted, env, [])
             except error:
 #                Exceptions.format_traceback(error, __STACKTRACE__)
