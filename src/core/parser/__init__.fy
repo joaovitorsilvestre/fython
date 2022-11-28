@@ -158,7 +158,9 @@ def statement(state):
 
     [state, node] = case:
         Core.Parser.Utils.tok_matchs(ct, "KEYWORD", "def") ->
-            Core.Parser.Functions.func_def_expr(state)
+            Core.Parser.Functions.func_def_expr(state, False)
+        Core.Parser.Utils.tok_matchs(ct, 'KEYWORD', 'struct') ->
+            struct_expr(state)
         Core.Parser.Utils.tok_matchs(ct, 'KEYWORD', 'assert') ->
             [state, assert_expr] = state |> advance() |> expr()
 
@@ -263,10 +265,17 @@ def call(state, _atom):
     # in the same line that the left parent
 
     (ct, ct_type, ct_line, prev_tok_ln) = get_info(state)
+    same_line_of_prev_tok = ct_line == prev_tok_ln
 
     [state, _atom] = case:
-        ct_type == 'LPAREN' and ct_line == prev_tok_ln -> call_func_expr(state, _atom)
-        ct_type == 'LSQUARE' and ct_line == prev_tok_ln -> static_access_expr(state, _atom)
+        ct_type == 'LPAREN' and same_line_of_prev_tok ->
+            # check if is a struct
+            is_struct = Core.Parser.Utils.is_struct_reference(_atom)
+
+            case is_struct:
+                True -> struct_call_expr(state, _atom)
+                False -> call_func_expr(state, _atom)
+        ct_type == 'LSQUARE' and same_line_of_prev_tok -> static_access_expr(state, _atom)
         True -> [state, _atom]
 
     (ct, ct_type, ct_line, prev_tok_ln) = get_info(state)
@@ -1140,3 +1149,205 @@ def range_expr(state, left_node <- (_, {"start": pos_start}, _)):
     )
 
     [state, node]
+
+def struct_expr(state):
+    pos_start = state['current_tok']['pos_start']
+    base_line = pos_start['ln']
+
+    state = advance(state)
+
+    (state, struct_name) = case state['current_tok']['type'] != 'IDENTIFIER':
+        True ->
+            state = Core.Parser.Utils.set_error(
+                state, "Expected identifier",
+                state["current_tok"]["pos_start"],
+                state["current_tok"]["pos_end"]
+            )
+            (state, None)
+        False ->
+            name = state['current_tok']['value']
+
+            # Validate struct name
+            first_letter = Elixir.String.graphemes(name) |> Elixir.List.first()
+            is_upper_case = first_letter == Elixir.String.upcase(first_letter)
+
+            state = case is_upper_case:
+                True -> state
+                False -> Core.Parser.Utils.set_error(
+                    state, "The name of the struct must start with a uppercase letter",
+                    state["current_tok"]["pos_start"],
+                    state["current_tok"]["pos_end"]
+                )
+
+            (advance(state), name)
+
+    state = case (state['current_tok']['type']) == 'DO':
+        True -> state
+        False -> Core.Parser.Utils.set_error(
+            state,
+            "Missing ':' after function definition",
+            state["prev_tok"]["pos_end"],
+            state["prev_tok"]["pos_end"]
+        )
+
+    state = handle_do_new_line(state, base_line)
+
+    state = loop_while(
+        state,
+        lambda state, ct:
+            case:
+                state["error"] != None -> False
+                ct["type"] == "EOF" -> False
+                ct["ident"] != 4 -> False
+                Core.Parser.Utils.tok_matchs(ct, "KEYWORD", "def") -> False
+                True -> True
+        ,
+        lambda state, ct:
+            fields_struct = Elixir.Map.get(state, '_fields_struct', [])
+            state = Elixir.Map.delete(state, '_fields_struct')
+
+            (state, field_name) = case state['current_tok']['type'] != 'IDENTIFIER':
+                True ->
+                    state = Core.Parser.Utils.set_error(
+                        state, "Expected identifier",
+                        state["current_tok"]["pos_start"],
+                        state["current_tok"]["pos_end"]
+                    )
+                    (state, None)
+                False ->
+                    (advance(state), state['current_tok']['value'])
+
+            state = case state['current_tok']['type'] == 'EQ':
+                True ->
+                    advance(state)
+                False ->
+                    Core.Parser.Utils.set_error(
+                        state, "Expected '='",
+                        state["current_tok"]["pos_start"],
+                        state["current_tok"]["pos_end"]
+                    )
+
+            [state, field_default] = expr(state)
+
+            Elixir.Map.put(state, '_fields_struct', [*fields_struct, (field_name, field_default)])
+    )
+
+    (fields_struct, state) = Elixir.Map.pop(state, '_fields_struct', [])
+
+    state = loop_while(
+        state,
+        lambda state, ct:
+            case:
+                state["error"] != None -> False
+                ct["type"] == "EOF" -> False
+                state['current_tok']['ident'] == 4 -> True
+                True -> False
+        ,
+        lambda state, ct:
+            functions = Elixir.Map.get(state, '_functions', [])
+            (_, state) = Elixir.Map.pop(state, '_functions')
+
+            [state, node] = Core.Parser.Functions.func_def_expr(state, True)
+
+            state = Elixir.Map.put(
+                state,
+                "_functions",
+                [*functions, node]
+            )
+    )
+
+    case state['error']:
+        None ->
+            (functions_struct, state) = Elixir.Map.pop(state, "_functions", [])
+
+            node = Core.Parser.Nodes.make_struct_def_node(
+                state['file'], struct_name, fields_struct, functions_struct, pos_start, state["prev_tok"]["pos_end"]
+            )
+
+            [state, node]
+        _ ->
+            [state, None]
+
+
+def struct_call_expr(state, atom):
+    pos_start = state["current_tok"]["pos_start"]
+
+    state = advance(state)
+
+    state = case (state['current_tok']['type']) == 'RPAREN':
+        True ->
+            state |> Elixir.Map.put('_keywords', {})
+        False ->
+            loop_while(
+                state,
+                lambda state, ct:
+                    case:
+                        ct["type"] == "EOF" -> False
+                        ct["type"] == "RPAREN" -> False
+                        state["error"] != None -> False
+                        True -> True
+                ,
+                lambda state, ct:
+                    (keywords, state) = Elixir.Map.pop(state, '_keywords', {})
+
+                    _key = state['current_tok']
+                    key_value = _key |> Elixir.Map.get('value')
+
+                    state = state |> advance() |> advance()
+
+                    state = case Elixir.Map.has_key?(keywords, key_value):
+                        True ->
+                            Core.Parser.Utils.set_error(
+                                state,
+                                "Duplicated keyword",
+                                _key["pos_start"],
+                                state['current_tok']["pos_start"]
+                            )
+                        False -> state
+
+                    [state, value] = expr(state)
+
+                    keywords = Elixir.Map.merge(keywords, {key_value: value})
+
+                    case state['current_tok']['type']:
+                        'COMMA' ->
+                            state
+                                |> advance()
+                                |> Elixir.Map.put('_keywords', keywords)
+
+                        'RPAREN' ->
+                            state
+                                |> Elixir.Map.put('_keywords', keywords)
+                        _ ->
+                            Core.Parser.Utils.set_error(
+                                state,
+                                "Expected ')', keyword or ','",
+                                state["current_tok"]["pos_start"],
+                                state["current_tok"]["pos_end"]
+                            )
+            )
+
+
+    (keywords, state) = state |> Elixir.Map.pop('_keywords', {})
+    keywords = keywords |> Elixir.Map.to_list()
+
+    state = case (state['current_tok']['type']) == 'RPAREN':
+        True -> state
+        False -> Core.Parser.Utils.set_error(
+            state,
+            "Expected ')'",
+            state["current_tok"]["pos_start"],
+            state["current_tok"]["pos_end"]
+        )
+
+    case state['error']:
+        None ->
+            pos_end = state['current_tok'] |> Elixir.Map.get('pos_end')
+
+            state = advance(state)
+
+            node = Core.Parser.Nodes.make_struct_node(state['file'], atom, keywords, pos_end)
+
+            [state, node]
+        _ ->
+            [state, None]

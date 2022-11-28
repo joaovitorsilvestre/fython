@@ -87,7 +87,6 @@ def increase_node_count(meta, state <- {"node_count": node_count}):
 def inject_into_node_quoted_function((:statements, meta, body), function_quoted):
     (:statements, meta, Elixir.Enum.concat(body, [function_quoted]))
 
-
 def quoted_get_refs_func(meta_per_line_ref):
     # return quoted verson of the folowing code:
     # def __fython_get_node_ref__(key):

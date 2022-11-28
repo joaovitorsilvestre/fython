@@ -166,6 +166,18 @@ def new_resolver((:def, meta, [name, args, guards, statements]), var_names_avali
 def new_resolver((:lambda, meta, [args, statements]), var_names_avaliable):
     (:lambda, meta, get_vars_defined_def_or_lambda(args, statements, var_names_avaliable))
 
+def new_resolver((:struct_def, meta, [struct_name, struct_fields, functions_struct]), var_names_avaliable):
+    (
+        :struct_def,
+        meta,
+        [
+            struct_name,
+            struct_fields,
+            Elixir.Enum.map(functions_struct, lambda x: new_resolver(x, var_names_avaliable))
+        ]
+    )
+
+
 def new_resolver((:static_access, meta, [node_to_access, node_key]), var_names_avaliable):
     (
         :static_access,
@@ -241,15 +253,28 @@ def new_resolver(node <- (:range, meta, [left_node, right_node]), var_names_aval
         ]
     )
 
+def new_resolver(node <- (:struct, meta, [struct_name, keywords]), var_names_avaliable):
+    (
+        :struct,
+        meta,
+        [
+            struct_name,
+            Elixir.Enum.map(keywords, lambda (key, value):
+                (key, convert_local_function_calls(value, var_names_avaliable))
+            ),
+        ]
+    )
+
+def new_resolver((:spread, meta, [node_to_spread]), var_names_avaliable):
+    (
+        :spread, meta, [new_resolver(node_to_spread, var_names_avaliable)]
+    )
+
+
 def resolve_map_pair((key, value), var_names_avaliable):
     (
         convert_local_function_calls(key, var_names_avaliable),
         convert_local_function_calls(value, var_names_avaliable)
-    )
-
-def resolve_map_pair((:spread, meta, [node_to_spread]), var_names_avaliable):
-    (
-        :spread, meta, [new_resolver(node_to_spread, var_names_avaliable)]
     )
 
 

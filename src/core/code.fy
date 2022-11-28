@@ -11,44 +11,72 @@ def compile_project(project_path, destine):
     # Ensure compiled folder is created
     Elixir.File.mkdir_p!(compiled_folder)
 
-    [project_path, "**/*.fy"]
+    # Ensure compiled folder is created
+    Elixir.File.mkdir_p!(compiled_folder)
+
+    files = [project_path, "**/*.fy"]
         |> Elixir.Enum.join('/')
         |> Elixir.Path.wildcard()
-        |> Elixir.Enum.map(lambda file_full_path:
-            compile_project_file(project_path, file_full_path, compiled_folder, False)
+
+    compile_files(project_path, files, compiled_folder, False)
+
+def compile_files(project_path, files, compiled_folder, bootstraping):
+    # files: [a.fy, folder/b.fy, etc]
+
+    modules_ready_to_be_saved = files
+        |> Elixir.Enum.map(lambda file:
+            (child_modules, parent_module) = pre_compile_file(project_path, file, compiled_folder, bootstraping)
+            (
+                file,
+                (child_modules, parent_module)
+            )
         )
 
-def compile_project_file(project_root, file_full_path, destine_compiled, bootstraping):
-    module_name = get_module_name(project_root, file_full_path, bootstraping)
+    child_modules = modules_ready_to_be_saved
+        |> Elixir.Enum.map(lambda (file, (childs, _parent)): (file, childs))
+        |> Elixir.Enum.filter(lambda (file, childs): Elixir.Enum.count(childs) > 0)
 
-    # Ensure compiled folder is created
-    Elixir.File.mkdir_p!(destine_compiled)
+    parent_modules = modules_ready_to_be_saved
+        |> Elixir.Enum.map(lambda (file, (_childs, parent)): (file, parent))
+
+    # We need to compile child modules first. Child modules are structs, protocols, etc
+    child_modules
+        |> Elixir.List.flatten()
+        |> Elixir.Enum.each(
+            lambda (file, childs):
+                Elixir.Enum.each(
+                    childs,
+                    lambda (m_name, ast):
+                        save_module(m_name, file, compiled_folder, ast)
+                )
+        )
+
+    parent_modules
+        |> Elixir.List.flatten()
+        |> Elixir.Enum.each(
+            lambda (file, (m_name, ast)): save_module(m_name, file, compiled_folder, ast)
+        )
+
+
+def pre_compile_file(project_root, file_full_path, compiled_folder, bootstraping):
+    module_name = get_module_name(project_root, file_full_path, bootstraping)
 
     Elixir.IO.puts(Elixir.Enum.join(["Compiling module: ", module_name]))
 
-    (state, quoted) = lexer_parse_convert_file(
+    (:ok, file_content) = Elixir.File.read(file_full_path)
+
+    (state, modules_converted) = lexer_parse_convert_file(
         module_name,
-        Elixir.File.read(file_full_path) |> Elixir.Kernel.elem(1),
+        file_content,
         {"file": file_full_path, "compiling_module": True}
     )
 
     case Elixir.Map.get(state, "error"):
         None ->
-            # Its super important to use this Module.create function
-            # to ensure that our module binary will not have
-            # Elixir. in the begin of the module name
-            (_, _, binary, _) = Elixir.Module.create(
-                Elixir.String.to_atom(module_name),
-                quoted,
-                [(:file, file_full_path)]
-            )
+            # Child modules consist of structs, protocols, etc
+            (child_modules, [parent_module]) = Elixir.Enum.split(modules_converted, -1)
 
-            # we save .ex just to help debugging
-            destine_ex = Elixir.Enum.join([destine_compiled, "/", module_name, ".ex"])
-            destine_beam = Elixir.Enum.join([destine_compiled, "/", module_name, ".beam"])
-
-            Elixir.File.write(destine_ex, Elixir.Macro.to_string(quoted))
-            Elixir.File.write(destine_beam, binary, mode=:binary)
+            (child_modules, parent_module)
         _ ->
             Elixir.IO.puts("Compilation error:")
             Elixir.IO.puts("file path:")
@@ -57,7 +85,27 @@ def compile_project_file(project_root, file_full_path, destine_compiled, bootstr
             Core.Errors.Utils.print_error(module_name, state, text)
             raise "Compilation failed"
 
+def save_module(module_name, file_full_path, compiled_folder, quoted):
+    # Its super important to use this Module.create function
+    # to ensure that our module binary will not have
+    # Elixir. in the begin of the module name
+    (_, _, binary, _) = Elixir.Module.create(
+        Elixir.String.to_atom(module_name),
+        quoted,
+        [(:file, file_full_path)]
+    )
+
+    # we save .ex just to help debugging
+    destine_ex = Elixir.Enum.join([compiled_folder, "/", module_name, ".ex"])
+    destine_beam = Elixir.Enum.join([compiled_folder, "/", module_name, ".beam"])
+
+    Elixir.File.write(destine_ex, Elixir.Macro.to_string(quoted))
+    Elixir.File.write(destine_beam, binary, mode=:binary)
+
 def lexer_parse_convert_file(module_name, text, config):
+    # Main functions to lexer, parser and convert
+    # Fython AST to Elixir AST
+
     lexed = Core.Lexer.execute(text)
 
     # 1º Convert each node from Fython AST to Elixir AST
@@ -71,20 +119,13 @@ def lexer_parse_convert_file(module_name, text, config):
     state_error = Elixir.Map.get(state, 'error')
     compiling_module = Elixir.Map.get(config, "compiling_module", False)
 
-    # 2º Inject usefull functions into the module
-    state = case [state_error, compiling_module]:
-        [None, True] ->
-            node = Core.Parser.Pos.Nodesrefs.run(state['node'], text)
-            Elixir.Map.put(state, 'node', node)
-        _ -> state
-
-#    Elixir.IO.inspect(state['node'])
-
-    # 3º Convert each node from Fython AST to Elixir AST
+    # 2º Convert each node from Fython AST to Elixir AST
     case Elixir.Map.get(state, 'error'):
         None ->
-            ast = Elixir.Map.get(state, 'node')
-            (state, Core.Generator.Conversor.convert(ast))
+            ast = state['node']
+            modules_converted = Core.Generator.Conversor.run_conversor(module_name, ast, text, config)
+
+            (state, modules_converted)
         _ -> (state, None)
 
 
@@ -97,7 +138,7 @@ def get_module_name(project_full_path, file_full_path, bootstraping):
     #    project_full_path = /home/joao/fythonproject
     #    file_full_path = /home/joao/fythonproject/module/utils.fy
     # bootstraping (when True we will not add the name of marent folder to the module's name
-#                   Otherwise Fython itself would have modules called Src, e.g Fython.Src.Core.func_name)
+    #               otherwise Fython itself would have modules called Src, e.g Fython.Src.Core.func_name)
     # output > Module.Utils
 
     # if file name is __init__.fy

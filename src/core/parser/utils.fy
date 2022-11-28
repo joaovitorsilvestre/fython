@@ -47,4 +47,35 @@ def nodes_types():
         :call,
         :try,
         :range,
+        :struct_def,
+        :struct
     ]
+
+#def extract_module_structs(node <- (:statements, meta, nodes)):
+#    (structs, remaining) = Elixir.Enum.split_with(nodes, lambda (node_type, _, _): node_type == :struct)
+#
+#    # put structs back inside a statements block
+#    structs = Elixir.Enum.map(
+#        structs,
+#        lambda (:struct, meta, body): (:statements, meta, [(:struct, meta, body)])
+#    )
+#
+#    (structs, (:statements, meta, remaining))
+
+def is_struct_reference((:var, _, [_, being_called])):
+    # All structs begin with
+    # Example.User -> returns true
+    # Example.user -> returns false
+
+    first_letter = being_called
+        |> Elixir.String.split('.')
+        |> Elixir.Enum.at(-1)
+        |> Elixir.String.graphemes()
+        |> Elixir.Enum.at(0)
+
+    letters = Core.Lexer.Consts.letters()
+
+    Elixir.String.contains?(letters, first_letter) and first_letter == Elixir.String.upcase(first_letter)
+
+def is_struct_reference(_):
+    False
