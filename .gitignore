@@ -5,5 +5,5 @@
 src/_compiled
 /example/
 **/erl_crash.dump
-libs/fy_doc/_env
+lib/fy_doc/_env
 bootstraped

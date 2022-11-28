@@ -137,8 +137,8 @@ def get_module_name(project_full_path, file_full_path, bootstraping):
     # input >
     #    project_full_path = /home/joao/fythonproject
     #    file_full_path = /home/joao/fythonproject/module/utils.fy
-    # bootstraping (when True we will not add the name of marent folder to the module's name
-    #               otherwise Fython itself would have modules called Src, e.g Fython.Src.Core.func_name)
+    # bootstrap_prefix (usefull to not add the name of parent folder to the module's name,
+    #                   otherwise Fython itself would have modules called Src, e.g Fython.Src.Core.func_name)
     # output > Module.Utils
 
     # if file name is __init__.fy
