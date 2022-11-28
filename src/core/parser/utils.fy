@@ -47,20 +47,20 @@ def nodes_types():
         :call,
         :try,
         :range,
-        :struct,
-        :struct_call
+        :struct_def,
+        :struct
     ]
 
-def extract_module_structs(node <- (:statements, meta, nodes)):
-    (structs, remaining) = Elixir.Enum.split_with(nodes, lambda (node_type, _, _): node_type == :struct)
-
-    # put structs back inside a statements block
-    structs = Elixir.Enum.map(
-        structs,
-        lambda (:struct, meta, body): (:statements, meta, [(:struct, meta, body)])
-    )
-
-    (structs, (:statements, meta, remaining))
+#def extract_module_structs(node <- (:statements, meta, nodes)):
+#    (structs, remaining) = Elixir.Enum.split_with(nodes, lambda (node_type, _, _): node_type == :struct)
+#
+#    # put structs back inside a statements block
+#    structs = Elixir.Enum.map(
+#        structs,
+#        lambda (:struct, meta, body): (:statements, meta, [(:struct, meta, body)])
+#    )
+#
+#    (structs, (:statements, meta, remaining))
 
 def is_struct_reference((:var, _, [_, being_called])):
     # All structs begin with

@@ -4,7 +4,7 @@ def node_types_accept_pattern():
 def node_types_accept_pattern_in_function_argument():
     Elixir.List.flatten(
         node_types_accept_pattern(),
-        [:number, :string, :atom]
+        [:number, :string, :atom, :struct]
     )
 
 def gen_meta(file, pos_start, pos_end):
@@ -241,18 +241,18 @@ def make_guard_node(file, node <- (_, {"end": pos_end}, _), pos_start):
     )
 
 
-def make_struct_node(file, struct_name, struct_fields, functions_struct, pos_start, pos_end):
+def make_struct_def_node(file, struct_name, struct_fields, functions_struct, pos_start, pos_end):
     (
-        :struct,
+        :struct_def,
         gen_meta(file, pos_start, pos_end),
         [struct_name, struct_fields, functions_struct]
     )
 
-def make_struct_call(file, node_to_call, keywords, pos_end):
+def make_struct_node(file, node_to_call, keywords, pos_end):
     (:var, {"start": pos_start}, [_, struct_name]) = node_to_call
 
     (
-        :struct_call,
+        :struct,
         gen_meta(file, pos_start, pos_end),
         [struct_name, keywords]
     )

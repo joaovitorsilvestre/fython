@@ -14,11 +14,18 @@ def compile_project(project_path, destine):
     # Ensure compiled folder is created
     Elixir.File.mkdir_p!(compiled_folder)
 
-    modules_ready_to_be_saved = [project_path, "**/*.fy"]
+    files = [project_path, "**/*.fy"]
         |> Elixir.Enum.join('/')
         |> Elixir.Path.wildcard()
+
+    compile_files(project_path, files, compiled_folder, False)
+
+def compile_files(project_path, files, compiled_folder, bootstraping):
+    # files: [a.fy, folder/b.fy, etc]
+
+    modules_ready_to_be_saved = files
         |> Elixir.Enum.map(lambda file:
-            (child_modules, parent_module) = compile_project_file(project_path, file, compiled_folder, False)
+            (child_modules, parent_module) = pre_compile_file(project_path, file, compiled_folder, bootstraping)
             (
                 file,
                 (child_modules, parent_module)
@@ -51,14 +58,16 @@ def compile_project(project_path, destine):
         )
 
 
-def compile_project_file(project_root, file_full_path, compiled_folder, bootstraping):
+def pre_compile_file(project_root, file_full_path, compiled_folder, bootstraping):
     module_name = get_module_name(project_root, file_full_path, bootstraping)
 
     Elixir.IO.puts(Elixir.Enum.join(["Compiling module: ", module_name]))
 
+    (:ok, file_content) = Elixir.File.read(file_full_path)
+
     (state, modules_converted) = lexer_parse_convert_file(
         module_name,
-        Elixir.File.read(file_full_path) |> Elixir.Kernel.elem(1),
+        file_content,
         {"file": file_full_path, "compiling_module": True}
     )
 
@@ -66,6 +75,7 @@ def compile_project_file(project_root, file_full_path, compiled_folder, bootstra
         None ->
             # Child modules consist of structs, protocols, etc
             (child_modules, [parent_module]) = Elixir.Enum.split(modules_converted, -1)
+
             (child_modules, parent_module)
         _ ->
             Elixir.IO.puts("Compilation error:")
@@ -106,44 +116,14 @@ def lexer_parse_convert_file(module_name, text, config):
         _ ->
             lexed
 
-    # Just for when theres a error
-#    state = Elixir.Map.put(state, 'structs', [])
-
     state_error = Elixir.Map.get(state, 'error')
     compiling_module = Elixir.Map.get(config, "compiling_module", False)
 
-#    # 2º Split structs. They have their own modules.
-#    state = case [state_error, compiling_module]:
-#        [None, True] ->
-#            node = state["node"]
-#            (structs, node) = Core.Parser.Utils.extract_module_structs(node)
-#            state
-#                |> Elixir.Map.put('node', node)
-#                |> Elixir.Map.put('structs', structs)
-#        _ -> state
-#
-#    # 3º Inject functions with metadata info into the module
-#    state = case [state_error, compiling_module]:
-#        [None, True] ->
-#            node = Core.Parser.Pos.Nodesrefs.run(state['node'], text)
-#
-#            structs = Elixir.Enum.map(
-#                state['structs'],
-#                lambda node: node
-##                lambda node: Core.Parser.Pos.Nodesrefs.run(node, text)
-#            )
-#
-#            state
-#                |> Elixir.Map.put('node', node)
-#                |> Elixir.Map.put('structs', structs)
-#        _ -> state
-    # TODO add funções de ref de linha na conversão de cada módulo
-
-    # 4º Convert each node from Fython AST to Elixir AST
+    # 2º Convert each node from Fython AST to Elixir AST
     case Elixir.Map.get(state, 'error'):
         None ->
             ast = state['node']
-            modules_converted = Core.Generator.Conversor.run_conversor(module_name, ast)
+            modules_converted = Core.Generator.Conversor.run_conversor(module_name, ast, text, config)
 
             (state, modules_converted)
         _ -> (state, None)
@@ -158,7 +138,7 @@ def get_module_name(project_full_path, file_full_path, bootstraping):
     #    project_full_path = /home/joao/fythonproject
     #    file_full_path = /home/joao/fythonproject/module/utils.fy
     # bootstraping (when True we will not add the name of marent folder to the module's name
-#                   Otherwise Fython itself would have modules called Src, e.g Fython.Src.Core.func_name)
+    #               otherwise Fython itself would have modules called Src, e.g Fython.Src.Core.func_name)
     # output > Module.Utils
 
     # if file name is __init__.fy

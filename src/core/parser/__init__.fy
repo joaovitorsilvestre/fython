@@ -1260,7 +1260,7 @@ def struct_expr(state):
         None ->
             (functions_struct, state) = Elixir.Map.pop(state, "_functions", [])
 
-            node = Core.Parser.Nodes.make_struct_node(
+            node = Core.Parser.Nodes.make_struct_def_node(
                 state['file'], struct_name, fields_struct, functions_struct, pos_start, state["prev_tok"]["pos_end"]
             )
 
@@ -1346,7 +1346,7 @@ def struct_call_expr(state, atom):
 
             state = advance(state)
 
-            node = Core.Parser.Nodes.make_struct_call(state['file'], atom, keywords, pos_end)
+            node = Core.Parser.Nodes.make_struct_node(state['file'], atom, keywords, pos_end)
 
             [state, node]
         _ ->

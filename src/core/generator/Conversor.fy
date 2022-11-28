@@ -12,7 +12,10 @@ def convert_meta((nodetype, {"start": (_coll, line, _index)}, body)):
     meta = [(:line, line + 1)]
     (nodetype, meta, body)
 
-def run_conversor(module_name, (:statements, meta, nodes)):
+def nodes_that_are_own_modules():
+    [:struct_def, :protocol]
+
+def run_conversor(module_name, (:statements, meta, nodes), file_content, config):
     # Return modules procuded by the statements
     # returns: [
     #    (:ModuleName, elixir_ast_of_module)
@@ -21,21 +24,31 @@ def run_conversor(module_name, (:statements, meta, nodes)):
     # they must be the first ones of the list
     # TODO create way to detect circular deps
 
-    (separated_modules, current_module) = Elixir.Enum.split_with(
-        nodes,
-        lambda (node_type, _, _): Elixir.Enum.member?([:struct, :protocol], node_type)
-    )
+    (separated_modules, current_module) = nodes
+        |> Elixir.Enum.split_with(
+            lambda (node_type, _, _): Elixir.Enum.member?(nodes_that_are_own_modules(), node_type)
+        )
 
-    current_module = (module_name, convert((:statements, meta, current_module)))
+    current_module = (:statements, meta, current_module)
+        |> inject_module_info_if_compiling_module(file_content, config)
+        |> convert()
 
     separated_modules = separated_modules
         |> Elixir.Enum.map(lambda x:
-            case x:
-                (:struct, _, _) -> convert_struct_node(module_name, convert_meta(x))
-                True -> raise "Should not get here"
+            (:statements, meta, [x])
+                |> inject_module_info_if_compiling_module(file_content, config)
+                |> convert_meta()
+                |> convert_struct_module(module_name)
         )
 
-    [*separated_modules, current_module]
+    [*separated_modules, (module_name, current_module)]
+
+def inject_module_info_if_compiling_module(node, file_content, config):
+    compiling_module = Elixir.Map.get(config, "compiling_module", False)
+
+    case compiling_module:
+        True -> node |> Core.Parser.Pos.Nodesrefs.run(file_content)
+        False -> node
 
 
 def convert(node):
@@ -63,7 +76,7 @@ def convert(node):
         :call           -> node |> convert_meta() |> convert_call()
         :try            -> node |> convert_meta() |> convert_try()
         :range          -> node |> convert_meta() |> convert_range_node()
-        :struct_call    -> node |> convert_meta() |> convert_struct_call_node()
+        :struct         -> node |> convert_meta() |> convert_struct_node()
 
 def convert_number((:number, _, [value])):
     value
@@ -494,8 +507,8 @@ def convert_range_node((:range, meta, [left_node, right_node])):
         [convert(left_node), convert(right_node)]
     )
 
-def convert_struct_node(
-    module_name, (:struct, meta, [struct_name, struct_fields, functions_struct])
+def convert_struct_def_node(
+    (:struct_def, meta, [struct_name, struct_fields, functions_struct])
 ):
     functions_struct = Elixir.Enum.map(functions_struct, &convert/1)
 
@@ -512,14 +525,36 @@ def convert_struct_node(
         *functions_struct
     ]
 
-    struct_name = Elixir.Enum.join(['Elixir.', module_name, '.', struct_name])
-
-    (struct_name, (:"__block__", meta, struct_statements))
+    struct_statements
 
 
-def convert_struct_call_node((:struct_call, meta, [struct_name, keywords])):
+def convert_struct_module((:statements, meta, body), module_name):
+    ([struct_def_node], metadata_statements) = Elixir.Enum.split(body, 1)
+    (:struct_def, _, [struct_name, _, _]) = struct_def_node
+
+    # Functions of struct itself
+    struct_statements = struct_def_node |> convert_meta() |> convert_struct_def_node()
+
+    # These statements are the functions with metadata info
+    metadata_statements = Elixir.Enum.map(metadata_statements, &convert/1)
+
+    module_name = Elixir.Enum.join(['Elixir.', module_name, '.', struct_name])
+
+    (
+        module_name,
+        (
+            :"__block__",
+            meta,
+            [
+                *struct_statements,
+                *metadata_statements
+            ]
+        )
+    )
+
+
+def convert_struct_node((:struct, meta, [struct_name, keywords])):
     struct_name = Elixir.String.to_atom(Elixir.Enum.join(["Fython", ".", struct_name]))
-#    struct_name = Elixir.String.to_atom(struct_name)
 
     keywords_converted = Elixir.Enum.map(keywords, lambda (key, value):
         (Elixir.String.to_atom(key), convert(value))
@@ -530,13 +565,6 @@ def convert_struct_call_node((:struct_call, meta, [struct_name, keywords])):
         meta,
         [
             (:__aliases__, [(:alias, False)], [struct_name]),
-#            (:"%{}", meta, test)
             (:"%{}", meta, keywords_converted)
         ]
     )
-
-#    (
-#        (:".", meta, [struct_name, :__struct__]),
-#        meta,
-#        [(:"%{}", [], keywords_converted)]
-#    )

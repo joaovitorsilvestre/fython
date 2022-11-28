@@ -166,9 +166,9 @@ def new_resolver((:def, meta, [name, args, guards, statements]), var_names_avali
 def new_resolver((:lambda, meta, [args, statements]), var_names_avaliable):
     (:lambda, meta, get_vars_defined_def_or_lambda(args, statements, var_names_avaliable))
 
-def new_resolver((:struct, meta, [struct_name, struct_fields, functions_struct]), var_names_avaliable):
+def new_resolver((:struct_def, meta, [struct_name, struct_fields, functions_struct]), var_names_avaliable):
     (
-        :struct,
+        :struct_def,
         meta,
         [
             struct_name,
@@ -253,9 +253,9 @@ def new_resolver(node <- (:range, meta, [left_node, right_node]), var_names_aval
         ]
     )
 
-def new_resolver(node <- (:struct_call, meta, [struct_name, keywords]), var_names_avaliable):
+def new_resolver(node <- (:struct, meta, [struct_name, keywords]), var_names_avaliable):
     (
-        :struct_call,
+        :struct,
         meta,
         [
             struct_name,
