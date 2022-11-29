@@ -1,12 +1,15 @@
 def compile_project(project_path):
-    compile_project(project_path, "_compiled")
+    compile_project(project_path, "_compiled", "")
 
-def compile_project(project_path, destine):
+def compile_project(project_path, destine, module_prefix):
     # start elixir compiler
     Erlang.application.start(:compiler)
     Erlang.application.start(:elixir)
 
-    compiled_folder = [project_path, destine] |> Elixir.Enum.join('/')
+    # If it's a absolute path we will not add the root as parent
+    compiled_folder = case Elixir.String.starts_with?(destine, "/"):
+        True -> destine
+        False -> [project_path, destine] |> Elixir.Enum.join('/')
 
     # Ensure compiled folder is created
     Elixir.File.mkdir_p!(compiled_folder)
@@ -18,14 +21,14 @@ def compile_project(project_path, destine):
         |> Elixir.Enum.join('/')
         |> Elixir.Path.wildcard()
 
-    compile_files(project_path, files, compiled_folder, False)
+    compile_files(project_path, files, compiled_folder, module_prefix)
 
-def compile_files(project_path, files, compiled_folder, bootstraping):
+def compile_files(project_path, files, compiled_folder, module_prefix):
     # files: [a.fy, folder/b.fy, etc]
 
     modules_ready_to_be_saved = files
         |> Elixir.Enum.map(lambda file:
-            (child_modules, parent_module) = pre_compile_file(project_path, file, compiled_folder, bootstraping)
+            (child_modules, parent_module) = pre_compile_file(project_path, file, module_prefix)
             (
                 file,
                 (child_modules, parent_module)
@@ -58,8 +61,8 @@ def compile_files(project_path, files, compiled_folder, bootstraping):
         )
 
 
-def pre_compile_file(project_root, file_full_path, compiled_folder, bootstraping):
-    module_name = get_module_name(project_root, file_full_path, bootstraping)
+def pre_compile_file(project_root, file_full_path, module_prefix):
+    module_name = get_module_name(project_root, file_full_path, module_prefix)
 
     Elixir.IO.puts(Elixir.Enum.join(["Compiling module: ", module_name]))
 
@@ -130,15 +133,19 @@ def lexer_parse_convert_file(module_name, text, config):
 
 
 def get_module_name(project_full_path, file_full_path):
-    get_module_name(project_full_path, file_full_path, False)
+    get_module_name(project_full_path, file_full_path, "")
 
 
-def get_module_name(project_full_path, file_full_path, bootstraping):
+def get_module_name(project_full_path, file_full_path, module_prefix):
     # input >
     #    project_full_path = /home/joao/fythonproject
     #    file_full_path = /home/joao/fythonproject/module/utils.fy
-    # bootstrap_prefix (usefull to not add the name of parent folder to the module's name,
-    #                   otherwise Fython itself would have modules called Src, e.g Fython.Src.Core.func_name)
+    # module_prefix
+    #   usefull for bootstraping. When we compile a module, they are loaded automaticly to current process.
+    #   This can cause serious problems in bootstrap because the modules of current fython being compiled will
+    #   start to be used to compile the next ones. We prevent this by compiling fython with a diferent prefix
+    #   (that way the module will be loaded but will not replace the existing ones)
+    #   and using this compiled to compile again, but this time without the prefix.
     # output > Module.Utils
 
     # if file name is __init__.fy
@@ -149,16 +156,14 @@ def get_module_name(project_full_path, file_full_path, bootstraping):
         True -> None
         False -> raise "File fullpath doent match project full path"
 
-    project_parent_path = case bootstraping:
-        False ->
-            project_full_path
-                |> Elixir.String.replace_suffix('/', '')
-                |> Elixir.String.split('/')
-                |> Elixir.Enum.slice(0..-2)
-                |> Elixir.Enum.join('/')
-        True -> project_full_path
+    project_parent_path = project_full_path
+        |> Elixir.String.replace_suffix('/', '')
+        |> Elixir.String.split('/')
+        |> Elixir.Enum.slice(0..-2)
+        |> Elixir.Enum.join('/')
 
     name = Elixir.String.replace_prefix(file_full_path, project_parent_path, "")
+    name = Elixir.Enum.join([module_prefix, name])
 
     # remove / from the start of the name
     name = case Elixir.String.graphemes(name) |> Elixir.Enum.at(0):

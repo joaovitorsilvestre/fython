@@ -15,12 +15,12 @@ TESTS_DOCKER_TAG:="fython:tests"
 .ONESHELL:
 bootstrap-with-docker:
 	DOCKER_BUILDKIT=1 docker build -f devtools/Dockerfile -t $(BOOTSTRAP_DOCKER_TAG) --target bootstrap . \
-		&& docker rm -f fython_bootstrap || true \
-		&& docker run \
-			--name fython_bootstrap \
-			-v $(ROOT_DIR)/bootstraped:/final_bootstrap \
-			-e FINAL_PATH='/final_bootstrap' \
-			$(BOOTSTRAP_DOCKER_TAG) && echo "Bootstrap finished. Result saved at '$(ROOT_DIR)/bootstraped'"
+#		&& docker rm -f fython_bootstrap || true \
+#		&& docker run \
+#			--name fython_bootstrap \
+#			-v $(ROOT_DIR)/bootstraped:/final_bootstrap \
+#			-e FINAL_PATH='/final_bootstrap' \
+#			$(BOOTSTRAP_DOCKER_TAG) && echo "Bootstrap finished. Result saved at '$(ROOT_DIR)/bootstraped'"
 
 compile-project:
 	# USAGE:
