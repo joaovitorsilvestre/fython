@@ -6,66 +6,13 @@ def run(node, source_code):
 
     state = {"node_count": 0, "meta_per_line_ref": {}}
 
-    [node, state] = add_statements_refs(node, state)
+    [node, state] = Core.Parser.Traverse.run(node, state, &increase_node_count/2)
 
     node
         |> inject_into_node_quoted_function(quoted_get_refs_func(state['meta_per_line_ref']))
         |> inject_into_node_quoted_function(quoted_source_code_func(source_code))
 
-def iterate_items(nodes, state):
-    acc = {"nodes": [], "state": state}
-    acc = Elixir.Enum.reduce(nodes, acc, lambda x, acc:
-        [x, state] = add_statements_refs(x, acc['state'])
-        {"nodes": Elixir.Enum.concat(acc['nodes'], [x]), "state": state}
-    )
-    [acc['nodes'], acc['state']]
-
-
-def add_statements_refs((left, right), state):
-    [left, state] = add_statements_refs(left, state)
-    [right, state] = add_statements_refs(right, state)
-    [(left, right), state]
-
-def add_statements_refs([node], state):
-    [node, state] = add_statements_refs(node, state)
-    [[node], state]
-
-def add_statements_refs(False, state):
-    [False, state]
-
-def add_statements_refs(True, state):
-    [True, state]
-
-def add_statements_refs(None, state):
-    [None, state]
-
-def add_statements_refs((nodetype, meta, body), state):
-    case Elixir.Enum.member?(Core.Parser.Utils.nodes_types(), nodetype):
-        False -> [(nodetype, meta, body), state]
-        True ->
-            [body, state] = case:
-                Elixir.Enumerable.impl_for(body)    -> iterate_items(body, state)
-                True                                -> add_statements_refs(body, state)
-                True -> [body, state]
-
-            [meta, state] = increase_node_count(meta, state)
-            [(nodetype, meta, body), state]
-
-def add_statements_refs(body, state):
-    [body, state] = case:
-        body == True                        -> [body, state]
-        body == False                       -> [body, state]
-        body == None                        -> [body, state]
-        body == []                          -> [body, state]
-        Elixir.Kernel.is_binary(body)       -> [body, state]
-        Elixir.Kernel.is_atom(body)         -> [body, state]
-        Elixir.Kernel.is_number(body)       -> [body, state]
-        Elixir.Enumerable.impl_for(body)    -> iterate_items(body, state)
-        True                                -> raise "faltou esse"
-
-    [body, state]
-
-def increase_node_count(meta, state <- {"node_count": node_count}):
+def increase_node_count((node_type, meta, body), state <- {"node_count": node_count}):
     meta = Elixir.Map.put(meta, "ref_line", node_count)
 
     meta_per_line_ref = case Elixir.Map.has_key?(state['meta_per_line_ref'], meta['ref_line']):
@@ -80,8 +27,7 @@ def increase_node_count(meta, state <- {"node_count": node_count}):
         |> Elixir.Map.put("node_count", node_count + 1)
         |> Elixir.Map.put("meta_per_line_ref", meta_per_line_ref)
 
-    [meta, state]
-
+    [(node_type, meta, body), state]
 
 
 def inject_into_node_quoted_function((:statements, meta, body), function_quoted):
