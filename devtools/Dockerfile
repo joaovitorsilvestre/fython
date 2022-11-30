@@ -74,16 +74,18 @@ CMD echo "Compiling $FOLDER" \
 
 FROM base as fydoc
 
+# Install python to use for docs
+RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=locked \
+    --mount=target=/var/cache/apt,type=cache,sharing=locked \
+    apt update && \
+    apt install -y software-properties-common && \
+    add-apt-repository ppa:deadsnakes/ppa && \
+    apt install -y python3.9 python3-pip
+
 ENV FOLDER="MUST_BE_GIVEN"
 
 ENV FYDOC_PATH="/lib/fydoc"
 COPY /lib/fydoc $FYDOC_PATH
-
-# Install python to use for docs
-RUN apt update && \
-    apt install -y software-properties-common && \
-    add-apt-repository ppa:deadsnakes/ppa && \
-    apt install -y python3.9 python3-pip
 
 RUN pip3 install -r $FYDOC_PATH/mkdocs/requirements.txt
 
