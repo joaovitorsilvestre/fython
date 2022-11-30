@@ -30,15 +30,17 @@ RUN rm -rf $PATH_FYTHON_TO_USE_AS_BOOTSTRAPER
 
 FROM base as bootstrap
 
-RUN /fython bootstrap /lib/fython $FIRST_PATH $DESTINE_PATH $ELIXIR_BEAMS_PATH
+ENV FIRST_BOOTSTRAP_DESTINE="/bootstrap1"
+ENV SECOND_BOOTSTRAP_DESTINE="/bootstrap2"
 
-# Check if it can recompile itself (its a good way to test while we dont have proper testing)
-#RUN ./bootstrap.sh compile /lib/fython $FIRST_PATH $DESTINE_PATH $ELIXIR_BEAMS_PATH
-#RUN ./bootstrap.sh compile /lib/fython $SECOND_PATH $FIRST_PATH $ELIXIR_BEAMS_PATH
-#
+RUN /fython bootstrap /lib/fython $FIRST_BOOTSTRAP_DESTINE $DESTINE_PATH $ELIXIR_BEAMS_PATH
+
+# Check if it can recompile itself
+RUN /fython bootstrap /lib/fython $SECOND_BOOTSTRAP_DESTINE $FIRST_BOOTSTRAP_DESTINE $ELIXIR_BEAMS_PATH
+
 ## The final version bootstraped ready for release
-#ENV FINAL_PATH="/bootstraped"
-#CMD ./bootstrap.sh compile /lib/fython $FINAL_PATH $SECOND_PATH $ELIXIR_BEAMS_PATH
+ENV FINAL_PATH="/bootstraped"
+CMD /fython bootstrap /lib/fython $FINAL_PATH $SECOND_BOOTSTRAP_DESTINE $ELIXIR_BEAMS_PATH
 
 FROM base as shell
 ENV ADITIONAL_PATHS=""

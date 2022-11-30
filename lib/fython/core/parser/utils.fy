@@ -79,3 +79,23 @@ def is_struct_reference((:var, _, [_, being_called])):
 
 def is_struct_reference(_):
     False
+
+def is_calling_function_of_fython_module(node <- (:call, meta, [(:var, _, [_, being_called]), args, keywords, False])):
+    # being_called
+    #   "nome_funcao" -> False
+    #   "Elixir.Module.nome_funcao" -> False
+    #   "Module.nome_funcao" -> True
+
+    case Elixir.String.contains?(being_called, '.'):
+        False -> False
+        True ->
+            (function, modules) = being_called
+                |> Elixir.String.split(".")
+                |> Elixir.List.pop_at(-1)
+
+            module = Elixir.Enum.join(modules, ".")
+
+            case:
+                Elixir.String.starts_with?(module, "Elixir.") -> False
+                Elixir.String.starts_with?(module, "Erlang.") -> False
+                True -> True

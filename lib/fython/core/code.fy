@@ -1,7 +1,7 @@
 def compile_project(project_path):
     compile_project(project_path, "_compiled", "")
 
-def compile_project(project_path, destine, module_prefix):
+def compile_project(project_path, destine, bootstrap_prefix):
     # start elixir compiler
     Erlang.application.start(:compiler)
     Erlang.application.start(:elixir)
@@ -21,14 +21,14 @@ def compile_project(project_path, destine, module_prefix):
         |> Elixir.Enum.join('/')
         |> Elixir.Path.wildcard()
 
-    compile_files(project_path, files, compiled_folder, module_prefix)
+    compile_files(project_path, files, compiled_folder, bootstrap_prefix)
 
-def compile_files(project_path, files, compiled_folder, module_prefix):
+def compile_files(project_path, files, compiled_folder, bootstrap_prefix):
     # files: [a.fy, folder/b.fy, etc]
 
     modules_ready_to_be_saved = files
         |> Elixir.Enum.map(lambda file:
-            (child_modules, parent_module) = pre_compile_file(project_path, file, module_prefix)
+            (child_modules, parent_module) = pre_compile_file(project_path, file, bootstrap_prefix)
             (
                 file,
                 (child_modules, parent_module)
@@ -61,8 +61,8 @@ def compile_files(project_path, files, compiled_folder, module_prefix):
         )
 
 
-def pre_compile_file(project_root, file_full_path, module_prefix):
-    module_name = get_module_name(project_root, file_full_path, module_prefix)
+def pre_compile_file(project_root, file_full_path, bootstrap_prefix):
+    module_name = get_module_name(project_root, file_full_path, bootstrap_prefix)
 
     Elixir.IO.puts(Elixir.Enum.join(["Compiling module: ", module_name]))
 
@@ -71,7 +71,8 @@ def pre_compile_file(project_root, file_full_path, module_prefix):
     (state, modules_converted) = lexer_parse_convert_file(
         module_name,
         file_content,
-        {"file": file_full_path, "compiling_module": True}
+        {"file": file_full_path, "compiling_module": True},
+        bootstrap_prefix
     )
 
     case Elixir.Map.get(state, "error"):
@@ -106,6 +107,9 @@ def save_module(module_name, file_full_path, compiled_folder, quoted):
     Elixir.File.write(destine_beam, binary, mode=:binary)
 
 def lexer_parse_convert_file(module_name, text, config):
+    lexer_parse_convert_file(module_name, text, config, "")
+
+def lexer_parse_convert_file(module_name, text, config, bootstrap_prefix):
     # Main functions to lexer, parser and convert
     # Fython AST to Elixir AST
 
@@ -126,6 +130,8 @@ def lexer_parse_convert_file(module_name, text, config):
     case Elixir.Map.get(state, 'error'):
         None ->
             ast = state['node']
+                |> add_prefix_to_function_calls(bootstrap_prefix)
+
             modules_converted = Core.Generator.Conversor.run_conversor(module_name, ast, text, config)
 
             (state, modules_converted)
@@ -136,12 +142,12 @@ def get_module_name(project_full_path, file_full_path):
     get_module_name(project_full_path, file_full_path, "")
 
 
-def get_module_name(project_full_path, file_full_path, module_prefix):
+def get_module_name(project_full_path, file_full_path, bootstrap_prefix):
     # input >
     #    project_full_path = /home/joao/fythonproject
     #    file_full_path = /home/joao/fythonproject/module/utils.fy
-    # module_prefix
-    #   usefull for bootstraping. When we compile a module, they are loaded automaticly to current process.
+    # bootstrap_prefix
+    #   Used in bootstraping. When we compile a module, they are loaded automaticly to current process.
     #   This can cause serious problems in bootstrap because the modules of current fython being compiled will
     #   start to be used to compile the next ones. We prevent this by compiling fython with a diferent prefix
     #   (that way the module will be loaded but will not replace the existing ones)
@@ -163,7 +169,6 @@ def get_module_name(project_full_path, file_full_path, module_prefix):
         |> Elixir.Enum.join('/')
 
     name = Elixir.String.replace_prefix(file_full_path, project_parent_path, "")
-    name = Elixir.Enum.join([module_prefix, name])
 
     # remove / from the start of the name
     name = case Elixir.String.graphemes(name) |> Elixir.Enum.at(0):
@@ -187,4 +192,39 @@ def get_module_name(project_full_path, file_full_path, module_prefix):
                 |> Elixir.Enum.join('.')
         _ -> final |> Elixir.Enum.join('.')
 
-    Elixir.Enum.join(["Fython.", final])
+    case bootstrap_prefix:
+        "" ->
+            # Returns Fython.ModuleA.ModuleB
+            final
+        _ ->
+            # Returns Fython.PREFIX.ModuleA.ModuleB
+            Elixir.Enum.join([
+                'Fython.',
+                bootstrap_prefix,
+                '.',
+                Elixir.String.replace_prefix(final, 'Fython.', '')
+            ])
+
+
+def add_prefix_to_function_calls(node, bootstrap_prefix):
+    [node, state] = Core.Parser.Traverse.run(
+        node, {"bootstrap_prefix": bootstrap_prefix}, &add_prefix/2
+    )
+    node
+
+def add_prefix(node <- (:call, meta, [func_name, args, keywords, False]), state):
+    {"bootstrap_prefix": bootstrap_prefix} = state
+
+    (:var, var_meta, [var_pin, being_called]) = func_name
+
+    being_called = case (Core.Parser.Utils.is_calling_function_of_fython_module(node), bootstrap_prefix):
+        (False, _) -> being_called
+        (True, '') -> being_called # no prefix
+        (True, _) -> Elixir.Enum.join([bootstrap_prefix, '.', being_called])
+
+    func_name = (:var, var_meta, [var_pin, being_called])
+
+    [(:call, meta, [func_name, args, keywords, False]), state]
+
+def add_prefix(node, state):
+    [node, state]

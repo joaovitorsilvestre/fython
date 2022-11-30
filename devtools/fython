@@ -14,8 +14,9 @@ exec () {
 
 bootstrap () {
   FYTHON_CODE_PATH=$1
-  FYTHON_BEAMS_USE_TO_BOOTSTRAP=$2
-  ELIXIR_BEAMS_PATH=$3
+  SECOND_COMPILED_FOLDER=$2
+  FYTHON_BEAMS_USE_TO_BOOTSTRAP=$3
+  ELIXIR_BEAMS_PATH=$4
 
   [[ -z "$FYTHON_CODE_PATH" ]] && echo "Missing fython src code path" && exit 1
   [[ -z "$FYTHON_BEAMS_USE_TO_BOOTSTRAP" ]] && echo "Missing fython's beams folder" && exit 1
@@ -23,7 +24,6 @@ bootstrap () {
 
   PREFIX=Bootstrap
   FIRST_COMPILED_FOLDER=/test_compiled1
-  SECOND_COMPILED_FOLDER=/test_compiled2
 
   # 1º Compile with a module prefix to prevent modules overriding
 
@@ -39,12 +39,15 @@ bootstrap () {
   # so we have the final bootstraped beams
 
   rm -rf $SECOND_COMPILED_FOLDER/*
-#  erl -pa $FIRST_COMPILED_FOLDER \
-#    -noshell \
-#    -eval "'Fython.$PREFIX.Fython.Core.Code':compile_project(<<"'"'"$FYTHON_CODE_PATH"'"'">>, <<"'"'"$SECOND_COMPILED_FOLDER"'"'">>, <<"'"'""'"'">>)." \
-#    -run init stop
-#
-#  cd $ELIXIR_BEAMS_PATH && cp -r . "$SECOND_COMPILED_FOLDER" && cd /
+  erl -pa $FIRST_COMPILED_FOLDER \
+    -noshell \
+    -eval "'Fython.$PREFIX.Core.Code':compile_project(<<"'"'"$FYTHON_CODE_PATH"'"'">>, <<"'"'"$SECOND_COMPILED_FOLDER"'"'">>, <<"'"'""'"'">>)." \
+    -run init stop
+
+  cd $ELIXIR_BEAMS_PATH && cp -r . "$SECOND_COMPILED_FOLDER" && cd /
+
+  # Creaning up disk
+  rm -rf $FIRST_COMPILED_FOLDER
 }
 
 $*

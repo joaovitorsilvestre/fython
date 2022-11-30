@@ -434,6 +434,7 @@ def convert_call(full <- (:call, meta, [(:var, _, [_, func_name]), args, keyword
                 Elixir.String.starts_with?(module, "Elixir.") -> module
                 Elixir.String.starts_with?(module, "Erlang.") ->
                     Elixir.String.replace(module, "Erlang.", "")
+                Elixir.String.starts_with?(module, "Fython.") -> module
                 True ->
                     Elixir.Enum.join(['Fython.', module])
 

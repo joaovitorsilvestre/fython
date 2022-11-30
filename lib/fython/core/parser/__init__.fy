@@ -160,7 +160,7 @@ def statement(state):
         Core.Parser.Utils.tok_matchs(ct, "KEYWORD", "def") ->
             Core.Parser.Functions.func_def_expr(state, False)
         Core.Parser.Utils.tok_matchs(ct, 'KEYWORD', 'struct') ->
-            struct_expr(state)
+            def_struct_expr(state)
         Core.Parser.Utils.tok_matchs(ct, 'KEYWORD', 'assert') ->
             [state, assert_expr] = state |> advance() |> expr()
 
@@ -273,7 +273,7 @@ def call(state, _atom):
             is_struct = Core.Parser.Utils.is_struct_reference(_atom)
 
             case is_struct:
-                True -> struct_call_expr(state, _atom)
+                True -> struct_expr(state, _atom)
                 False -> call_func_expr(state, _atom)
         ct_type == 'LSQUARE' and same_line_of_prev_tok -> static_access_expr(state, _atom)
         True -> [state, _atom]
@@ -1150,7 +1150,7 @@ def range_expr(state, left_node <- (_, {"start": pos_start}, _)):
 
     [state, node]
 
-def struct_expr(state):
+def def_struct_expr(state):
     pos_start = state['current_tok']['pos_start']
     base_line = pos_start['ln']
 
@@ -1269,7 +1269,7 @@ def struct_expr(state):
             [state, None]
 
 
-def struct_call_expr(state, atom):
+def struct_expr(state, atom):
     pos_start = state["current_tok"]["pos_start"]
 
     state = advance(state)
