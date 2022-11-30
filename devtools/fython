@@ -41,7 +41,7 @@ bootstrap () {
   rm -rf $SECOND_COMPILED_FOLDER/*
   erl -pa $FIRST_COMPILED_FOLDER \
     -noshell \
-    -eval "'Fython.$PREFIX.Core.Code':compile_project(<<"'"'"$FYTHON_CODE_PATH"'"'">>, <<"'"'"$SECOND_COMPILED_FOLDER"'"'">>, <<"'"'""'"'">>)." \
+    -eval "'Fython.$PREFIX.Core.Code':compile_project(<<"'"'"$FYTHON_CODE_PATH"'"'">>, <<"'"'"$SECOND_COMPILED_FOLDER"'"'">>, nil)." \
     -run init stop
 
   cd $ELIXIR_BEAMS_PATH && cp -r . "$SECOND_COMPILED_FOLDER" && cd /
