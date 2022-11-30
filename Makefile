@@ -3,7 +3,9 @@ SHELL := /bin/bash
 # makefile location
 ROOT_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 # fython src folder
-SRC_DIR:="$(ROOT_DIR)/src"
+FYTHON_SRC_DIR:="$(ROOT_DIR)/lib/fython"
+
+# TODO these are tests of fython, we need to move it to fython folder inside lib
 TESTS_PATH:="$(ROOT_DIR)/tests"
 
 BOOTSTRAP_DOCKER_TAG:="fython:bootstrap"
@@ -11,6 +13,7 @@ COMPILER_DOCKER_TAG:="fython:compiler"
 SHELL_DOCKER_TAG:="fython:shell"
 FYTEST_DOCKER_TAG:="fython:fytest"
 TESTS_DOCKER_TAG:="fython:tests"
+FYDOC_DOCKER_TAG:="fython:fydoc"
 
 .ONESHELL:
 bootstrap-with-docker:
@@ -20,7 +23,8 @@ bootstrap-with-docker:
 			--name fython_bootstrap \
 			-v $(ROOT_DIR)/bootstraped:/final_bootstrap \
 			-e FINAL_PATH='/final_bootstrap' \
-			$(BOOTSTRAP_DOCKER_TAG) && echo "Bootstrap finished. Result saved at '$(ROOT_DIR)/bootstraped'"
+			$(BOOTSTRAP_DOCKER_TAG) && echo "Bootstrap finished. Result saved at '$(ROOT_DIR)/bootstraped'" \
+		&& docker rm -f fython_bootstrap
 
 compile-project:
 	# USAGE:
@@ -33,11 +37,19 @@ run-tests:
 	$(MAKE) build-fytest \
 		&& DOCKER_BUILDKIT=1 docker run -e FOLDER=$(TESTS_PATH) -v $(TESTS_PATH):$(TESTS_PATH) $(FYTEST_DOCKER_TAG)
 
+gen-docs-fython:
+	# > make gen-docs
+	$(MAKE) build-fydoc \
+		&& DOCKER_BUILDKIT=1 docker run -e FOLDER=$(FYTHON_SRC_DIR) -v $(FYTHON_SRC_DIR):$(FYTHON_SRC_DIR) $(FYDOC_DOCKER_TAG)
+
 build-shell:
 	DOCKER_BUILDKIT=1 docker build -f devtools/Dockerfile -t $(SHELL_DOCKER_TAG) --target shell .
 
 build-fytest:
 	DOCKER_BUILDKIT=1 docker build -f devtools/Dockerfile -t $(FYTEST_DOCKER_TAG) --target fytest .
+
+build-fydoc:
+	DOCKER_BUILDKIT=1 docker build -f devtools/Dockerfile -t $(FYDOC_DOCKER_TAG) --target fydoc .
 
 shell-current-src:
 	$(MAKE) build-shell \

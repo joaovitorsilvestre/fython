@@ -1,0 +1,10 @@
+site_name: Fython
+theme:
+  name: gitbook
+extra_css: ["extra.css"]
+extra_javascript: ["extra.js"]
+#nav:
+#    - 'Home': 'index.md'
+#    - 'Modules':
+#        - 'Core':
+#            - Functions: 'modules/core/functions.md'
