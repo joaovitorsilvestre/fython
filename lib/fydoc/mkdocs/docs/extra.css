@@ -1,0 +1,17 @@
+.function-header {
+    margin: 2em 0 1em;
+    padding: 0.5em 1em;
+    background: #f7f7f7;
+    border-left: 3px solid #6ecb58;
+    font-size: 1.2em !important;
+    font-weight: 700;
+    font-family: Inconsolata,Menlo,Courier,monospace;
+    position: relative;
+}
+
+.function-sumary-header {
+    color: rgb(51, 51, 51) !important;
+    text-decoration: none !important;
+    font-weight: 700;
+    font-size: 1.1em;
+}

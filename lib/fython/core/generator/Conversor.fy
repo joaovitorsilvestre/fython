@@ -16,7 +16,7 @@ def nodes_that_are_own_modules():
     [:struct_def, :protocol]
 
 def run_conversor(module_name, (:statements, meta, nodes), file_content, config):
-    # Return modules procuded by the statements
+    # Return modules produced by the statements
     # returns: [
     #    (:ModuleName, elixir_ast_of_module)
     # ]

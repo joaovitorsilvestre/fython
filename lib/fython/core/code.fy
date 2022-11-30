@@ -1,5 +1,5 @@
 def compile_project(project_path):
-    compile_project(project_path, "_compiled", "")
+    compile_project(project_path, "_compiled", None)
 
 def compile_project(project_path, destine, bootstrap_prefix):
     # start elixir compiler
@@ -14,14 +14,14 @@ def compile_project(project_path, destine, bootstrap_prefix):
     # Ensure compiled folder is created
     Elixir.File.mkdir_p!(compiled_folder)
 
-    # Ensure compiled folder is created
-    Elixir.File.mkdir_p!(compiled_folder)
+    files = get_fython_files_in_folder(project_path)
+    compile_files(project_path, files, compiled_folder, bootstrap_prefix)
 
-    files = [project_path, "**/*.fy"]
+def get_fython_files_in_folder(project_path):
+    [project_path, "**/*.fy"]
         |> Elixir.Enum.join('/')
         |> Elixir.Path.wildcard()
 
-    compile_files(project_path, files, compiled_folder, bootstrap_prefix)
 
 def compile_files(project_path, files, compiled_folder, bootstrap_prefix):
     # files: [a.fy, folder/b.fy, etc]
@@ -60,6 +60,9 @@ def compile_files(project_path, files, compiled_folder, bootstrap_prefix):
             lambda (file, (m_name, ast)): save_module(m_name, file, compiled_folder, ast)
         )
 
+
+def pre_compile_file(project_root, file_full_path):
+    pre_compile_file(project_root, file_full_path, None)
 
 def pre_compile_file(project_root, file_full_path, bootstrap_prefix):
     module_name = get_module_name(project_root, file_full_path, bootstrap_prefix)
@@ -107,7 +110,7 @@ def save_module(module_name, file_full_path, compiled_folder, quoted):
     Elixir.File.write(destine_beam, binary, mode=:binary)
 
 def lexer_parse_convert_file(module_name, text, config):
-    lexer_parse_convert_file(module_name, text, config, "")
+    lexer_parse_convert_file(module_name, text, config, None)
 
 def lexer_parse_convert_file(module_name, text, config, bootstrap_prefix):
     # Main functions to lexer, parser and convert
@@ -129,8 +132,7 @@ def lexer_parse_convert_file(module_name, text, config, bootstrap_prefix):
     # 2º Convert each node from Fython AST to Elixir AST
     case Elixir.Map.get(state, 'error'):
         None ->
-            ast = state['node']
-                |> add_prefix_to_function_calls(bootstrap_prefix)
+            ast = state['node'] |> add_prefix_to_function_calls(bootstrap_prefix)
 
             modules_converted = Core.Generator.Conversor.run_conversor(module_name, ast, text, config)
 
@@ -139,7 +141,7 @@ def lexer_parse_convert_file(module_name, text, config, bootstrap_prefix):
 
 
 def get_module_name(project_full_path, file_full_path):
-    get_module_name(project_full_path, file_full_path, "")
+    get_module_name(project_full_path, file_full_path, None)
 
 
 def get_module_name(project_full_path, file_full_path, bootstrap_prefix):
@@ -192,11 +194,8 @@ def get_module_name(project_full_path, file_full_path, bootstrap_prefix):
                 |> Elixir.Enum.join('.')
         _ -> final |> Elixir.Enum.join('.')
 
-    case bootstrap_prefix:
-        "" ->
-            # Returns Fython.ModuleA.ModuleB
-            final
-        _ ->
+    case:
+        bootstrap_prefix ->
             # Returns Fython.PREFIX.ModuleA.ModuleB
             Elixir.Enum.join([
                 'Fython.',
@@ -204,7 +203,11 @@ def get_module_name(project_full_path, file_full_path, bootstrap_prefix):
                 '.',
                 Elixir.String.replace_prefix(final, 'Fython.', '')
             ])
+        Elixir.String.starts_with?(final, 'Fython.') -> final
+        True -> Elixir.Enum.join(['Fython.', final])
 
+def add_prefix_to_function_calls(node, None):
+    node
 
 def add_prefix_to_function_calls(node, bootstrap_prefix):
     [node, state] = Core.Parser.Traverse.run(

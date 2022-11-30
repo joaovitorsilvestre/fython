@@ -71,3 +71,29 @@ RUN /fython exec "Core.Code.compile_project('$FYTEST_PATH')" $DESTINE_PATH
 CMD echo "Compiling $FOLDER" \
     && /fython exec "Core.Code.compile_project('$FOLDER')" $DESTINE_PATH \
     && /fython exec "Fytest.run('$FOLDER')" $FOLDER/_compiled $FYTEST_PATH_COMPILED $DESTINE_PATH
+
+FROM base as fydoc
+
+ENV FOLDER="MUST_BE_GIVEN"
+
+ENV FYDOC_PATH="/lib/fydoc"
+COPY /lib/fydoc $FYDOC_PATH
+
+# Install python to use for docs
+RUN apt update && \
+    apt install -y software-properties-common && \
+    add-apt-repository ppa:deadsnakes/ppa && \
+    apt install -y python3.9 python3-pip
+
+RUN pip3 install -r $FYDOC_PATH/mkdocs/requirements.txt
+
+RUN /fython exec "Core.Code.compile_project('$FYDOC_PATH')" $DESTINE_PATH
+
+CMD rm -rf $FOLDER/docs && \
+    /fython exec "Fydoc.run('$FOLDER')" $FYDOC_PATH/_compiled $DESTINE_PATH && \
+    cp $FYDOC_PATH/mkdocs/docs/extra.css $FOLDER/docs/extra.css && \
+    cp $FYDOC_PATH/mkdocs/docs/extra.js $FOLDER/docs/extra.js && \
+    cp $FYDOC_PATH/mkdocs/docs/index.md $FOLDER/docs/index.md && \
+    cp $FYDOC_PATH/mkdocs/mkdocs.yml $FOLDER/mkdocs.yml && \
+    cd $FOLDER && mkdocs build && rm -rf $FOLDER/mkdocs.yml && rm -rf $FOLDER/docs && \
+    echo "Documentation generated at $FOLDER/site"
