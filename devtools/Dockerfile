@@ -2,7 +2,7 @@ FROM elixir:1.14.1 as base
 
 # Arguments you can modify
 ARG DESTINE_PATH="/compiled"
-ARG VERSION_TO_USE_AS_BOOTSTRAPER="v0.8.0"
+ARG VERSION_TO_USE_AS_BOOTSTRAPER="v0.9.0"
 
 ENV DESTINE_PATH=$DESTINE_PATH
 ENV PATH_FYTHON_TO_USE_AS_BOOTSTRAPER="/fython_$VERSION_TO_USE_AS_BOOTSTRAPER"
@@ -23,7 +23,7 @@ RUN chmod a+x /fython
 
 # Execute bootstrap
 RUN echo "Bootstraping using Fython $VERSION_TO_USE_AS_BOOTSTRAPER" \
-    && ./bootstrap.sh compile /lib/fython $DESTINE_PATH $PATH_FYTHON_TO_USE_AS_BOOTSTRAPER $ELIXIR_BEAMS_PATH
+  && /fython bootstrap /lib/fython $DESTINE_PATH $PATH_FYTHON_TO_USE_AS_BOOTSTRAPER $ELIXIR_BEAMS_PATH
 
 # Remove base used for bootstrap (to ensure that we are not using it anymore)
 RUN rm -rf $PATH_FYTHON_TO_USE_AS_BOOTSTRAPER
