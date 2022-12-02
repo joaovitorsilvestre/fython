@@ -147,6 +147,7 @@ def parse(state):
     case state["error"]:
         None ->
             cc = state["current_char"]
+            nc = state["next_char"]
             pos = state["position"]
 
             case:
@@ -161,7 +162,9 @@ def parse(state):
                         |> advance()
                         |> parse()
                 cc == ':' -> parse(make_do_or_atom(state))
-                cc == "'" or cc == '"' -> parse(make_string(state))
+                cc == 'c' and (nc == "'" or nc == '"') -> parse(make_string(advance(state), :charlist))
+                cc == 'r' and (nc == "'" or nc == '"') -> parse(make_string(advance(state), :regex))
+                cc == "'" or cc == '"' -> parse(make_string(state, :string))
                 Elixir.String.contains?(Core.Lexer.Consts.identifier_chars(True), cc) ->
                     state |> make_identifier() |> parse()
                 cc == "&" -> simple_maker(state, "ECOM")
@@ -330,7 +333,7 @@ def make_do_or_atom(state):
                 |> Core.Lexer.Tokens.add_token("DO")
 
 
-def make_string(state):
+def make_string(state, type) if type in [:string, :regex, :charlist]:
     pos_start = state["position"]
     string_char_type = state["current_char"] # ' or "
 
@@ -364,17 +367,16 @@ def make_string(state):
             # to advance the end string char
             state = advance(state)
 
-            string = state
-                |> Elixir.Map.get("result", "")
-#                |> Elixir.String.graphemes()
-#                |> Elixir.Enum.map(lambda i:
-#                    Elixir.Enum.join(['\\', '"']) if i == '"' else i
-#                )
-#                |> Elixir.Enum.join()
+            string = state |> Elixir.Map.get("result", "")
+
+            token_type = case type:
+                :string -> "STRING"
+                :regex -> "REGEX"
+                :charlist -> "CHARLIST"
 
             state
                 |> Core.Lexer.Tokens.add_token(
-                    "STRING", string, pos_start
+                    token_type, string, pos_start
                 )
                 |> Elixir.Map.delete("result")
 

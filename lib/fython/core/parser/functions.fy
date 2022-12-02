@@ -6,6 +6,8 @@ def func_def_expr(state, allow_funct_inside_block):
     valid_def_impl = state["current_tok"]['ident'] == 4 and allow_funct_inside_block
     base_ident = state["current_tok"]['ident']
 
+    private = Core.Parser.Utils.tok_matchs(state['current_tok'], "KEYWORD", "defp")
+
     state = case:
         not valid_def and not valid_def_impl->
             Core.Parser.Utils.set_error(
@@ -90,7 +92,7 @@ def func_def_expr(state, allow_funct_inside_block):
         [None, _] ->    [state, None]
         _ ->
             node = Core.Parser.Nodes.make_funcdef_node(
-                state['file'], var_name_tok, arg_nodes, guards, body, docstring, pos_start
+                state['file'], var_name_tok, arg_nodes, guards, body, docstring, pos_start, private
             )
 
             [state, node]

@@ -85,6 +85,12 @@ def new_resolver(node <- (:var, _, _), _):
 def new_resolver(node <- (:string, _, _), _):
     node
 
+def new_resolver(node <- (:regex, _, _), _):
+    node
+
+def new_resolver(node <- (:charlist, _, _), _):
+    node
+
 def new_resolver(node <- (:func, _, _), _):
     node
 
@@ -156,12 +162,12 @@ def new_resolver((:statements, meta, nodes), var_names_avaliable):
     )
 
 
-def new_resolver((:def, meta, [name, args, guards, statements]), var_names_avaliable):
+def new_resolver((node_type, meta, [name, args, guards, statements]), var_names_avaliable) if node_type in [:def, :defp]:
     [args, statements] = get_vars_defined_def_or_lambda(
         args, statements, var_names_avaliable
     )
 
-    (:def, meta, [name, args, guards, statements])
+    (node_type, meta, [name, args, guards, statements])
 
 def new_resolver((:lambda, meta, [args, statements]), var_names_avaliable):
     (:lambda, meta, get_vars_defined_def_or_lambda(args, statements, var_names_avaliable))

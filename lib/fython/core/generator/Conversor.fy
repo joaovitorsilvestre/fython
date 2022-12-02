@@ -57,6 +57,8 @@ def convert(node):
         :atom           -> node |> convert_meta() |> convert_atom()
         :var            -> node |> convert_meta() |> convert_var()
         :string         -> node |> convert_meta() |> convert_string()
+        :regex          -> node |> convert_meta() |> convert_regex()
+        :charlist       -> node |> convert_meta() |> convert_charlist()
         :unary          -> node |> convert_meta() |> convert_unary()
         :list           -> node |> convert_meta() |> convert_list()
         :tuple          -> node |> convert_meta() |> convert_tuple()
@@ -66,7 +68,8 @@ def convert(node):
         :func           -> node |> convert_meta() |> convert_func()
         :statements     -> node |> convert_meta() |> convert_statements()
         :lambda         -> node |> convert_meta() |> convert_lambda()
-        :def            -> node |> convert_meta() |> convert_def()
+        :def            -> node |> convert_meta() |> convert_def_or_defp()
+        :defp           -> node |> convert_meta() |> convert_def_or_defp()
         :static_access  -> node |> convert_meta() |> convert_static_access()
         :raise          -> node |> convert_meta() |> convert_raise()
         :assert         -> node |> convert_meta() |> convert_assert()
@@ -124,6 +127,16 @@ def convert_var_with_dots(value):
 
 def convert_string((:string, meta, [value])):
     value
+
+def convert_regex((:regex, meta, [value])):
+    (
+        :sigil_r,
+        Elixir.List.flatten([[(:delimiter, "/")], meta]),
+        [(:"<<>>", meta, [value]), []]
+    )
+
+def convert_charlist((:charlist, meta, [value])):
+    Elixir.List.Chars.to_charlist(value)
 
 def convert_unary((:unary, meta, [:minus, node])):
     (:"-", meta, [convert(node)])
@@ -231,7 +244,7 @@ def convert_lambda((:lambda, meta, [args, statements])):
     (:fn, meta, [(:"->", meta, [args, convert(statements)])])
 
 
-def convert_def((:def, meta, [name, args, guards, statements])):
+def convert_def_or_defp((node_type, meta, [name, args, guards, statements])) if node_type in [:def, :defp]:
     args = Elixir.Enum.map(args, &convert/1)
 
     func_name_quoted = case guards:
@@ -250,7 +263,7 @@ def convert_def((:def, meta, [name, args, guards, statements])):
         [] -> (Elixir.String.to_atom(name), meta, args)
 
     (
-        :def,
+        node_type,
         meta,
         [
             func_name_quoted,

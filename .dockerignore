@@ -1,4 +1,7 @@
 **/_compiled/
+lib/fython/site
+lib/fytest/site
+lib/fydoc/site
 /bin/
 /Makefile
 **/erl_crash.dump
