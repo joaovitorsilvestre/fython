@@ -159,6 +159,8 @@ def statement(state):
     [state, node] = case:
         Core.Parser.Utils.tok_matchs(ct, "KEYWORD", "def") ->
             Core.Parser.Functions.func_def_expr(state, False)
+        Core.Parser.Utils.tok_matchs(ct, "KEYWORD", "defp") ->
+            Core.Parser.Functions.func_def_expr(state, False)
         Core.Parser.Utils.tok_matchs(ct, 'KEYWORD', 'struct') ->
             def_struct_expr(state)
         Core.Parser.Utils.tok_matchs(ct, 'KEYWORD', 'assert') ->
@@ -314,6 +316,12 @@ def atom(state):
             [state |> advance(), node]
         ct_type == 'STRING' ->
             node = Core.Parser.Nodes.make_string_node(state['file'], ct)
+            [state |> advance(), node]
+        ct_type == 'REGEX' ->
+            node = Core.Parser.Nodes.make_regex_node(state['file'], ct)
+            [state |> advance(), node]
+        ct_type == 'CHARLIST' ->
+            node = Core.Parser.Nodes.make_charlist_node(state['file'], ct)
             [state |> advance(), node]
         ct_type == 'IDENTIFIER' or ct_type == 'PIN' ->
             is_pinned = ct_type == 'PIN'

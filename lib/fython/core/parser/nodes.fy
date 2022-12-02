@@ -39,6 +39,20 @@ def make_string_node(file, tok):
         [tok['value']]
     )
 
+def make_regex_node(file, tok):
+    (
+        :regex,
+        gen_meta(file, tok['pos_start'], tok['pos_end']),
+        [tok['value']]
+    )
+
+def make_charlist_node(file, tok):
+    (
+        :charlist,
+        gen_meta(file, tok['pos_start'], tok['pos_end']),
+        [tok['value']]
+    )
+
 def make_varaccess_node(file, var_name_tok, pinned):
     (
         :var,
@@ -149,11 +163,15 @@ def make_assert_node(file, expr, pos_start):
     )
 
 
-def make_funcdef_node(file, var_name_tok, arg_nodes, guards, body_node, docstring, pos_start):
+def make_funcdef_node(file, var_name_tok, arg_nodes, guards, body_node, docstring, pos_start, private):
     (_, {"end": pos_end}, _) = body_node
 
+    node_type = case private:
+        True -> :defp
+        False -> :def
+
     (
-        :def,
+        node_type,
         Elixir.Map.merge(
             gen_meta(file, pos_start, pos_end),
             {"docstring": docstring}

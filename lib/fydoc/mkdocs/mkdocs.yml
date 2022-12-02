@@ -1,4 +1,5 @@
 site_name: Fython
+site_url: http://localhost:3000
 theme:
   name: gitbook
 extra_css: ["extra.css"]

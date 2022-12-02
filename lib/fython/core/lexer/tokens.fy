@@ -2,6 +2,8 @@ def valid_token_type?(type):
     tokens = [
         "INT",
         "STRING",
+        "REGEX",
+        "CHARLIST",
         "ARROW",
         "LARROW",
         "KEYWORD",
@@ -42,7 +44,7 @@ def keywords():
     [
         'import', 'as', 'and', 'or', 'not', 'if', 'else',
         'def', 'lambda', 'case', 'in', 'raise', 'assert', 'try', 'except', 'finally', 'as',
-        'struct'
+        'struct', 'defp'
     ]
 
 def add_eof_token(state):
