@@ -274,3 +274,11 @@ def make_struct_node(file, node_to_call, keywords, pos_end):
         gen_meta(file, pos_start, pos_end),
         [struct_name, keywords]
     )
+
+
+def make_exception_node(file, exception_name, fields_exception, pos_start, pos_end):
+    (
+        :exception,
+        gen_meta(file, pos_start, pos_end),
+        [exception_name, fields_exception]
+    )

@@ -161,6 +161,8 @@ def statement(state):
             Core.Parser.Functions.func_def_expr(state, False)
         Core.Parser.Utils.tok_matchs(ct, "KEYWORD", "defp") ->
             Core.Parser.Functions.func_def_expr(state, False)
+        Core.Parser.Utils.tok_matchs(ct, 'KEYWORD', 'exception') ->
+            exception_expr(state)
         Core.Parser.Utils.tok_matchs(ct, 'KEYWORD', 'struct') ->
             def_struct_expr(state)
         Core.Parser.Utils.tok_matchs(ct, 'KEYWORD', 'assert') ->
@@ -1367,7 +1369,7 @@ def exception_expr(state):
 
     state = advance(state)
 
-    (state, struct_name) = case state['current_tok']['type'] != 'IDENTIFIER':
+    (state, exception_name) = case state['current_tok']['type'] != 'IDENTIFIER':
         True ->
             state = Core.Parser.Utils.set_error(
                 state, "Expected name of the exception",
@@ -1410,12 +1412,10 @@ def exception_expr(state):
                 state["error"] != None -> False
                 ct["type"] == "EOF" -> False
                 ct["ident"] != 4 -> False
-                Core.Parser.Utils.tok_matchs(ct, "KEYWORD", "def") -> False
                 True -> True
         ,
         lambda state, ct:
-            fields_struct = Elixir.Map.get(state, '_fields_struct', [])
-            state = Elixir.Map.delete(state, '_fields_struct')
+            (fields_exception, state) = Elixir.Map.pop(state, '_fields_exception', [])
 
             (state, field_name) = case state['current_tok']['type'] != 'IDENTIFIER':
                 True ->
@@ -1448,7 +1448,7 @@ def exception_expr(state):
     case state['error']:
         None ->
             node = Core.Parser.Nodes.make_exception_node(
-                state['file'], struct_name, fields_exception, pos_start, state["prev_tok"]["pos_end"]
+                state['file'], exception_name, fields_exception, pos_start, state["prev_tok"]["pos_end"]
             )
 
             [state, node]

@@ -13,7 +13,7 @@ def convert_meta((nodetype, {"start": (_coll, line, _index)}, body)):
     (nodetype, meta, body)
 
 def nodes_that_are_own_modules():
-    [:struct_def, :protocol]
+    [:struct_def, :exception]
 
 def run_conversor(module_name, (:statements, meta, nodes), file_content, config):
     # Return modules produced by the statements
@@ -37,8 +37,7 @@ def run_conversor(module_name, (:statements, meta, nodes), file_content, config)
         |> Elixir.Enum.map(lambda x:
             (:statements, meta, [x])
                 |> inject_module_info_if_compiling_module(file_content, config)
-                |> convert_meta()
-                |> convert_struct_module(module_name)
+                |> convert_module(module_name)
         )
 
     [*separated_modules, (module_name, current_module)]
@@ -80,6 +79,12 @@ def convert(node):
         :try            -> node |> convert_meta() |> convert_try()
         :range          -> node |> convert_meta() |> convert_range_node()
         :struct         -> node |> convert_meta() |> convert_struct_node()
+
+
+def convert_module(node, module_name):
+    case Elixir.Kernel.elem(node, 0):
+        :struct         -> node |> convert_meta() |> convert_struct_module(module_name)
+        :exception      -> node |> convert_meta() |> convert_exception_module(module_name)
 
 def convert_number((:number, _, [value])):
     value
@@ -582,3 +587,22 @@ def convert_struct_node((:struct, meta, [struct_name, keywords])):
             (:"%{}", meta, keywords_converted)
         ]
     )
+
+def convert_exception_module((:statements, meta, body), module_name):
+    ([exception_node], metadata_statements) = Elixir.Enum.split(body, 1)
+    (:exception, _, [exception_name, args]) = exception_node
+
+    exception_name = Elixir.String.to_atom(Elixir.Enum.join(["Elixir", ".", exception_name]))
+    r = (
+        module_name,
+        (
+            :"defexception",
+            meta,
+            [Elixir.Enum.map(args, lambda (key, value):
+                (Elixir.String.to_atom(key), convert(value))
+            )]
+        )
+    )
+    Elixir.IO.inspect('expcetio node ')
+    Elixir.IO.inspect(r)
+    r

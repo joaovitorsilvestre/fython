@@ -184,6 +184,9 @@ def new_resolver((:struct_def, meta, [struct_name, struct_fields, functions_stru
     )
 
 
+def new_resolver(node <- (:exception, meta, [exception_name, exception_fields]), var_names_avaliable):
+    node
+
 def new_resolver((:static_access, meta, [node_to_access, node_key]), var_names_avaliable):
     (
         :static_access,
