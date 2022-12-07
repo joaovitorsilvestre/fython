@@ -17,7 +17,10 @@ RUN wget https://github.com/joaovitorsilvestre/fython/releases/download/$VERSION
 
 COPY lib/fython lib/fython
 COPY /devtools/fython /fython
+COPY /devtools/fython.erl /fython.erl
 RUN chmod a+x /fython
+
+RUN erl -compile /fython.erl
 
 # Execute bootstrap
 RUN echo "Bootstraping using Fython $VERSION_TO_USE_AS_BOOTSTRAPER" \
