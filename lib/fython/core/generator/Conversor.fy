@@ -13,7 +13,7 @@ def convert_meta((nodetype, {"start": (_coll, line, _index)}, body)):
     (nodetype, meta, body)
 
 def nodes_that_are_own_modules():
-    [:struct_def, :protocol]
+    [:struct_def, :exception]
 
 def run_conversor(module_name, (:statements, meta, nodes), file_content, config):
     # Return modules produced by the statements
@@ -29,17 +29,17 @@ def run_conversor(module_name, (:statements, meta, nodes), file_content, config)
             lambda (node_type, _, _): Elixir.Enum.member?(nodes_that_are_own_modules(), node_type)
         )
 
-    current_module = (:statements, meta, current_module)
-        |> inject_module_info_if_compiling_module(file_content, config)
-        |> convert()
-
     separated_modules = separated_modules
         |> Elixir.Enum.map(lambda x:
             (:statements, meta, [x])
                 |> inject_module_info_if_compiling_module(file_content, config)
-                |> convert_meta()
-                |> convert_struct_module(module_name)
+                |> convert_module(module_name)
         )
+
+    current_module = (:statements, meta, current_module)
+        |> inject_module_info_if_compiling_module(file_content, config)
+#        |> inject_aliases_of_modules_used_in_module(separated_modules)
+        |> convert()
 
     [*separated_modules, (module_name, current_module)]
 
@@ -50,6 +50,45 @@ def inject_module_info_if_compiling_module(node, file_content, config):
         True -> node |> Core.Parser.Pos.Nodesrefs.run(file_content)
         False -> node
 
+def inject_aliases_of_modules_used_in_module((:statements, meta, nodes), separated_modules):
+    # This makes possible to use modules defined in the same file
+    # (like exception, struct, protocol, etc) without need of the full name. Eg:
+    #  -- file MyModule.fy --
+    #  exception MyException
+    #      message = 'error'
+    #
+    #  def run():
+    #      raise MyException <- this will be converted to raise MyModule.MyException
+
+    aliases = Elixir.Enum.map(separated_modules, lambda (module_name, _):
+        module_name_as_list_of_atoms = module_name
+            |> Elixir.String.replace_prefix('Elixir.', '')
+            |> Elixir.String.split(".")
+            |> Elixir.Enum.map(lambda x: Elixir.String.to_atom(x))
+
+        name_of_module_as_we_want_refer_to = module_name
+            |> Elixir.String.split(".")
+            |> Elixir.List.last()
+            |> Elixir.String.to_atom()
+
+        (
+            :alias,
+            [],
+            [
+                (:'__aliases__', [(:alias, False)], module_name_as_list_of_atoms),
+                [(:as, (:'__aliases__', [(:alias, False)], [name_of_module_as_we_want_refer_to]))]
+            ]
+        )
+    )
+
+    (:statements, meta, [*aliases, *nodes])
+
+def convert_module(node <- (:statements, meta, body), module_name):
+    ([module_node], metadata_statements) = Elixir.Enum.split(body, 1)
+
+    case module_node:
+        (:struct_def, _, _) -> node |> convert_meta() |> convert_struct_module(module_name)
+        (:exception, _, _)  -> node |> convert_meta() |> convert_exception_module(module_name)
 
 def convert(node):
     case Elixir.Kernel.elem(node, 0):
@@ -80,6 +119,11 @@ def convert(node):
         :try            -> node |> convert_meta() |> convert_try()
         :range          -> node |> convert_meta() |> convert_range_node()
         :struct         -> node |> convert_meta() |> convert_struct_node()
+        # This is temporary, while we dont have this node implemented
+        # it's created in the function inject_aliases_of_modules_used_in_module
+        # ant it' already converted, so we just return it
+        :alias          -> node
+
 
 def convert_number((:number, _, [value])):
     value
@@ -487,6 +531,9 @@ def convert_try((:try, meta, [try_block, exceptions, finally_block])):
                 (True, _) ->
                     # Case of:
                     # > except ArithmeticError as error:
+
+                    except_identifier = Elixir.Enum.join(["Fython.", except_identifier])
+
                     (
                         :"->",
                         meta,
@@ -568,7 +615,11 @@ def convert_struct_module((:statements, meta, body), module_name):
 
 
 def convert_struct_node((:struct, meta, [struct_name, keywords])):
-    struct_name = Elixir.String.to_atom(Elixir.Enum.join(["Fython", ".", struct_name]))
+    struct_name = case Elixir.String.starts_with?(struct_name, "Elixir."):
+        True -> struct_name
+        False -> Elixir.Enum.join(["Fython", ".", struct_name])
+
+    struct_name = Elixir.String.to_atom(struct_name)
 
     keywords_converted = Elixir.Enum.map(keywords, lambda (key, value):
         (Elixir.String.to_atom(key), convert(value))
@@ -581,4 +632,28 @@ def convert_struct_node((:struct, meta, [struct_name, keywords])):
             (:__aliases__, [(:alias, False)], [struct_name]),
             (:"%{}", meta, keywords_converted)
         ]
+    )
+
+def convert_exception_module((:statements, meta, body), module_name):
+    ([exception_node], metadata_statements) = Elixir.Enum.split(body, 1)
+    (:exception, _, [exception_name, args]) = exception_node
+
+    module_name = Elixir.Enum.join(['Elixir.', module_name, '.', exception_name])
+    exception_name = Elixir.String.to_atom(Elixir.Enum.join(["Fython.", exception_name]))
+
+    exception_converted = (
+        :"defexception",
+        meta,
+        [Elixir.Enum.map(args, lambda (key, value):
+            (Elixir.String.to_atom(key), convert(value))
+        )]
+    )
+
+    (
+        module_name,
+        (
+            :"__block__",
+            meta,
+            [exception_converted]
+        )
     )

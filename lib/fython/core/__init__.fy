@@ -16,5 +16,4 @@ def eval_string(module_name, text, config):
 #                Elixir.IO.inspect(converted)
                 Elixir.Code.eval_quoted(converted, env, [])
             except error:
-#                Exceptions.format_traceback(error, __STACKTRACE__)
                 Elixir.Kernel.reraise(error, __STACKTRACE__)

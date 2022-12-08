@@ -2,7 +2,7 @@ FROM elixir:1.14.1 as base
 
 # Arguments you can modify
 ARG FYTHON_PATH="/compiled"
-ARG VERSION_TO_USE_AS_BOOTSTRAPER="v0.9.0"
+ARG VERSION_TO_USE_AS_BOOTSTRAPER="v0.10.1"
 
 ENV FYTHON_PATH=$FYTHON_PATH
 ENV PATH_FYTHON_TO_USE_AS_BOOTSTRAPER="/fython_$VERSION_TO_USE_AS_BOOTSTRAPER"
@@ -17,7 +17,10 @@ RUN wget https://github.com/joaovitorsilvestre/fython/releases/download/$VERSION
 
 COPY lib/fython lib/fython
 COPY /devtools/fython /fython
+COPY /devtools/fython.erl /fython.erl
 RUN chmod a+x /fython
+
+RUN erl -compile /fython.erl
 
 # Execute bootstrap
 RUN echo "Bootstraping using Fython $VERSION_TO_USE_AS_BOOTSTRAPER" \

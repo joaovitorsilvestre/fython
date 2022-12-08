@@ -88,8 +88,16 @@ def pre_compile_file(project_root, file_full_path, bootstrap_prefix):
             Elixir.IO.puts("Compilation error:")
             Elixir.IO.puts("file path:")
             Elixir.IO.puts(file_full_path)
-            text = Elixir.File.read(file_full_path) |> Elixir.Kernel.elem(1)
-            Core.Errors.Utils.print_error(module_name, state, text)
+
+            {'error': {'pos_start': {'ln': line, 'col': col_start}, 'pos_end': {'col': col_end}, 'msg': msg}} = state
+            meta = {
+                "start": (None, line, col_start),
+                "end": (None, line, col_end),
+            }
+            Exception.Code.format_error_in_source_code(file_content, meta)
+                |> Elixir.IO.puts()
+            Elixir.IO.puts(msg)
+
             raise "Compilation failed"
 
 def save_module(module_name, file_full_path, compiled_folder, quoted):

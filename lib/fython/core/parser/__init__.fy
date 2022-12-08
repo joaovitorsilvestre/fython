@@ -161,6 +161,8 @@ def statement(state):
             Core.Parser.Functions.func_def_expr(state, False)
         Core.Parser.Utils.tok_matchs(ct, "KEYWORD", "defp") ->
             Core.Parser.Functions.func_def_expr(state, False)
+        Core.Parser.Utils.tok_matchs(ct, 'KEYWORD', 'exception') ->
+            exception_expr(state)
         Core.Parser.Utils.tok_matchs(ct, 'KEYWORD', 'struct') ->
             def_struct_expr(state)
         Core.Parser.Utils.tok_matchs(ct, 'KEYWORD', 'assert') ->
@@ -1359,3 +1361,97 @@ def struct_expr(state, atom):
             [state, node]
         _ ->
             [state, None]
+
+
+def exception_expr(state):
+    pos_start = state['current_tok']['pos_start']
+    base_line = pos_start['ln']
+
+    state = advance(state)
+
+    (state, exception_name) = case state['current_tok']['type'] != 'IDENTIFIER':
+        True ->
+            state = Core.Parser.Utils.set_error(
+                state, "Expected name of the exception",
+                state["current_tok"]["pos_start"],
+                state["current_tok"]["pos_end"]
+            )
+            (state, None)
+        False ->
+            name = state['current_tok']['value']
+
+            # Validate struct name
+            first_letter = Elixir.String.graphemes(name) |> Elixir.List.first()
+            is_upper_case = first_letter == Elixir.String.upcase(first_letter)
+
+            state = case is_upper_case:
+                True -> state
+                False -> Core.Parser.Utils.set_error(
+                    state, "The name of the exception must start with a uppercase letter",
+                    state["current_tok"]["pos_start"],
+                    state["current_tok"]["pos_end"]
+                )
+
+            (advance(state), name)
+
+    state = case (state['current_tok']['type']) == 'DO':
+        True -> state
+        False -> Core.Parser.Utils.set_error(
+            state,
+            "Expected : after name of exception",
+            state["prev_tok"]["pos_end"],
+            state["prev_tok"]["pos_end"]
+        )
+
+    state = handle_do_new_line(state, base_line)
+
+    state = loop_while(
+        state,
+        lambda state, ct:
+            case:
+                state["error"] != None -> False
+                ct["type"] == "EOF" -> False
+                ct["ident"] != 4 -> False
+                True -> True
+        ,
+        lambda state, ct:
+            (fields_exception, state) = Elixir.Map.pop(state, '_fields_exception', [])
+
+            (state, field_name) = case state['current_tok']['type'] != 'IDENTIFIER':
+                True ->
+                    state = Core.Parser.Utils.set_error(
+                        state, "Expected identifier",
+                        state["current_tok"]["pos_start"],
+                        state["current_tok"]["pos_end"]
+                    )
+                    (state, None)
+                False ->
+                    (advance(state), state['current_tok']['value'])
+
+            state = case state['current_tok']['type'] == 'EQ':
+                True ->
+                    advance(state)
+                False ->
+                    Core.Parser.Utils.set_error(
+                        state, "Expected '='",
+                        state["current_tok"]["pos_start"],
+                        state["current_tok"]["pos_end"]
+                    )
+
+            [state, field_default] = expr(state)
+
+            Elixir.Map.put(state, '_fields_exception', [*fields_exception, (field_name, field_default)])
+    )
+
+    (fields_exception, state) = Elixir.Map.pop(state, '_fields_exception', [])
+
+    case state['error']:
+        None ->
+            node = Core.Parser.Nodes.make_exception_node(
+                state['file'], exception_name, fields_exception, pos_start, state["prev_tok"]["pos_end"]
+            )
+
+            [state, node]
+        _ ->
+            [state, None]
+
