@@ -1,48 +1,24 @@
 -module(fython).
--export([eval_string/1, bootstrap/2, bootstrap1/3, bootstrap2/4]).
+-export([eval_string/1, bootstrap1/3, bootstrap2/3]).
 
 eval_string(Code) ->
     'Fython.Core':eval_string(Code).
 
-bootstrap1(FythonCodePath, Destine, Prefix) ->
-    'Fython.Core.Code':compile_project(FythonCodePath, Destine, Prefix).
+prefix_bootstrap() ->
+    "Bootstrap".
 
-bootstrap2(FythonCodePath, Destine, Prefix, ElixirBeamsPath) ->
-    clean_dir(Destine),
-    Module = list_to_atom("Fython." ++ Prefix ++ ".Core.Code"),
+bootstrap1(FythonCodePath, Destine, ElixirBeamsPath) ->
+    'Fython.Core.Code':compile_project(FythonCodePath, Destine, prefix_bootstrap()),
+    copy_files_from_dir_to_another(ElixirBeamsPath, binary_to_string(Destine)).
+
+bootstrap2(FythonCodePath, Destine, ElixirBeamsPath) ->
+    Module = list_to_atom("Fython." ++ prefix_bootstrap() ++ ".Core.Code"),
     Module:compile_project(FythonCodePath, Destine, nil),
-    copy_elixir_beams_to_folder(ElixirBeamsPath, binary_to_string(Destine)).
+    copy_files_from_dir_to_another(ElixirBeamsPath, binary_to_string(Destine)).
 
 binary_to_string(Bin) ->
-    % converts <<1,2,3>> to "123"
-    lists:nth(1, io_lib:format("~s",[<<"aa">>])).
+    % converts <<"abc">> to "abc"
+    lists:nth(1, io_lib:format("~s",[Bin])).
 
-bootstrap(FythonCodePath, ElixirBeamsPath) ->
-    Prefix = "Bootstrap",
-    FirstCompiledFolder = "/test_compiled1",
-    SecondCompiledFolder = "/test_compiled1",
-
-    % 1º Compile with a module prefix to prevent modules overriding
-    clean_dir(FirstCompiledFolder),
-    'Fython.Core.Code':compile_project(FythonCodePath, FirstCompiledFolder, Prefix),
-    copy_elixir_beams_to_folder(ElixirBeamsPath, FirstCompiledFolder),
-
-    % 2º Bootstrap again using previous step, but without the prefix this time
-    % so we have the final bootstraped beams
-    clean_dir(SecondCompiledFolder),
-    Module = list_to_atom("Fython." ++ Prefix ++ ".Core.Code"),
-    Module:compile_project(FythonCodePath, SecondCompiledFolder, nil),
-    copy_elixir_beams_to_folder(ElixirBeamsPath, SecondCompiledFolder),
-    file:del_dir(FirstCompiledFolder, []).
-
-clean_dir(Dir) ->
-    file:del_dir(Dir),
-    file:make_dir(Dir).
-
-copy_elixir_beams_to_folder(ElixirBeamsPath, Destine) ->
-    {ok, Filenames} = file:list_dir(ElixirBeamsPath),
-
-    lists:map(fun(Filename) ->
-        file:copy(Filename, Destine ++ "/" ++ Filename, [overwrite]),
-        io:format("Copied ~s to ~s~n", [Filename, Destine ++ "/" ++ Filename])
-    end,Filenames).
+copy_files_from_dir_to_another(SourceDir, DestineDir) ->
+    'Elixir.File':'cp_r!'(SourceDir, DestineDir).

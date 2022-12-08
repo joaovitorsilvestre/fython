@@ -615,7 +615,11 @@ def convert_struct_module((:statements, meta, body), module_name):
 
 
 def convert_struct_node((:struct, meta, [struct_name, keywords])):
-    struct_name = Elixir.String.to_atom(Elixir.Enum.join(["Fython", ".", struct_name]))
+    struct_name = case Elixir.String.starts_with?(struct_name, "Elixir."):
+        True -> struct_name
+        False -> Elixir.Enum.join(["Fython", ".", struct_name])
+
+    struct_name = Elixir.String.to_atom(struct_name)
 
     keywords_converted = Elixir.Enum.map(keywords, lambda (key, value):
         (Elixir.String.to_atom(key), convert(value))

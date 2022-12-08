@@ -19,29 +19,28 @@ state = {
     "source_code": source_code,
     "source_code_lines": source_code.split('\n'),
     "source_code_lines_indexed": list(enumerate(source_code.split('\n'))),
-    "line_num": meta['start'][1],  # line starting at 0
-    "start": (meta['start'][1], meta['start'][2]),
-    "end": (meta['end'][1], meta['end'][2]),
+    "position": (meta['start'][1], meta['start'][2], meta['end'][2]),  # line starting at 0
 }
 
 
 def get_lines_above(state):
+    line_num = state['position'][0]
     HOW_MANY_LINES_SHOW_ABOVE = 5
 
     source_code_lines = [(num, line) for num, line in enumerate(state['source_code_lines'])]
 
-    if state['line_num'] > HOW_MANY_LINES_SHOW_ABOVE:
-        lines_to_keep_above = source_code_lines[slice(state['line_num']-HOW_MANY_LINES_SHOW_ABOVE, state['line_num'])]
+    if line_num > HOW_MANY_LINES_SHOW_ABOVE:
+        lines_to_keep_above = source_code_lines[slice(line_num-HOW_MANY_LINES_SHOW_ABOVE, line_num)]
     else:
-        lines_to_keep_above = source_code_lines[0:state['line_num']]
+        lines_to_keep_above = source_code_lines[0:line_num]
 
     return lines_to_keep_above
 
 
 def draw_pointers(state):
-    start, end = state['start'][1], state['end'][1]
+    start, end = state['position'][1], state['position'][2]
 
-    pointer = " " * (get_need_size_numbers(state) + 3)
+    pointer = " " * (get_necessary_size_to_fit_line_numbers(state) + 3)
     for i in range(0, start):
         pointer += '~'
 
@@ -52,22 +51,22 @@ def draw_pointers(state):
 
 def get_lines_to_print(state):
     lines_above = get_lines_above(state)
-    current_line = state['source_code_lines_indexed'][state['line_num']]
+    current_line = state['source_code_lines_indexed'][state['position'][0]]
     pointers = draw_pointers(state)
 
     return [
-        *add_line_numbers(meta, lines_above),
-        *add_line_numbers(meta, [current_line]),
+        *add_line_numbers(state, lines_above),
+        *add_line_numbers(state, [current_line]),
         *pointers,
     ]
 
 
-def get_need_size_numbers(state):
-    return len(str(state['end'][0]))
+def get_necessary_size_to_fit_line_numbers(state):
+    return len(str(state['position'][2]))
 
 
-def add_line_numbers(meta, list_of_lines_indexed):
-    size = get_need_size_numbers(meta)
+def add_line_numbers(state, list_of_lines_indexed):
+    size = get_necessary_size_to_fit_line_numbers(state)
     return [
         f"{str(i + 1).rjust(size)} ǁ {l}" for i, l in list_of_lines_indexed
     ]
