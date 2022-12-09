@@ -57,7 +57,7 @@ FROM base as compiler
 ENV PROJET_FOLDER="/project"
 CMD echo "Compiling project: $PROJET_FOLDER" \
     && rm -rf $PROJET_FOLDER/_compiled \
-    && /fython exec "Core.Code.compile_project('$PROJET_FOLDER')" $FYTHON_PATH
+    && /fython exec "Core.Code.compile_project('$PROJET_FOLDER','_compiled','Bootstrap')" $FYTHON_PATH
 
 FROM base as fytest
 

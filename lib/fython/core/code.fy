@@ -227,8 +227,11 @@ def add_prefix_to_function_calls(node, bootstrap_prefix):
 def add_prefix(node <- (:struct, meta, [struct_name, keywords]), state):
     {"bootstrap_prefix": bootstrap_prefix} = state
 
-    struct_name = Elixir.Enum.join([bootstrap_prefix, '.', struct_name])
-    (:struct, meta, [struct_name, keywords])
+    struct_name = case Elixir.String.starts_with?(struct_name, 'Elixir.'):
+        True -> struct_name
+        False -> Elixir.Enum.join([bootstrap_prefix, '.', struct_name])
+
+    [(:struct, meta, [struct_name, keywords]), state]
 
 def add_prefix(node <- (:call, meta, [func_name, args, keywords, False]), state):
     {"bootstrap_prefix": bootstrap_prefix} = state
