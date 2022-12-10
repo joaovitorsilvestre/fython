@@ -1,6 +1,7 @@
 def execute(text):
     state = {
         "text": None,
+        "source_code": text,
         "position": None,
         "prev_position": None,
         "current_ident_level": 0,
@@ -73,7 +74,7 @@ def execute(text):
                 |> Elixir.Map.put("position", position(-1, ln, -1))
                 |> advance()
         )
-        |> parallel_map(&parse/1)
+        |> Itertools.parallel_map(&parse/1)
 
     first_with_error = Elixir.Enum.find(all_lines_parsed, lambda i: i['error'] != None)
 
@@ -96,10 +97,6 @@ def execute(text):
         |> Elixir.Map.put("position", last_position)
         |> Core.Lexer.Tokens.add_eof_token()
 
-def parallel_map(collection, func):
-    collection
-        |> Elixir.Enum.map(lambda i: Elixir.Task.async(lambda: func(i)))
-        |> Elixir.Enum.map(lambda i: Elixir.Task.await(i, :infinity))
 
 def position(idx, ln, col):
     {"idx": idx, "ln": ln, "col": col}
@@ -133,15 +130,18 @@ def advance(state):
     Elixir.Map.merge(state, new_state)
 
 def set_error(state, error):
-    Elixir.Map.put(
-        state,
-        "error",
-        {
-            "msg": error,
-            "pos_start": state['position'],
-            "pos_end": state['position']
-        }
-    )
+    {"col": col, "ln": line} = state['position']
+    raise Kernel.SyntaxError(message=error, position=(line, col, col), source_code=state['source_code'])
+
+#    Elixir.Map.put(
+#        state,
+#        "error",
+#        {
+#            "msg": error,
+#            "pos_start": state['position'],
+#            "pos_end": state['position']
+#        }
+#    )
 
 def parse(state):
     case state["error"]:

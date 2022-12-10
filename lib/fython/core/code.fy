@@ -27,7 +27,7 @@ def compile_files(project_path, files, compiled_folder, bootstrap_prefix):
     # files: [a.fy, folder/b.fy, etc]
 
     modules_ready_to_be_saved = files
-        |> Elixir.Enum.map(lambda file:
+        |> Itertools.parallel_map(lambda file:
             (child_modules, parent_module) = pre_compile_file(project_path, file, bootstrap_prefix)
             (
                 file,
@@ -124,28 +124,20 @@ def lexer_parse_convert_file(module_name, text, config, bootstrap_prefix):
     # Main functions to lexer, parser and convert
     # Fython AST to Elixir AST
 
-    lexed = Core.Lexer.execute(text)
-
-    # 1º Convert each node from Fython AST to Elixir AST
-    state = case Elixir.Map.get(lexed, "error"):
-        None ->
-            tokens = Elixir.Map.get(lexed, "tokens")
-            Core.Parser.execute(tokens, config)
-        _ ->
-            lexed
-
-    state_error = Elixir.Map.get(state, 'error')
     compiling_module = Elixir.Map.get(config, "compiling_module", False)
 
-    # 2º Convert each node from Fython AST to Elixir AST
-    case Elixir.Map.get(state, 'error'):
-        None ->
-            ast = state['node'] |> add_prefix_to_function_calls(bootstrap_prefix)
+    # 1º Lexer
+    state = Core.Lexer.execute(text)
 
-            modules_converted = Core.Generator.Conversor.run_conversor(module_name, ast, text, config)
+    # 2º Parser
+    state = Core.Parser.execute(state['tokens'], text, config)
 
-            (state, modules_converted)
-        _ -> (state, None)
+    # 3º Convert each node from Fython AST to Elixir AST
+    ast = state['node'] |> add_prefix_to_function_calls(bootstrap_prefix)
+
+    modules_converted = Core.Generator.Conversor.run_conversor(module_name, ast, text, config)
+
+    (state, modules_converted)
 
 
 def get_module_name(project_full_path, file_full_path):

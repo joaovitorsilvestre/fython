@@ -14,13 +14,18 @@ def get_next_tok(state):
     tokens |> Elixir.Enum.at(idx)
 
 def set_error(state, msg, pos_start, pos_end):
-    case Elixir.Map.get(state, 'error'):
-        None ->
-            state = Elixir.Map.put(
-                state, "error", {"msg": msg, "pos_start": pos_start, "pos_end": pos_end}
-            )
-            state
-        _ -> state
+    {"ln": line, "col": col_start} = pos_start
+    {"col": col_end} = pos_end
+
+    raise Kernel.SyntaxError(message=msg, position=(line, col_start, col_end), source_code=state['source_code'])
+
+#    case Elixir.Map.get(state, 'error'):
+#        None ->
+#            state = Elixir.Map.put(
+#                state, "error", {"msg": msg, "pos_start": pos_start, "pos_end": pos_end}
+#            )
+#            state
+#        _ -> state
 
 def nodes_types():
     [

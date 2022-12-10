@@ -1,4 +1,4 @@
-def execute(tokens, config):
+def execute(tokens, source_code, config):
     # config: {
     #   "file": path,
     #   "env": [],          # (optional) current defined variables, used for pos parser
@@ -7,6 +7,7 @@ def execute(tokens, config):
 
     state = {
         "file": config['file'],
+        "source_code": source_code,
         "error": None,
         "prev_tok": None,
         "current_tok": None,
@@ -24,7 +25,7 @@ def advance(state):
     # before anything, lets check that the states only contains expected keys
     # otherwise they are invalid and can have terrible effects in recusive functions
     valid_keys = [
-        "error", "current_tok", "next_tok", "inside_pattern",
+        "error", "current_tok", "next_tok", "inside_pattern", "source_code",
         "node", "_current_tok_idx", "_tokens", "prev_tok", "file"
     ]
 

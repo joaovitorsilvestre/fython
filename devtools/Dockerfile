@@ -2,7 +2,7 @@ FROM elixir:1.14.1 as base
 
 # Arguments you can modify
 ARG FYTHON_PATH="/compiled"
-ARG VERSION_TO_USE_AS_BOOTSTRAPER="v0.11.0"
+ARG VERSION_TO_USE_AS_BOOTSTRAPER="v0.11.2"
 
 ENV FYTHON_PATH=$FYTHON_PATH
 ENV PATH_FYTHON_TO_USE_AS_BOOTSTRAPER="/fython_$VERSION_TO_USE_AS_BOOTSTRAPER"
@@ -57,7 +57,7 @@ FROM base as compiler
 ENV PROJET_FOLDER="/project"
 CMD echo "Compiling project: $PROJET_FOLDER" \
     && rm -rf $PROJET_FOLDER/_compiled \
-    && /fython exec "Core.Code.compile_project('$PROJET_FOLDER','_compiled','Bootstrap')" $FYTHON_PATH
+    && /fython exec "Core.Code.compile_project('$PROJET_FOLDER')" $FYTHON_PATH
 
 FROM base as fytest
 
