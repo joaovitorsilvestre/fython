@@ -13,6 +13,10 @@ def format_error_in_source_code(source_code, meta):
         "position": (line_num, start_col, end_col),  # line starting at 0
     }
 
+    case start_col > end_col:
+        True -> Elixir.IO.inspect(source_code_lines |> Elixir.Enum.at(start_col))
+        False -> None
+
     lines_above = get_lines_above_error(state)
     pointers = draw_pointers(state)
     current_line = Elixir.Enum.at(state['source_code_lines_indexed'], line_num)
