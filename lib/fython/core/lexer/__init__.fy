@@ -1,6 +1,7 @@
 def execute(text):
     state = {
         "text": None,
+        "source_code": text,
         "position": None,
         "prev_position": None,
         "current_ident_level": 0,
@@ -73,7 +74,7 @@ def execute(text):
                 |> Elixir.Map.put("position", position(-1, ln, -1))
                 |> advance()
         )
-        |> parallel_map(&parse/1)
+        |> Itertools.parallel_map(&parse/1)
 
     first_with_error = Elixir.Enum.find(all_lines_parsed, lambda i: i['error'] != None)
 
@@ -96,10 +97,6 @@ def execute(text):
         |> Elixir.Map.put("position", last_position)
         |> Core.Lexer.Tokens.add_eof_token()
 
-def parallel_map(collection, func):
-    collection
-        |> Elixir.Enum.map(lambda i: Elixir.Task.async(lambda: func(i)))
-        |> Elixir.Enum.map(lambda i: Elixir.Task.await(i, :infinity))
 
 def position(idx, ln, col):
     {"idx": idx, "ln": ln, "col": col}
@@ -133,62 +130,52 @@ def advance(state):
     Elixir.Map.merge(state, new_state)
 
 def set_error(state, error):
-    Elixir.Map.put(
-        state,
-        "error",
-        {
-            "msg": error,
-            "pos_start": state['position'],
-            "pos_end": state['position']
-        }
-    )
+    {"col": col, "ln": line} = state['position']
+    raise Kernel.SyntaxError(message=error, position=(line, col, col), source_code=state['source_code'])
 
 def parse(state):
-    case state["error"]:
-        None ->
-            cc = state["current_char"]
-            nc = state["next_char"]
-            pos = state["position"]
+    cc = state["current_char"]
+    nc = state["next_char"]
+    pos = state["position"]
 
-            case:
-                cc == None -> state
-                cc == "#" -> parse(skip_comment(state))
-                cc == " " and pos["col"] == 0 -> parse(make_ident(state))
-                cc == " " or cc == '\t' -> parse(advance(state))
-                cc == "\n" ->
-                    state
-                        |> Elixir.Map.put("current_ident_level", 0)
-                        |> Core.Lexer.Tokens.add_token("NEWLINE")
-                        |> advance()
-                        |> parse()
-                cc == ':' -> parse(make_do_or_atom(state))
-                cc == 'c' and (nc == "'" or nc == '"') -> parse(make_string(advance(state), :charlist))
-                cc == 'r' and (nc == "'" or nc == '"') -> parse(make_string(advance(state), :regex))
-                cc == "'" or cc == '"' -> parse(make_string(state, :string))
-                Elixir.String.contains?(Core.Lexer.Consts.identifier_chars(True), cc) ->
-                    state |> make_identifier() |> parse()
-                cc == "&" -> simple_maker(state, "ECOM")
-                Elixir.String.contains?(Core.Lexer.Consts.digists(), cc) -> parse(make_number(state))
-                cc == "^" -> simple_maker(state, "PIN")
-                cc == "," -> simple_maker(state, "COMMA")
-                cc == "+" -> simple_maker(state, "PLUS")
-                cc == "/" -> simple_maker(state, "DIV")
-                cc == '(' -> simple_maker(state, 'LPAREN')
-                cc == ')' -> simple_maker(state, 'RPAREN')
-                cc == '[' -> simple_maker(state, 'LSQUARE')
-                cc == ']' -> simple_maker(state, 'RSQUARE')
-                cc == '{' -> simple_maker(state, 'LCURLY')
-                cc == '}' -> simple_maker(state, 'RCURLY')
-                cc == '-' -> double_maker(state, "MINUS", [(">", "ARROW")])
-                cc == '*' -> double_maker(state, "MUL", [("*", "POW")])
-                cc == '>' -> double_maker(state, "GT", [("=", "GTE")])
-                cc == '<' -> double_maker(state, "LT", [("=", "LTE"), ('-', 'LARROW')])
-                cc == '=' -> double_maker(state, "EQ", [("=", "EE")])
-                cc == '!' -> expected_double_maker(state, "!", "NE", "=")
-                cc == '.' -> expected_double_maker(state, ".", "RANGE", ".")
-                cc == '|' -> expected_double_maker(state, "|", "PIPE", ">")
-                True -> set_error(state, Elixir.Enum.join(["IllegalCharError: ", cc]))
-        _ -> state
+    case:
+        cc == None -> state
+        cc == "#" -> parse(skip_comment(state))
+        cc == " " and pos["col"] == 0 -> parse(make_ident(state))
+        cc == " " or cc == '\t' -> parse(advance(state))
+        cc == "\n" ->
+            state
+                |> Elixir.Map.put("current_ident_level", 0)
+                |> Core.Lexer.Tokens.add_token("NEWLINE")
+                |> advance()
+                |> parse()
+        cc == ':' -> parse(make_do_or_atom(state))
+        cc == 'c' and (nc == "'" or nc == '"') -> parse(make_string(advance(state), :charlist))
+        cc == 'r' and (nc == "'" or nc == '"') -> parse(make_string(advance(state), :regex))
+        cc == "'" or cc == '"' -> parse(make_string(state, :string))
+        Elixir.String.contains?(Core.Lexer.Consts.identifier_chars(True), cc) ->
+            state |> make_identifier() |> parse()
+        cc == "&" -> simple_maker(state, "ECOM")
+        Elixir.String.contains?(Core.Lexer.Consts.digists(), cc) -> parse(make_number(state))
+        cc == "^" -> simple_maker(state, "PIN")
+        cc == "," -> simple_maker(state, "COMMA")
+        cc == "+" -> simple_maker(state, "PLUS")
+        cc == "/" -> simple_maker(state, "DIV")
+        cc == '(' -> simple_maker(state, 'LPAREN')
+        cc == ')' -> simple_maker(state, 'RPAREN')
+        cc == '[' -> simple_maker(state, 'LSQUARE')
+        cc == ']' -> simple_maker(state, 'RSQUARE')
+        cc == '{' -> simple_maker(state, 'LCURLY')
+        cc == '}' -> simple_maker(state, 'RCURLY')
+        cc == '-' -> double_maker(state, "MINUS", [(">", "ARROW")])
+        cc == '*' -> double_maker(state, "MUL", [("*", "POW")])
+        cc == '>' -> double_maker(state, "GT", [("=", "GTE")])
+        cc == '<' -> double_maker(state, "LT", [("=", "LTE"), ('-', 'LARROW')])
+        cc == '=' -> double_maker(state, "EQ", [("=", "EE")])
+        cc == '!' -> expected_double_maker(state, "!", "NE", "=")
+        cc == '.' -> expected_double_maker(state, ".", "RANGE", ".")
+        cc == '|' -> expected_double_maker(state, "|", "PIPE", ">")
+        True -> set_error(state, Elixir.Enum.join(["IllegalCharError: ", cc]))
 
 def simple_maker(st, type):
     st

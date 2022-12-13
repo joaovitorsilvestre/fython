@@ -148,7 +148,6 @@ def resolve_params(state, end_tok):
             case:
                 ct["type"] == "EOF" -> False
                 ct["type"] == end_tok -> False
-                state["error"] != None -> False
                 True -> True
         ,
         lambda state, ct:

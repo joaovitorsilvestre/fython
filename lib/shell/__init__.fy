@@ -90,7 +90,7 @@ def execute(text, env, config):
 
         (result, new_env)
     except error:
-        Exception.display_error_formated(error)
+        Exception.format_traceback(error, __STACKTRACE__)
         # usefull for debuggind
 #        Elixir.IO.inspect("Shell recebeu o erro:")
 #        Elixir.IO.inspect(error)

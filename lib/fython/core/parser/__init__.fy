@@ -1,4 +1,4 @@
-def execute(tokens, config):
+def execute(tokens, source_code, config):
     # config: {
     #   "file": path,
     #   "env": [],          # (optional) current defined variables, used for pos parser
@@ -7,6 +7,7 @@ def execute(tokens, config):
 
     state = {
         "file": config['file'],
+        "source_code": source_code,
         "error": None,
         "prev_tok": None,
         "current_tok": None,
@@ -24,7 +25,7 @@ def advance(state):
     # before anything, lets check that the states only contains expected keys
     # otherwise they are invalid and can have terrible effects in recusive functions
     valid_keys = [
-        "error", "current_tok", "next_tok", "inside_pattern",
+        "error", "current_tok", "next_tok", "inside_pattern", "source_code",
         "node", "_current_tok_idx", "_tokens", "prev_tok", "file"
     ]
 
@@ -33,7 +34,7 @@ def advance(state):
         |> Elixir.Enum.filter(lambda key_n_value: Elixir.Kernel.elem(key_n_value, 0) in valid_keys)
         |> Elixir.Map.new()
 
-    case state_filtered != state and state['error'] == None:
+    case state_filtered != state:
         True ->
             # If you get this error. Almost sure that some key
             # wasnt deleted in some loop_while lambdas
@@ -64,7 +65,7 @@ def parse(state):
 
     ct = state["current_tok"]
 
-    case state["error"] == None and ct["type"] != "EOF":
+    case ct["type"] != "EOF":
         True ->
             Core.Parser.Utils.set_error(
                 state,
@@ -121,8 +122,6 @@ def statements(state, expected_ident_gte):
     state = Elixir.Map.delete(state, "_statements") |> Elixir.Map.delete("_break")
 
     case:
-        state["error"] != None ->
-            [state, None]
         _statements == [] ->
             ct = state["current_tok"]
 
@@ -177,19 +176,6 @@ def statement(state):
             [state, node]
         True ->
             [state, _expr] = expr(state)
-
-            case state["error"]:
-                None -> [state, _expr]
-                _ ->
-                    ct = state["current_tok"]
-
-                    state = Core.Parser.Utils.set_error(
-                        state,
-                        "Expected int, float, variable, 'not', '+', '-', '(' or '['",
-                        ct["pos_start"],
-                        ct["pos_end"]
-                    )
-                    [state, None]
 
     state = Elixir.Map.put(state, 'inside_pattern', False)
 
@@ -298,11 +284,8 @@ def factor(state):
 
             [state, _factor] = factor(state)
 
-            case state["error"]:
-                None ->
-                    node = Core.Parser.Nodes.make_unary_node(state['file'], ct, _factor)
-                    [state, node]
-                _ -> [state, None]
+            node = Core.Parser.Nodes.make_unary_node(state['file'], ct, _factor)
+            [state, node]
 
         False -> power(state)
 
@@ -404,7 +387,6 @@ def bin_op(state, func_a, ops, func_b):
         lambda state, ct:
             case:
                 ct["type"] == "EOF" -> False
-                state["error"] != None -> False
                 Elixir.Enum.member?(ops, ct["type"]) or Elixir.Enum.member?(ops, [ct["type"], ct["value"]]) -> True
                 True -> False
         ,
@@ -417,11 +399,8 @@ def bin_op(state, func_a, ops, func_b):
 
             [state, right] = func_b(state)
 
-            case state["error"]:
-                None ->
-                    left = Core.Parser.Nodes.make_bin_op_node(state['file'], left, op_tok, right)
-                    Elixir.Map.put(state, "_node", left)
-                _ -> state
+            left = Core.Parser.Nodes.make_bin_op_node(state['file'], left, op_tok, right)
+            Elixir.Map.put(state, "_node", left)
     )
 
     left = Elixir.Map.get(state, '_node', first_left)
@@ -440,7 +419,6 @@ def list_expr(state):
                 ct["type"] == "RSQUARE" -> False
                 ct["type"] == "COMMA" and state['next_tok']['type'] == "RSQUARE" -> False
                 ct["type"] == "EOF" -> False
-                state["error"] != None -> False
                 True -> True
         ,
         lambda state, ct:
@@ -537,7 +515,6 @@ def map_expr(state):
                 ct["type"] == "RCURLY" -> False
                 ct["type"] == "COMMA" and state['next_tok']['type'] == "RCURLY" -> False
                 ct["type"] == "EOF" -> False
-                state["error"] != None -> False
                 True -> True
         ,
         lambda state, ct:
@@ -627,19 +604,8 @@ def pipe_expr(state, left_node):
 
     [state, right_node] = expr(state)
 
-    case state['error']:
-        None ->
-            node = Core.Parser.Nodes.make_pipe_node(state['file'], left_node, right_node)
-            [state, node]
-        _ ->
-            state = Core.Parser.Utils.set_error(
-                state,
-                "Expected and expression after '|>'",
-                state["current_tok"]["pos_start"],
-                state["current_tok"]["pos_end"]
-            )
-
-            [state, None]
+    node = Core.Parser.Nodes.make_pipe_node(state['file'], left_node, right_node)
+    [state, node]
 
 def func_as_var_expr(state):
     pos_start = state['current_tok']['pos_start']
@@ -726,7 +692,6 @@ def case_expr(state):
                 lambda state, ct:
                     case:
                         ct["type"] == "EOF" -> False
-                        state["error"] != None -> False
                         ct["ident"] != initial_ident + 4 -> False
                         True -> True
                 ,
@@ -757,8 +722,8 @@ def case_expr(state):
                             )
                         _ -> state
 
-                    case [state['error'],(state['current_tok']['type']) == 'ARROW']:
-                        [None, True] ->
+                    case (state['current_tok']['type']) == 'ARROW':
+                        True ->
                             state = advance(state)
 
                             [state, right_expr] = case (state['current_tok']['ident']) == this_ident:
@@ -768,14 +733,13 @@ def case_expr(state):
                             cases = [*cases, (left_expr, right_expr)]
 
                             state |> Elixir.Map.put('_cases', cases)
-                        [None, False] ->
+                        False ->
                             Core.Parser.Utils.set_error(
                                 state,
                                 "Expected '->'",
                                 state["current_tok"]["pos_start"],
                                 state["current_tok"]["pos_end"]
                             )
-                        [_, _] -> state
             )
         False ->
             Core.Parser.Utils.set_error(
@@ -823,7 +787,6 @@ def call_func_expr(state, atom):
                     case:
                         ct["type"] == "EOF" -> False
                         ct["type"] == "RPAREN" -> False
-                        state["error"] != None -> False
                         True -> True
                 ,
                 lambda state, ct:
@@ -904,17 +867,13 @@ def call_func_expr(state, atom):
             state["current_tok"]["pos_end"]
         )
 
-    case state['error']:
-        None ->
-            pos_end = state['current_tok'] |> Elixir.Map.get('pos_end')
+    pos_end = state['current_tok'] |> Elixir.Map.get('pos_end')
 
-            state = advance(state)
+    state = advance(state)
 
-            node = Core.Parser.Nodes.make_call_node(state['file'], atom, arg_nodes, keywords, pos_end)
+    node = Core.Parser.Nodes.make_call_node(state['file'], atom, arg_nodes, keywords, pos_end)
 
-            [state, node]
-        _ ->
-            [state, None]
+    [state, node]
 
 def tuple_expr(state, pos_start, first_expr):
     # if the first_expr is None it means
@@ -929,7 +888,6 @@ def tuple_expr(state, pos_start, first_expr):
             case:
                 ct["type"] == "EOF" -> False
                 ct["type"] == "RPAREN" -> False
-                state["error"] != None -> False
                 True -> True
         ,
         lambda state, ct:
@@ -976,17 +934,13 @@ def tuple_expr(state, pos_start, first_expr):
             state["current_tok"]["pos_end"]
         )
 
-    case state['error']:
-        None ->
-            pos_end = state['current_tok']['pos_end']
+    pos_end = state['current_tok']['pos_end']
 
-            state = advance(state)
+    state = advance(state)
 
-            node = Core.Parser.Nodes.make_tuple_node(state['file'], element_nodes, pos_start, pos_end)
+    node = Core.Parser.Nodes.make_tuple_node(state['file'], element_nodes, pos_start, pos_end)
 
-            [state, node]
-        _ ->
-            [state, None]
+    [state, node]
 
 def pattern_match(state, left_node <- (left_node_type, _, _), pos_start):
     state = advance(state)
@@ -994,7 +948,6 @@ def pattern_match(state, left_node <- (left_node_type, _, _), pos_start):
     valid_left_node = left_node_type in Core.Parser.Nodes.node_types_accept_pattern()
 
     case:
-        state['error'] -> [state, None]
         valid_left_node == False ->
             state = Core.Parser.Utils.set_error(
                 state,
@@ -1029,15 +982,12 @@ def static_access_expr(state, left_node):
                 state["current_tok"]["pos_end"]
             )
 
-    case state['error']:
-        None ->
-            pos_end = state['current_tok']['pos_end']
-            node = Core.Parser.Nodes.make_staticaccess_node(state['file'], left_node, node_value, pos_end)
+    pos_end = state['current_tok']['pos_end']
+    node = Core.Parser.Nodes.make_staticaccess_node(state['file'], left_node, node_value, pos_end)
 
-            state = advance(state)
+    state = advance(state)
 
-            [state, node]
-        _ -> [state, None]
+    [state, node]
 
 
 def handle_do_new_line(state, base_line):
@@ -1206,7 +1156,6 @@ def def_struct_expr(state):
         state,
         lambda state, ct:
             case:
-                state["error"] != None -> False
                 ct["type"] == "EOF" -> False
                 ct["ident"] != 4 -> False
                 Core.Parser.Utils.tok_matchs(ct, "KEYWORD", "def") -> False
@@ -1248,7 +1197,6 @@ def def_struct_expr(state):
         state,
         lambda state, ct:
             case:
-                state["error"] != None -> False
                 ct["type"] == "EOF" -> False
                 state['current_tok']['ident'] == 4 -> True
                 True -> False
@@ -1266,17 +1214,13 @@ def def_struct_expr(state):
             )
     )
 
-    case state['error']:
-        None ->
-            (functions_struct, state) = Elixir.Map.pop(state, "_functions", [])
+    (functions_struct, state) = Elixir.Map.pop(state, "_functions", [])
 
-            node = Core.Parser.Nodes.make_struct_def_node(
-                state['file'], struct_name, fields_struct, functions_struct, pos_start, state["prev_tok"]["pos_end"]
-            )
+    node = Core.Parser.Nodes.make_struct_def_node(
+        state['file'], struct_name, fields_struct, functions_struct, pos_start, state["prev_tok"]["pos_end"]
+    )
 
-            [state, node]
-        _ ->
-            [state, None]
+    [state, node]
 
 
 def struct_expr(state, atom):
@@ -1294,7 +1238,6 @@ def struct_expr(state, atom):
                     case:
                         ct["type"] == "EOF" -> False
                         ct["type"] == "RPAREN" -> False
-                        state["error"] != None -> False
                         True -> True
                 ,
                 lambda state, ct:
@@ -1350,17 +1293,13 @@ def struct_expr(state, atom):
             state["current_tok"]["pos_end"]
         )
 
-    case state['error']:
-        None ->
-            pos_end = state['current_tok'] |> Elixir.Map.get('pos_end')
+    pos_end = state['current_tok'] |> Elixir.Map.get('pos_end')
 
-            state = advance(state)
+    state = advance(state)
 
-            node = Core.Parser.Nodes.make_struct_node(state['file'], atom, keywords, pos_end)
+    node = Core.Parser.Nodes.make_struct_node(state['file'], atom, keywords, pos_end)
 
-            [state, node]
-        _ ->
-            [state, None]
+    [state, node]
 
 
 def exception_expr(state):
@@ -1409,7 +1348,6 @@ def exception_expr(state):
         state,
         lambda state, ct:
             case:
-                state["error"] != None -> False
                 ct["type"] == "EOF" -> False
                 ct["ident"] != 4 -> False
                 True -> True
@@ -1445,13 +1383,8 @@ def exception_expr(state):
 
     (fields_exception, state) = Elixir.Map.pop(state, '_fields_exception', [])
 
-    case state['error']:
-        None ->
-            node = Core.Parser.Nodes.make_exception_node(
-                state['file'], exception_name, fields_exception, pos_start, state["prev_tok"]["pos_end"]
-            )
+    node = Core.Parser.Nodes.make_exception_node(
+        state['file'], exception_name, fields_exception, pos_start, state["prev_tok"]["pos_end"]
+    )
 
-            [state, node]
-        _ ->
-            [state, None]
-
+    [state, node]

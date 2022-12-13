@@ -14,13 +14,10 @@ def get_next_tok(state):
     tokens |> Elixir.Enum.at(idx)
 
 def set_error(state, msg, pos_start, pos_end):
-    case Elixir.Map.get(state, 'error'):
-        None ->
-            state = Elixir.Map.put(
-                state, "error", {"msg": msg, "pos_start": pos_start, "pos_end": pos_end}
-            )
-            state
-        _ -> state
+    {"ln": line, "col": col_start} = pos_start
+    {"col": col_end} = pos_end
+
+    raise Kernel.SyntaxError(message=msg, position=(line, col_start, col_end), source_code=state['source_code'])
 
 def nodes_types():
     [
@@ -50,17 +47,6 @@ def nodes_types():
         :struct_def,
         :struct
     ]
-
-#def extract_module_structs(node <- (:statements, meta, nodes)):
-#    (structs, remaining) = Elixir.Enum.split_with(nodes, lambda (node_type, _, _): node_type == :struct)
-#
-#    # put structs back inside a statements block
-#    structs = Elixir.Enum.map(
-#        structs,
-#        lambda (:struct, meta, body): (:statements, meta, [(:struct, meta, body)])
-#    )
-#
-#    (structs, (:statements, meta, remaining))
 
 def is_struct_reference((:var, _, [_, being_called])):
     # All structs begin with
