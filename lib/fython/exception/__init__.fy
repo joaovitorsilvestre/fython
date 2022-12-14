@@ -1,3 +1,53 @@
+def format_traceback(error <- Elixir.FunctionClauseError(), stacktrace):
+    (_module, _function, arguments, _) = Elixir.Enum.at(stacktrace, 0)
+
+    error = Kernel.FunctionClauseError(
+        message="",
+        module=error.module,
+        function=error.function,
+        arity=error.arity,
+        arguments=arguments,
+    )
+
+    format_traceback(error, stacktrace)
+
+
+def format_traceback(error <- Kernel.FunctionClauseError(), stacktrace):
+    only_fython_stacktrace = stacktrace
+        |> Elixir.Enum.filter(&is_fython_stack?/1)
+
+    formated_lines = only_fython_stacktrace
+        |> Elixir.Enum.reverse()
+        |> Elixir.Enum.map(&format_line_stacktrace/1)
+        |> Elixir.Enum.join("")
+
+    source_code_error_pointing = only_fython_stacktrace
+        |> Elixir.Enum.at(0)
+        |> gen_source_code_error_pointing()
+
+    Elixir.IO.puts("Traceback (most recent call last):")
+    Elixir.IO.puts(formated_lines)
+    Elixir.IO.puts(source_code_error_pointing)
+
+    arguments = error.arguments
+        |> Elixir.Enum.with_index()
+        |> Elixir.Enum.reduce("", lambda (arg, index), acc:
+            arg_number = case index:
+                0 -> "1st"
+                1 -> "2nd"
+                2 -> "3rd"
+                _ -> Elixir.Enum.join([index + 1, "th"])
+
+            Elixir.Enum.join([acc, arg_number, " arg -> ", Elixir.Kernel.inspect(arg), "\n"])
+        )
+
+    Elixir.IO.puts(Elixir.Enum.join([
+        "    function received arguments: \n        ", arguments, "\n",
+        "    Maybe theres is a pattern that didn't match with the arguments?\n"
+    ]))
+    display_error_name_formated(error)
+
+
 def format_traceback(error <- Elixir.ArithmeticError(), stacktrace):
     format_traceback(Kernel.ArithmeticError(message=error.message), stacktrace)
 
@@ -17,14 +67,13 @@ def format_traceback(error <- Kernel.SyntaxError(), stacktrace):
     )
 
     Elixir.IO.puts(source_code_error_pointing)
-    display_error_formated(error)
+    display_error_name_formated(error)
 
 
 def format_traceback(error, stacktrace):
     # Main function to format stacktrace
     only_fython_stacktrace = stacktrace
         |> Elixir.Enum.filter(&is_fython_stack?/1)
-
 
     formated_lines = only_fython_stacktrace
         |> Elixir.Enum.reverse()
@@ -38,10 +87,10 @@ def format_traceback(error, stacktrace):
     Elixir.IO.puts("Traceback (most recent call last):")
     Elixir.IO.puts(formated_lines)
     Elixir.IO.puts(source_code_error_pointing)
-    display_error_formated(error)
+    display_error_name_formated(error)
 
 
-def display_error_formated(error):
+def display_error_name_formated(error):
     error_name = module_name_as_string(error.__struct__)
     Elixir.IO.puts(error_name)
     Elixir.IO.puts(Elixir.Enum.join(["    ", error.message]))

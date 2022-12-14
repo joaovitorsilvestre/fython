@@ -4,7 +4,7 @@ def format_error_in_source_code(source_code, meta):
         |> Elixir.Enum.with_index()
 
     (_, line_num, start_col) = meta['start']
-    (_, _, end_col) = meta['end']
+    (_, line_num_end, end_col) = meta['end']
 
     state = {
         "source_code": source_code,
@@ -13,9 +13,10 @@ def format_error_in_source_code(source_code, meta):
         "position": (line_num, start_col, end_col),  # line starting at 0
     }
 
-    case start_col > end_col:
-        True -> Elixir.IO.inspect(source_code_lines |> Elixir.Enum.at(start_col))
-        False -> None
+    # TODO show only first line to the end if multiple lines, for now
+    case line_num != line_num_end:
+        False -> Elixir.IO.inspect(source_code_lines |> Elixir.Enum.at(start_col))
+        True -> raise "Multiline statement not supported yet"
 
     lines_above = get_lines_above_error(state)
     pointers = draw_pointers(state)
