@@ -18,7 +18,7 @@ def nodes_that_are_own_modules():
 def run_conversor(module_name, (:statements, meta, nodes), file_content, config):
     # Return modules produced by the statements
     # returns: [
-    #    (:ModuleName, elixir_ast_of_module)
+    #    (:ModuleName, elixir_ast_of_module, ["Module.Dependency"])
     # ]
     # structs, protocols are their own modules and
     # they must be the first ones of the list
@@ -31,17 +31,24 @@ def run_conversor(module_name, (:statements, meta, nodes), file_content, config)
 
     separated_modules = separated_modules
         |> Elixir.Enum.map(lambda x:
-            (:statements, meta, [x])
+            deps = Module.find_dependencies_of_module(x)
+
+            (module_name, module) = (:statements, meta, [x])
                 |> inject_module_info_if_compiling_module(file_content, config)
                 |> convert_module(module_name)
+
+            (module_name, module, deps)
         )
 
     current_module = (:statements, meta, current_module)
+    deps = Module.find_dependencies_of_module(current_module)
+
+    current_module = current_module
         |> inject_module_info_if_compiling_module(file_content, config)
 #        |> inject_aliases_of_modules_used_in_module(separated_modules)
         |> convert()
 
-    [*separated_modules, (module_name, current_module)]
+    [*separated_modules, (module_name, current_module, deps)]
 
 def inject_module_info_if_compiling_module(node, file_content, config):
     compiling_module = Elixir.Map.get(config, "compiling_module", False)

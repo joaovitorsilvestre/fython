@@ -26,38 +26,24 @@ def get_fython_files_in_folder(project_path):
 def compile_files(project_path, files, compiled_folder, bootstrap_prefix):
     # files: [a.fy, folder/b.fy, etc]
 
-    modules_ready_to_be_saved = files
+    files
         |> Itertools.parallel_map(lambda file:
             (child_modules, parent_module) = pre_compile_file(project_path, file, bootstrap_prefix)
-            (
-                file,
-                (child_modules, parent_module)
-            )
+
+            child_modules = child_modules
+                |> Elixir.Enum.map(lambda (m_name, ast, deps): (file, m_name, ast, deps))
+
+            (m_name, ast, deps) = parent_module
+            parent_module = (file, m_name, ast, deps)
+
+            # [(file, module_name, ast, deps), ...]
+            [*child_modules, parent_module]
         )
-
-    child_modules = modules_ready_to_be_saved
-        |> Elixir.Enum.map(lambda (file, (childs, _parent)): (file, childs))
-        |> Elixir.Enum.filter(lambda (file, childs): Elixir.Enum.count(childs) > 0)
-
-    parent_modules = modules_ready_to_be_saved
-        |> Elixir.Enum.map(lambda (file, (_childs, parent)): (file, parent))
-
-    # We need to compile child modules first. Child modules are structs, protocols, etc
-    child_modules
         |> Elixir.List.flatten()
+        |> Module.sort_modules_by_dependencies()
         |> Elixir.Enum.each(
-            lambda (file, childs):
-                Elixir.Enum.each(
-                    childs,
-                    lambda (m_name, ast):
-                        save_module(m_name, file, compiled_folder, ast)
-                )
-        )
-
-    parent_modules
-        |> Elixir.List.flatten()
-        |> Elixir.Enum.each(
-            lambda (file, (m_name, ast)): save_module(m_name, file, compiled_folder, ast)
+            lambda (file, m_name, ast, _deps):
+                save_module(m_name, file, compiled_folder, ast)
         )
 
 
