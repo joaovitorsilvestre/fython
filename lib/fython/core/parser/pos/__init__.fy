@@ -1,5 +1,6 @@
 def execute(state, config):
     env = Elixir.Map.get(config, "env", [])
+    bootstrap_prefix = Elixir.Map.get(config, "bootstrap_prefix")
 
     var_names_avaliable = env
         |> Elixir.Enum.map(lambda ((var_name, _), obj):
@@ -14,6 +15,8 @@ def execute(state, config):
             node = state
                 |> Elixir.Map.get('node')
                 |> Core.Parser.Pos.Localcalls.convert_local_function_calls(var_names_avaliable)
+                |> Core.Parser.Pos.Bootprefix.add_prefix_to_function_calls(bootstrap_prefix)
+                |> Core.Parser.Pos.Exceptions.catch_and_convert_elixir_excetions_to_fython(bootstrap_prefix)
 
             Elixir.Map.put(state, 'node', node)
         _ -> state

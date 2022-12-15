@@ -1,4 +1,8 @@
 def format_error_in_source_code(source_code, meta):
+    # 5 Lines above as default and no left padding
+    format_error_in_source_code(source_code, meta, 5, "")
+
+def format_error_in_source_code(source_code, meta, lines_to_show_above, left_padding):
     source_code_lines = Elixir.String.split(source_code, '\n')
     source_code_lines_indexed = source_code_lines
         |> Elixir.Enum.with_index()
@@ -13,13 +17,14 @@ def format_error_in_source_code(source_code, meta):
         "position": (line_num, start_col, end_col),  # line starting at 0
     }
 
-    # TODO show only first line to the end if multiple lines, for now
-    case line_num != line_num_end:
-        False -> Elixir.IO.inspect(source_code_lines |> Elixir.Enum.at(start_col))
-        True -> raise "Multiline statement not supported yet"
+    # TODO we dont suport showing multiline errors, yet, here do a patch to not break in that case
+    # TODO For now, we will show from first col to the end of the first line
+    end_col = case line_num != line_num_end do
+        True -> Elixir.String.length(Elixir.Enum.at(source_code_lines, line_num)) - 1
+        False -> end_col
 
-    lines_above = get_lines_above_error(state)
-    pointers = draw_pointers(state)
+    lines_above = get_lines_above_error(state, lines_to_show_above)
+    pointers = draw_pointers(state, start_col, end_col)
     current_line = Elixir.Enum.at(state['source_code_lines_indexed'], line_num)
 
     lines_formated = [
@@ -28,26 +33,24 @@ def format_error_in_source_code(source_code, meta):
         *pointers,
     ]
 
-    Elixir.Enum.join(lines_formated, '\n')
+    lines_formated
+        |> Elixir.Enum.map(lambda x: Elixir.Enum.join([left_padding, x]))
+        |> Elixir.Enum.join('\n')
 
 
-def get_lines_above_error(state):
-    HOW_MANY_LINES_SHOW_ABOVE = 5
-
+def get_lines_above_error(state, lines_to_show_above):
     (line_num, _, _) = state['position']
 
     source_code_lines = state['source_code_lines_indexed']
 
-    range_to_slice = case line_num > HOW_MANY_LINES_SHOW_ABOVE:
-        True -> (line_num - HOW_MANY_LINES_SHOW_ABOVE)..(line_num - 1)
+    range_to_slice = case line_num > lines_to_show_above:
+        True -> (line_num - lines_to_show_above)..(line_num - 1)
         False -> 0..(line_num - 1)
 
     lines_to_keep_above = Elixir.Enum.slice(source_code_lines, range_to_slice)
 
 
-def draw_pointers(state):
-    (_, start_col, end_col) = state['position']
-
+def draw_pointers(state, start_col, end_col):
     pointer = Elixir.String.duplicate(" ", get_necessary_size_to_fit_line_numbers(state) + 3)
 
     pointer = Elixir.Enum.join([

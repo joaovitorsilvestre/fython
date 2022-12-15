@@ -1,23 +1,10 @@
-def format_traceback(error <- Elixir.FunctionClauseError(), stacktrace):
-    (_module, _function, arguments, _) = Elixir.Enum.at(stacktrace, 0)
-
-    error = Kernel.FunctionClauseError(
-        message="",
-        module=error.module,
-        function=error.function,
-        arity=error.arity,
-        arguments=arguments,
-    )
-
-    format_traceback(error, stacktrace)
-
-
 def format_traceback(error <- Kernel.FunctionClauseError(), stacktrace):
     only_fython_stacktrace = stacktrace
         |> Elixir.Enum.filter(&is_fython_stack?/1)
 
     formated_lines = only_fython_stacktrace
         |> Elixir.Enum.reverse()
+        |> Elixir.Enum.slice(0..-2) # dont show last line stack because it will appear in source code pointers
         |> Elixir.Enum.map(&format_line_stacktrace/1)
         |> Elixir.Enum.join("")
 
@@ -38,7 +25,7 @@ def format_traceback(error <- Kernel.FunctionClauseError(), stacktrace):
                 2 -> "3rd"
                 _ -> Elixir.Enum.join([index + 1, "th"])
 
-            Elixir.Enum.join([acc, arg_number, " arg -> ", Elixir.Kernel.inspect(arg), "\n"])
+            Elixir.Enum.join([acc, "* ",arg_number, " argument: ", Elixir.Kernel.inspect(arg), "\n"])
         )
 
     Elixir.IO.puts(Elixir.Enum.join([
@@ -47,9 +34,6 @@ def format_traceback(error <- Kernel.FunctionClauseError(), stacktrace):
     ]))
     display_error_name_formated(error)
 
-
-def format_traceback(error <- Elixir.ArithmeticError(), stacktrace):
-    format_traceback(Kernel.ArithmeticError(message=error.message), stacktrace)
 
 def format_traceback(error <- Kernel.SyntaxError(), stacktrace):
     only_fython_stacktrace = stacktrace
@@ -78,7 +62,7 @@ def format_traceback(error, stacktrace):
     formated_lines = only_fython_stacktrace
         |> Elixir.Enum.reverse()
         |> Elixir.Enum.map(&format_line_stacktrace/1)
-        |> Elixir.Enum.join("")
+        |> Elixir.Enum.join("\n")
 
     source_code_error_pointing = only_fython_stacktrace
         |> Elixir.Enum.at(0)
@@ -112,15 +96,20 @@ def format_line_stacktrace((module, func_name, _, [(:file, file), (:line, line)]
 
 def format_line_stacktrace((module, func_name, _, [(:file, file), (:line, line), (:error_info, _error_info)])):
     module = module_name_as_string(module)
+    meta = get_meta_of_line_ref(module, line)
     line = get_real_line_of_the_error(module, line)
+    source_code = get_module_source_code(module)
 
-    Elixir.Enum.join(["  file: ", file, ", line: ", line, "\n", "    -> ",  module, ".", func_name, "()\n"], "")
+    first_line = ["  file: ", file, ", line: ", line, " at ",  module, ".", func_name, "()\n"]
+
+    second_line = Exception.Code.format_error_in_source_code(source_code, meta, 0, "    ")
+
+    Elixir.Enum.join([*first_line, second_line, "\n"])
 
 def format_line_stacktrace(aaa):
     Elixir.IO.puts('wtffffffff')
     Elixir.IO.inspect(aaa)
     "Not hable to parse"
-
 
 def gen_source_code_error_pointing((module, func_name, _, [(:file, file), (:line, line)])):
     gen_source_code_error_pointing((module, func_name, None, [(:file, file), (:line, line), (:error_info, None)]))

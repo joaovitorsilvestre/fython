@@ -1,19 +1,10 @@
 def eval_string(text):
-    eval_string('<stdin>', text, {"file": '<stdin>'})
+    eval_string('<stdin>', text, {"file": '<stdin>', 'env': []})
 
-def eval_string(module_name, text, config):
+def eval_string(module_name, text, config <- {"file": file, "env": env}):
     (state, [(_, converted)]) = Core.Code.lexer_parse_convert_file(module_name, text, config)
 
-    file = Elixir.Map.get(config, 'file')
-    env = Elixir.Map.get(config, 'env', [])
+    Elixir.Code.eval_quoted(converted, env, [])
 
-    case converted:
-        None ->
-            Core.Errors.Utils.print_error(file, state, text)
-            (None, env)
-        _ ->
-            try:
-#                Elixir.IO.inspect(converted)
-                Elixir.Code.eval_quoted(converted, env, [])
-            except error:
-                Elixir.Kernel.reraise(error, __STACKTRACE__)
+def exit_with_status(status):
+    Erlang.init.stop(status)

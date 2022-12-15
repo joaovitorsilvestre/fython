@@ -514,6 +514,7 @@ def convert_try((:try, meta, [try_block, exceptions, finally_block])):
         lambda i :
             (except_identifier, alias, block) = i
 
+            # TODO bug, it will return true for alias starting with _ because its the same uppercased
             is_alias_to_exception = Elixir.Kernel.is_bitstring(except_identifier) and Elixir.String.at(except_identifier, 0) == Elixir.String.upcase(Elixir.String.at(except_identifier, 0))
 
             case (is_alias_to_exception, alias):
