@@ -1,7 +1,7 @@
 def to_fython_exception(error <- Elixir.FunctionClauseError(), stacktrace):
     (_module, _function, arguments, _) = Elixir.Enum.at(stacktrace, 0)
 
-    error = Kernel.FunctionClauseError(
+    error = Exception.FunctionClauseError(
         message="",
         module=error.module,
         function=error.function,
@@ -13,7 +13,7 @@ def to_fython_exception(error <- Elixir.FunctionClauseError(), stacktrace):
 
 
 def to_fython_exception(error <- Elixir.ArithmeticError(), stacktrace):
-    to_fython_exception(Kernel.ArithmeticError(message=error.message), stacktrace)
+    to_fython_exception(Exception.ArithmeticError(message=error.message), stacktrace)
 
 
 def to_fython_exception(error, stacktrace):

@@ -1,4 +1,25 @@
-def format_traceback(error <- Kernel.FunctionClauseError(), stacktrace):
+exception SyntaxError:
+    message = "Invalid syntax"
+    position = None # (line, col_start, col_end)
+    source_code = None
+
+exception ArithmeticError:
+    message = None
+
+exception FunctionClauseError:
+    # Raised when a function is called with invalid arguments
+    # Example of when it will be raised:
+    #   [1, 2, 3] |> Elixir.Enum.map(lambda (a, b): 1)
+    #   the arity of the lambda is correct, but the pattern matching will fail
+
+    message = None
+    module = None
+    function = None
+    arity = None
+    arguments = None
+
+
+def format_traceback(error <- Exception.FunctionClauseError(), stacktrace):
     only_fython_stacktrace = stacktrace
         |> Elixir.Enum.filter(&is_fython_stack?/1)
 
@@ -35,7 +56,7 @@ def format_traceback(error <- Kernel.FunctionClauseError(), stacktrace):
     display_error_name_formated(error)
 
 
-def format_traceback(error <- Kernel.SyntaxError(), stacktrace):
+def format_traceback(error <- Exception.SyntaxError(), stacktrace):
     only_fython_stacktrace = stacktrace
         |> Elixir.Enum.filter(&is_fython_stack?/1)
 
@@ -125,16 +146,12 @@ def gen_source_code_error_pointing((module, func_name, _, [(:file, file), (:line
 
 def get_module_source_code(module):
     # Use Metadata functions saved in module to retrieve the source code of the module
-    code_to_run = Elixir.Enum.join([module, '.__fython_get_file_source_code__()'])
-    (result, _) = Core.eval_string(code_to_run)
-    result
+    Core.apply(module, '__fython_get_file_source_code__', [])
 
 
 def get_meta_of_line_ref(module, line):
     # Returns the meta of the node in the line
-    code_to_run = Elixir.Enum.join([module, '.__fython_get_node_ref__(', line, ')'])
-    (result, _) = Core.eval_string(code_to_run)
-    result
+    Core.apply(module, '__fython_get_node_ref__', [line])
 
 
 def get_real_line_of_the_error(module, line):

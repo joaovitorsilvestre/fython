@@ -26,7 +26,7 @@ def get_fython_files_in_folder(project_path):
 def compile_files(project_path, files, compiled_folder, bootstrap_prefix):
     # files: [a.fy, folder/b.fy, etc]
 
-    files
+    modules = files
         |> Itertools.parallel_map(lambda file:
             (child_modules, parent_module) = pre_compile_file(project_path, file, bootstrap_prefix)
 

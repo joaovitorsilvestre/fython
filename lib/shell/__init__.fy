@@ -2,6 +2,7 @@ def start():
     env = []  # where variables, etc will be saved
     config = {
         "file": "stdin",
+        "module_name": "stdin",
     }
 
     start(
@@ -83,7 +84,7 @@ def start(count, state, env, config):
 def execute(text, env, config):
     try:
         config = Elixir.Map.put(config, 'env', env)
-        (result, new_env) = Core.eval_string('<stdin>', text, config)
+        (result, new_env) = Core.eval_string(text, config)
         case result:
             None -> None
             _ -> Elixir.IO.inspect(result)

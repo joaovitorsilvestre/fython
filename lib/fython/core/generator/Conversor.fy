@@ -49,6 +49,21 @@ def run_conversor(module_name, (:statements, meta, nodes), file_content, config)
         |> convert()
 
     [*separated_modules, (module_name, current_module, deps)]
+        |> inject_fython_core_as_dependency(config)
+
+def inject_fython_core_as_dependency(modules, config):
+    # modules: [(module_name, ast, deps)]
+
+    {'bootstrap_prefix': bootstrap_prefix} = config
+
+    modules
+        |> Elixir.Enum.map(lambda (module_name, ast, deps):
+            # imports Fython.Core automatically and add
+            # it as a dependency
+            deps = ["Fython.Core", *deps]
+            (module_name, ast, deps)
+        )
+
 
 def inject_module_info_if_compiling_module(node, file_content, config):
     compiling_module = Elixir.Map.get(config, "compiling_module", False)
@@ -284,10 +299,7 @@ def convert_func((:func, meta, [name, arity])):
 
 def convert_statements((:statements, meta, nodes)):
     content = Elixir.Enum.map(nodes, &convert/1)
-
-    case Elixir.Enum.count(content):
-        1 -> Elixir.Enum.at(content, 0)
-        _ -> (:"__block__", meta, content)
+    (:"__block__", meta, content)
 
 def convert_lambda((:lambda, meta, [args, statements])):
     args = args |> Elixir.Enum.map(&convert/1)
