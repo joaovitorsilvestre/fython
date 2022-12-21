@@ -10,7 +10,7 @@ The language borrow a lot of ideas from Python and apply them in the world of fu
 
 ```python
 def run():
-		print('hello world')
+    print('hello world')
 
 > run()
 hello world
