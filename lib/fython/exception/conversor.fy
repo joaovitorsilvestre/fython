@@ -29,5 +29,5 @@ def to_fython_exception(error, stacktrace):
             Elixir.IO.inspect(error)
             Elixir.IO.puts("that was the error stacktrace: ")
             Elixir.IO.inspect(stacktrace)
-            Core.exit_with_status(0)
+            Core.exit_with_status_code(0)
 

@@ -49,19 +49,62 @@ def run_conversor(module_name, (:statements, meta, nodes), file_content, config)
         |> convert()
 
     [*separated_modules, (module_name, current_module, deps)]
+        |> remove_global_import_of_elixir_kernel(config)
         |> inject_fython_core_as_dependency(config)
+
+def remove_global_import_of_elixir_kernel(modules, config):
+    # We remove all imports from Elixir.Kernel, to avoid conflict
+    # with functions of Fython.Core
+    # This way we ensure that user only calls Elixir.Kernel functions with 'Elixir.' prefix
+
+    modules = modules
+        |> Elixir.Enum.map(lambda (module_name, ast, deps):
+            (:'__block__', meta, statements) = ast
+
+            # Functions that we dont want to be auto loaded from Elixir.Kernel
+            functions_to_ignore = [
+                (:apply, 2),
+                (:apply, 3),
+            ]
+
+            # ast of 'import Kernel, only: [...]'
+            import_no_function_from_elixir_kernel = (
+                :import,
+                [(:context, :Elixir)],
+                [(:'__aliases__', [(:alias, False)], [:Kernel]), [(:except, functions_to_ignore)]]
+            )
+
+            ast = (:'__block__', meta, [import_no_function_from_elixir_kernel, *statements])
+            (module_name, ast, deps)
+        )
+
 
 def inject_fython_core_as_dependency(modules, config):
     # modules: [(module_name, ast, deps)]
 
-    {'bootstrap_prefix': bootstrap_prefix} = config
+    bootstrap_prefix = Elixir.Map.get(config, 'bootstrap_prefix')
 
     modules
         |> Elixir.Enum.map(lambda (module_name, ast, deps):
-            # imports Fython.Core automatically and add
-            # it as a dependency
-            deps = ["Fython.Core", *deps]
-            (module_name, ast, deps)
+            core_module_name = case bootstrap_prefix:
+                None -> "Fython.Core"
+                _ -> Elixir.Enum.join(["Fython.", bootstrap_prefix, ".Core"])
+
+            case module_name:
+                ^core_module_name ->
+                    # Core module should not depend on itself
+                    (module_name, ast, deps)
+                _ ->
+                    # imports Fython.Core automatically and add
+                    # it as a dependency
+                    deps = [core_module_name, *deps]
+
+                    import_stm = (:import, [(:context, :Elixir)], [Elixir.String.to_atom(core_module_name)])
+
+                    (:'__block__', meta, statements) = ast
+                    ast = (:'__block__', meta, [import_stm, *statements])
+
+                    (module_name, ast, deps)
         )
 
 
@@ -277,12 +320,20 @@ def convert_binop((:binop, meta, [left, :pow, right])):
 
 def convert_binop((:binop, meta, [left, op, right])):
     elixir_op = {
-        :plus: '+', :minus: '-', :mul: '*', :div: '/',
-        :gt: '>', :gte: '>=', :lt: '<', :lte: '<=',
-        :ee: '==', :ne: '!=', :in: 'in'
+        :plus: :sum,  # calls Core.sum
+        :minus: :'-',
+        :mul: :'*',
+        :div: :'/',
+        :gt: :'>',
+        :gte: :'>=',
+        :lt: :'<',
+        :lte: :'<=',
+        :ee: :'==',
+        :ne: :'!=',
+        :in: :'in'
     }
 
-    (Elixir.String.to_atom(elixir_op[op]), meta, [convert(left), convert(right)])
+    (elixir_op[op], meta, [convert(left), convert(right)])
 
 def convert_pattern((:pattern, meta, [left, right])):
     (:"=", meta, [convert(left), convert(right)])

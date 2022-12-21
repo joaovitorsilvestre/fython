@@ -235,7 +235,7 @@ def call(state):
 
 def call(state, _atom):
     [state, _atom] = case _atom:
-        None -> atom(state)
+        None -> atom_expr(state)
         _ -> [state, _atom]
 
     get_info = lambda state:
@@ -289,7 +289,7 @@ def factor(state):
 
         False -> power(state)
 
-def atom(state):
+def atom_expr(state):
     ct = state["current_tok"]
     ct_type = ct['type']
 

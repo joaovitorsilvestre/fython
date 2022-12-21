@@ -46,11 +46,11 @@ def format_traceback(error <- Exception.FunctionClauseError(), stacktrace):
                 2 -> "3rd"
                 _ -> Elixir.Enum.join([index + 1, "th"])
 
-            Elixir.Enum.join([acc, "* ",arg_number, " argument: ", Elixir.Kernel.inspect(arg), "\n"])
+            Elixir.Enum.join([acc, "        * ",arg_number, " argument: ", Elixir.Kernel.inspect(arg), "\n"])
         )
 
     Elixir.IO.puts(Elixir.Enum.join([
-        "    function received arguments: \n        ", arguments, "\n",
+        "    function received the arguments: \n", arguments, "\n",
         "    Maybe theres is a pattern that didn't match with the arguments?\n"
     ]))
     display_error_name_formated(error)
