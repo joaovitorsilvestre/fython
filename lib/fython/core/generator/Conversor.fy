@@ -18,7 +18,7 @@ def nodes_that_are_own_modules():
 def run_conversor(module_name, (:statements, meta, nodes), file_content, config):
     # Return modules produced by the statements
     # returns: [
-    #    (:ModuleName, elixir_ast_of_module)
+    #    (:ModuleName, elixir_ast_of_module, ["Module.Dependency"])
     # ]
     # structs, protocols are their own modules and
     # they must be the first ones of the list
@@ -31,17 +31,82 @@ def run_conversor(module_name, (:statements, meta, nodes), file_content, config)
 
     separated_modules = separated_modules
         |> Elixir.Enum.map(lambda x:
-            (:statements, meta, [x])
+            deps = Module.find_dependencies_of_module(x)
+
+            (module_name, module) = (:statements, meta, [x])
                 |> inject_module_info_if_compiling_module(file_content, config)
                 |> convert_module(module_name)
+
+            (module_name, module, deps)
         )
 
     current_module = (:statements, meta, current_module)
+    deps = Module.find_dependencies_of_module(current_module)
+
+    current_module = current_module
         |> inject_module_info_if_compiling_module(file_content, config)
 #        |> inject_aliases_of_modules_used_in_module(separated_modules)
         |> convert()
 
-    [*separated_modules, (module_name, current_module)]
+    [*separated_modules, (module_name, current_module, deps)]
+        |> remove_global_import_of_elixir_kernel(config)
+        |> inject_fython_core_as_dependency(config)
+
+def remove_global_import_of_elixir_kernel(modules, config):
+    # We remove all imports from Elixir.Kernel, to avoid conflict
+    # with functions of Fython.Core
+    # This way we ensure that user only calls Elixir.Kernel functions with 'Elixir.' prefix
+
+    modules = modules
+        |> Elixir.Enum.map(lambda (module_name, ast, deps):
+            (:'__block__', meta, statements) = ast
+
+            # Functions that we dont want to be auto loaded from Elixir.Kernel
+            functions_to_ignore = [
+                (:apply, 2),
+                (:apply, 3),
+            ]
+
+            # ast of 'import Kernel, only: [...]'
+            import_no_function_from_elixir_kernel = (
+                :import,
+                [(:context, :Elixir)],
+                [(:'__aliases__', [(:alias, False)], [:Kernel]), [(:except, functions_to_ignore)]]
+            )
+
+            ast = (:'__block__', meta, [import_no_function_from_elixir_kernel, *statements])
+            (module_name, ast, deps)
+        )
+
+
+def inject_fython_core_as_dependency(modules, config):
+    # modules: [(module_name, ast, deps)]
+
+    bootstrap_prefix = Elixir.Map.get(config, 'bootstrap_prefix')
+
+    modules
+        |> Elixir.Enum.map(lambda (module_name, ast, deps):
+            core_module_name = case bootstrap_prefix:
+                None -> "Fython.Core"
+                _ -> Elixir.Enum.join(["Fython.", bootstrap_prefix, ".Core"])
+
+            case module_name:
+                ^core_module_name ->
+                    # Core module should not depend on itself
+                    (module_name, ast, deps)
+                _ ->
+                    # imports Fython.Core automatically and add
+                    # it as a dependency
+                    deps = [core_module_name, *deps]
+
+                    import_stm = (:import, [(:context, :Elixir)], [Elixir.String.to_atom(core_module_name)])
+
+                    (:'__block__', meta, statements) = ast
+                    ast = (:'__block__', meta, [import_stm, *statements])
+
+                    (module_name, ast, deps)
+        )
+
 
 def inject_module_info_if_compiling_module(node, file_content, config):
     compiling_module = Elixir.Map.get(config, "compiling_module", False)
@@ -255,12 +320,20 @@ def convert_binop((:binop, meta, [left, :pow, right])):
 
 def convert_binop((:binop, meta, [left, op, right])):
     elixir_op = {
-        :plus: '+', :minus: '-', :mul: '*', :div: '/',
-        :gt: '>', :gte: '>=', :lt: '<', :lte: '<=',
-        :ee: '==', :ne: '!=', :in: 'in'
+        :plus: :sum,  # calls Core.sum
+        :minus: :'-',
+        :mul: :'*',
+        :div: :'/',
+        :gt: :'>',
+        :gte: :'>=',
+        :lt: :'<',
+        :lte: :'<=',
+        :ee: :'==',
+        :ne: :'!=',
+        :in: :'in'
     }
 
-    (Elixir.String.to_atom(elixir_op[op]), meta, [convert(left), convert(right)])
+    (elixir_op[op], meta, [convert(left), convert(right)])
 
 def convert_pattern((:pattern, meta, [left, right])):
     (:"=", meta, [convert(left), convert(right)])
@@ -277,10 +350,7 @@ def convert_func((:func, meta, [name, arity])):
 
 def convert_statements((:statements, meta, nodes)):
     content = Elixir.Enum.map(nodes, &convert/1)
-
-    case Elixir.Enum.count(content):
-        1 -> Elixir.Enum.at(content, 0)
-        _ -> (:"__block__", meta, content)
+    (:"__block__", meta, content)
 
 def convert_lambda((:lambda, meta, [args, statements])):
     args = args |> Elixir.Enum.map(&convert/1)
@@ -514,6 +584,7 @@ def convert_try((:try, meta, [try_block, exceptions, finally_block])):
         lambda i :
             (except_identifier, alias, block) = i
 
+            # TODO bug, it will return true for alias starting with _ because its the same uppercased
             is_alias_to_exception = Elixir.Kernel.is_bitstring(except_identifier) and Elixir.String.at(except_identifier, 0) == Elixir.String.upcase(Elixir.String.at(except_identifier, 0))
 
             case (is_alias_to_exception, alias):

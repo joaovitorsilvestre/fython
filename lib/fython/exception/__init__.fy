@@ -1,7 +1,62 @@
-def format_traceback(error <- Elixir.ArithmeticError(), stacktrace):
-    format_traceback(Kernel.ArithmeticError(message=error.message), stacktrace)
+exception SyntaxError:
+    message = "Invalid syntax"
+    position = None # (line, col_start, col_end)
+    source_code = None
 
-def format_traceback(error <- Kernel.SyntaxError(), stacktrace):
+exception ArithmeticError:
+    message = None
+
+exception FunctionClauseError:
+    # Raised when a function is called with invalid arguments
+    # Example of when it will be raised:
+    #   [1, 2, 3] |> Elixir.Enum.map(lambda (a, b): 1)
+    #   the arity of the lambda is correct, but the pattern matching will fail
+
+    message = None
+    module = None
+    function = None
+    arity = None
+    arguments = None
+
+
+def format_traceback(error <- Exception.FunctionClauseError(), stacktrace):
+    only_fython_stacktrace = stacktrace
+        |> Elixir.Enum.filter(&is_fython_stack?/1)
+
+    formated_lines = only_fython_stacktrace
+        |> Elixir.Enum.reverse()
+        |> Elixir.Enum.slice(0..-2) # dont show last line stack because it will appear in source code pointers
+        |> Elixir.Enum.map(&format_line_stacktrace/1)
+        |> Elixir.Enum.join("")
+
+    source_code_error_pointing = only_fython_stacktrace
+        |> Elixir.Enum.at(0)
+        |> gen_source_code_error_pointing()
+
+    Elixir.IO.puts("Traceback (most recent call last):")
+    Elixir.IO.puts(formated_lines)
+    Elixir.IO.puts(source_code_error_pointing)
+
+    arguments = error.arguments
+        |> Elixir.Enum.with_index()
+        |> Elixir.Enum.reduce("", lambda (arg, index), acc:
+            arg_number = case index:
+                0 -> "1st"
+                1 -> "2nd"
+                2 -> "3rd"
+                _ -> Elixir.Enum.join([index + 1, "th"])
+
+            Elixir.Enum.join([acc, "        * ",arg_number, " argument: ", Elixir.Kernel.inspect(arg), "\n"])
+        )
+
+    Elixir.IO.puts(Elixir.Enum.join([
+        "    function received the arguments: \n", arguments, "\n",
+        "    Maybe theres is a pattern that didn't match with the arguments?\n"
+    ]))
+    display_error_name_formated(error)
+
+
+def format_traceback(error <- Exception.SyntaxError(), stacktrace):
     only_fython_stacktrace = stacktrace
         |> Elixir.Enum.filter(&is_fython_stack?/1)
 
@@ -17,7 +72,7 @@ def format_traceback(error <- Kernel.SyntaxError(), stacktrace):
     )
 
     Elixir.IO.puts(source_code_error_pointing)
-    display_error_formated(error)
+    display_error_name_formated(error)
 
 
 def format_traceback(error, stacktrace):
@@ -25,11 +80,10 @@ def format_traceback(error, stacktrace):
     only_fython_stacktrace = stacktrace
         |> Elixir.Enum.filter(&is_fython_stack?/1)
 
-
     formated_lines = only_fython_stacktrace
         |> Elixir.Enum.reverse()
         |> Elixir.Enum.map(&format_line_stacktrace/1)
-        |> Elixir.Enum.join("")
+        |> Elixir.Enum.join("\n")
 
     source_code_error_pointing = only_fython_stacktrace
         |> Elixir.Enum.at(0)
@@ -38,10 +92,10 @@ def format_traceback(error, stacktrace):
     Elixir.IO.puts("Traceback (most recent call last):")
     Elixir.IO.puts(formated_lines)
     Elixir.IO.puts(source_code_error_pointing)
-    display_error_formated(error)
+    display_error_name_formated(error)
 
 
-def display_error_formated(error):
+def display_error_name_formated(error):
     error_name = module_name_as_string(error.__struct__)
     Elixir.IO.puts(error_name)
     Elixir.IO.puts(Elixir.Enum.join(["    ", error.message]))
@@ -63,15 +117,20 @@ def format_line_stacktrace((module, func_name, _, [(:file, file), (:line, line)]
 
 def format_line_stacktrace((module, func_name, _, [(:file, file), (:line, line), (:error_info, _error_info)])):
     module = module_name_as_string(module)
+    meta = get_meta_of_line_ref(module, line)
     line = get_real_line_of_the_error(module, line)
+    source_code = get_module_source_code(module)
 
-    Elixir.Enum.join(["  file: ", file, ", line: ", line, "\n", "    -> ",  module, ".", func_name, "()\n"], "")
+    first_line = ["  file: ", file, ", line: ", line, " at ",  module, ".", func_name, "()\n"]
+
+    second_line = Exception.Code.format_error_in_source_code(source_code, meta, 0, "    ")
+
+    Elixir.Enum.join([*first_line, second_line, "\n"])
 
 def format_line_stacktrace(aaa):
     Elixir.IO.puts('wtffffffff')
     Elixir.IO.inspect(aaa)
     "Not hable to parse"
-
 
 def gen_source_code_error_pointing((module, func_name, _, [(:file, file), (:line, line)])):
     gen_source_code_error_pointing((module, func_name, None, [(:file, file), (:line, line), (:error_info, None)]))
@@ -87,16 +146,12 @@ def gen_source_code_error_pointing((module, func_name, _, [(:file, file), (:line
 
 def get_module_source_code(module):
     # Use Metadata functions saved in module to retrieve the source code of the module
-    code_to_run = Elixir.Enum.join([module, '.__fython_get_file_source_code__()'])
-    (result, _) = Core.eval_string(code_to_run)
-    result
+    Core.apply(module, '__fython_get_file_source_code__', [])
 
 
 def get_meta_of_line_ref(module, line):
     # Returns the meta of the node in the line
-    code_to_run = Elixir.Enum.join([module, '.__fython_get_node_ref__(', line, ')'])
-    (result, _) = Core.eval_string(code_to_run)
-    result
+    Core.apply(module, '__fython_get_node_ref__', [line])
 
 
 def get_real_line_of_the_error(module, line):

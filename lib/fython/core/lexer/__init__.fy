@@ -131,7 +131,7 @@ def advance(state):
 
 def set_error(state, error):
     {"col": col, "ln": line} = state['position']
-    raise Kernel.SyntaxError(message=error, position=(line, col, col), source_code=state['source_code'])
+    raise Exception.SyntaxError(message=error, position=(line, col, col), source_code=state['source_code'])
 
 def parse(state):
     cc = state["current_char"]

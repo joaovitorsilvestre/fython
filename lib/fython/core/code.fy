@@ -26,38 +26,24 @@ def get_fython_files_in_folder(project_path):
 def compile_files(project_path, files, compiled_folder, bootstrap_prefix):
     # files: [a.fy, folder/b.fy, etc]
 
-    modules_ready_to_be_saved = files
+    modules = files
         |> Itertools.parallel_map(lambda file:
             (child_modules, parent_module) = pre_compile_file(project_path, file, bootstrap_prefix)
-            (
-                file,
-                (child_modules, parent_module)
-            )
+
+            child_modules = child_modules
+                |> Elixir.Enum.map(lambda (m_name, ast, deps): (file, m_name, ast, deps))
+
+            (m_name, ast, deps) = parent_module
+            parent_module = (file, m_name, ast, deps)
+
+            # [(file, module_name, ast, deps), ...]
+            [*child_modules, parent_module]
         )
-
-    child_modules = modules_ready_to_be_saved
-        |> Elixir.Enum.map(lambda (file, (childs, _parent)): (file, childs))
-        |> Elixir.Enum.filter(lambda (file, childs): Elixir.Enum.count(childs) > 0)
-
-    parent_modules = modules_ready_to_be_saved
-        |> Elixir.Enum.map(lambda (file, (_childs, parent)): (file, parent))
-
-    # We need to compile child modules first. Child modules are structs, protocols, etc
-    child_modules
         |> Elixir.List.flatten()
+        |> Module.sort_modules_by_dependencies()
         |> Elixir.Enum.each(
-            lambda (file, childs):
-                Elixir.Enum.each(
-                    childs,
-                    lambda (m_name, ast):
-                        save_module(m_name, file, compiled_folder, ast)
-                )
-        )
-
-    parent_modules
-        |> Elixir.List.flatten()
-        |> Elixir.Enum.each(
-            lambda (file, (m_name, ast)): save_module(m_name, file, compiled_folder, ast)
+            lambda (file, m_name, ast, _deps):
+                save_module(m_name, file, compiled_folder, ast)
         )
 
 
@@ -74,8 +60,7 @@ def pre_compile_file(project_root, file_full_path, bootstrap_prefix):
     (state, modules_converted) = lexer_parse_convert_file(
         module_name,
         file_content,
-        {"file": file_full_path, "compiling_module": True},
-        bootstrap_prefix
+        {"file": file_full_path, "compiling_module": True, "bootstrap_prefix": bootstrap_prefix},
     )
 
     case Elixir.Map.get(state, "error"):
@@ -118,9 +103,6 @@ def save_module(module_name, file_full_path, compiled_folder, quoted):
     Elixir.File.write(destine_beam, binary, mode=:binary)
 
 def lexer_parse_convert_file(module_name, text, config):
-    lexer_parse_convert_file(module_name, text, config, None)
-
-def lexer_parse_convert_file(module_name, text, config, bootstrap_prefix):
     # Main functions to lexer, parser and convert
     # Fython AST to Elixir AST
 
@@ -132,10 +114,7 @@ def lexer_parse_convert_file(module_name, text, config, bootstrap_prefix):
     # 2º Parser
     state = Core.Parser.execute(state['tokens'], text, config)
 
-    # 3º Convert each node from Fython AST to Elixir AST
-    ast = state['node'] |> add_prefix_to_function_calls(bootstrap_prefix)
-
-    modules_converted = Core.Generator.Conversor.run_conversor(module_name, ast, text, config)
+    modules_converted = Core.Generator.Conversor.run_conversor(module_name, state['node'], text, config)
 
     (state, modules_converted)
 
@@ -205,39 +184,3 @@ def get_module_name(project_full_path, file_full_path, bootstrap_prefix):
             ])
         Elixir.String.starts_with?(final, 'Fython.') -> final
         True -> Elixir.Enum.join(['Fython.', final])
-
-def add_prefix_to_function_calls(node, None):
-    node
-
-def add_prefix_to_function_calls(node, bootstrap_prefix):
-    [node, state] = Core.Parser.Traverse.run(
-        node, {"bootstrap_prefix": bootstrap_prefix}, &add_prefix/2
-    )
-    node
-
-
-def add_prefix(node <- (:struct, meta, [struct_name, keywords]), state):
-    {"bootstrap_prefix": bootstrap_prefix} = state
-
-    struct_name = case Elixir.String.starts_with?(struct_name, 'Elixir.'):
-        True -> struct_name
-        False -> Elixir.Enum.join([bootstrap_prefix, '.', struct_name])
-
-    [(:struct, meta, [struct_name, keywords]), state]
-
-def add_prefix(node <- (:call, meta, [func_name, args, keywords, False]), state):
-    {"bootstrap_prefix": bootstrap_prefix} = state
-
-    (:var, var_meta, [var_pin, being_called]) = func_name
-
-    being_called = case (Core.Parser.Utils.is_calling_function_of_fython_module(node), bootstrap_prefix):
-        (False, _) -> being_called
-        (True, '') -> being_called # no prefix
-        (True, _) -> Elixir.Enum.join([bootstrap_prefix, '.', being_called])
-
-    func_name = (:var, var_meta, [var_pin, being_called])
-
-    [(:call, meta, [func_name, args, keywords, False]), state]
-
-def add_prefix(node, state):
-    [node, state]

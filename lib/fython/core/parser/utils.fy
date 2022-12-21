@@ -17,7 +17,7 @@ def set_error(state, msg, pos_start, pos_end):
     {"ln": line, "col": col_start} = pos_start
     {"col": col_end} = pos_end
 
-    raise Kernel.SyntaxError(message=msg, position=(line, col_start, col_end), source_code=state['source_code'])
+    raise Exception.SyntaxError(message=msg, position=(line, col_start, col_end), source_code=state['source_code'])
 
 def nodes_types():
     [
