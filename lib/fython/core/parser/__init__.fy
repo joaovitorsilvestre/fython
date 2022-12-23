@@ -1003,7 +1003,11 @@ def handle_do_new_line(state, base_line):
                 state["current_tok"]["pos_end"]
             )
 
-    state = case state['current_tok']['pos_start']['ln'] > base_line:
+    ensure_new_line(state, base_line)
+
+
+defp ensure_new_line(state, base_line):
+    case state['current_tok']['pos_start']['ln'] > base_line:
         True -> state
         False -> Core.Parser.Utils.set_error(
             state,
@@ -1011,8 +1015,6 @@ def handle_do_new_line(state, base_line):
             state["current_tok"]["pos_start"],
             state["current_tok"]["pos_end"]
         )
-
-    state
 
 
 def handle_except_blocks(state, base_ident, base_line, prev_blocks):
@@ -1176,17 +1178,9 @@ def def_struct_expr(state):
                 False ->
                     (advance(state), state['current_tok']['value'])
 
-            state = case state['current_tok']['type'] == 'EQ':
-                True ->
-                    advance(state)
-                False ->
-                    Core.Parser.Utils.set_error(
-                        state, "Expected '='",
-                        state["current_tok"]["pos_start"],
-                        state["current_tok"]["pos_end"]
-                    )
-
-            [state, field_default] = expr(state)
+            [state, field_default]  = case state['current_tok']['type'] == 'EQ':
+                True -> state |> advance() |> expr()
+                False -> [ensure_new_line(state, base_line), None]
 
             Elixir.Map.put(state, '_fields_struct', [*fields_struct, (field_name, field_default)])
     )
@@ -1366,17 +1360,9 @@ def exception_expr(state):
                 False ->
                     (advance(state), state['current_tok']['value'])
 
-            state = case state['current_tok']['type'] == 'EQ':
-                True ->
-                    advance(state)
-                False ->
-                    Core.Parser.Utils.set_error(
-                        state, "Expected '='",
-                        state["current_tok"]["pos_start"],
-                        state["current_tok"]["pos_end"]
-                    )
-
-            [state, field_default] = expr(state)
+            [state, field_default]  = case state['current_tok']['type'] == 'EQ':
+                True -> state |> advance() |> expr()
+                False -> [ensure_new_line(state, base_line), None]
 
             Elixir.Map.put(state, '_fields_exception', [*fields_exception, (field_name, field_default)])
     )

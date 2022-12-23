@@ -12,7 +12,7 @@ def get_modules_asts(project_path):
 
             text = Elixir.File.read(file) |> Elixir.Kernel.elem(1)
             lexed = Core.Lexer.execute(text)
-            {'node': node} = Core.Parser.execute(lexed['tokens'], config)
+            {'node': node} = Core.Parser.execute(lexed['tokens'], text, config)
             (module_name, node, text)
         )
 
