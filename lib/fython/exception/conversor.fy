@@ -1,5 +1,5 @@
 def to_fython_exception(error <- Elixir.FunctionClauseError(), stacktrace):
-    (_module, _function, arguments, _) = Elixir.Enum.at(stacktrace, 0)
+    (_module, _function, arguments, _) = Enum.at(stacktrace, 0)
 
     error = Exception.FunctionClauseError(
         message="",
@@ -29,5 +29,5 @@ def to_fython_exception(error, stacktrace):
             Elixir.IO.inspect(error)
             Elixir.IO.puts("that was the error stacktrace: ")
             Elixir.IO.inspect(stacktrace)
-            Core.exit_with_status_code(0)
+            Core.exit_with_status_code(1)
 

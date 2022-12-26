@@ -7,6 +7,9 @@ def count(enumerable):
 def each(enumerable, function):
     Elixir.Enum.each(enumerable, function)
 
+def filter(enumerable, function):
+    Elixir.Enum.filter(enumerable, function)
+
 def join(enumerable):
     Elixir.Enum.join(enumerable)
 

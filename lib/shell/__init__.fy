@@ -91,7 +91,18 @@ def execute(text, env, config):
 
         (result, new_env)
     except error:
-        Exception.format_traceback(error, __STACKTRACE__)
+        # Remove the lines of shell itself and of eval_string
+        stacktrace = __STACKTRACE__
+            |> Enum.filter(lambda stack:
+                module = stack |> Elixir.Kernel.elem(0) |> Elixir.Atom.to_string()
+
+                not (
+                    Elixir.String.starts_with?(module, "Fython.Shell") or
+                    Elixir.String.starts_with?(module, "Fython.Core")
+                )
+            )
+
+        Exception.format_traceback(error, stacktrace)
         # usefull for debuggind
 #        Elixir.IO.inspect("Shell recebeu o erro:")
 #        Elixir.IO.inspect(error)

@@ -20,20 +20,10 @@ exception FunctionClauseError:
 
 
 def format_traceback(error <- Exception.FunctionClauseError(), stacktrace):
-    only_fython_stacktrace = stacktrace
-        |> Elixir.Enum.filter(&is_fython_stack?/1)
+    formated_lines = gen_formated_lines(stacktrace, 2)
 
-    formated_lines = only_fython_stacktrace
-        |> Elixir.Enum.reverse()
-        |> Elixir.Enum.slice(0..-2) # dont show last line stack because it will appear in source code pointers
-        |> Elixir.Enum.map(&format_line_stacktrace/1)
-        |> Elixir.Enum.join("")
+    source_code_error_pointing = gen_source_code_error_pointing(stacktrace)
 
-    source_code_error_pointing = only_fython_stacktrace
-        |> Elixir.Enum.at(0)
-        |> gen_source_code_error_pointing()
-
-    Elixir.IO.puts("Traceback (most recent call last):")
     Elixir.IO.puts(formated_lines)
     Elixir.IO.puts(source_code_error_pointing)
 
@@ -56,10 +46,21 @@ def format_traceback(error <- Exception.FunctionClauseError(), stacktrace):
     display_error_name_formated(error)
 
 
-def format_traceback(error <- Exception.SyntaxError(), stacktrace):
-    only_fython_stacktrace = stacktrace
-        |> Elixir.Enum.filter(&is_fython_stack?/1)
+def gen_formated_lines(stacktrace):
+    gen_formated_lines(stacktrace, 0)
 
+def gen_formated_lines(stacktrace, hide_n_last):
+    lines = stacktrace
+        |> Elixir.Enum.filter(&is_fython_stack?/1)
+        |> Elixir.Enum.reverse()
+        # usefull to hide last lines stack on cases that it will appear in source code pointers
+        |> Elixir.Enum.slice(0..(hide_n_last * -1))
+        |> Elixir.Enum.map(&format_line_stacktrace/1)
+        |> Elixir.Enum.join("")
+
+    Enum.join(["Traceback (most recent call last):\n", lines])
+
+def format_traceback(error <- Exception.SyntaxError(), stacktrace):
     (line, col_start, col_end) = error.position
 
     meta = {
@@ -77,19 +78,10 @@ def format_traceback(error <- Exception.SyntaxError(), stacktrace):
 
 def format_traceback(error, stacktrace):
     # Main function to format stacktrace
-    only_fython_stacktrace = stacktrace
-        |> Elixir.Enum.filter(&is_fython_stack?/1)
+    formated_lines = gen_formated_lines(stacktrace)
 
-    formated_lines = only_fython_stacktrace
-        |> Elixir.Enum.reverse()
-        |> Elixir.Enum.map(&format_line_stacktrace/1)
-        |> Elixir.Enum.join("\n")
+    source_code_error_pointing = gen_source_code_error_pointing(stacktrace)
 
-    source_code_error_pointing = only_fython_stacktrace
-        |> Elixir.Enum.at(0)
-        |> gen_source_code_error_pointing()
-
-    Elixir.IO.puts("Traceback (most recent call last):")
     Elixir.IO.puts(formated_lines)
     Elixir.IO.puts(source_code_error_pointing)
     display_error_name_formated(error)
@@ -132,11 +124,17 @@ def format_line_stacktrace(aaa):
     Elixir.IO.inspect(aaa)
     "Not hable to parse"
 
-def gen_source_code_error_pointing((module, func_name, _, [(:file, file), (:line, line)])):
-    gen_source_code_error_pointing((module, func_name, None, [(:file, file), (:line, line), (:error_info, None)]))
+def gen_source_code_error_pointing(stacktrace):
+    stacktrace
+        |> Elixir.Enum.filter(&is_fython_stack?/1)
+        |> Elixir.Enum.at(0)
+        |> gen_source_code_error_pointing_for_line()
+
+defp gen_source_code_error_pointing_for_line((module, func_name, _, [(:file, file), (:line, line)])):
+    gen_source_code_error_pointing_for_line((module, func_name, None, [(:file, file), (:line, line), (:error_info, None)]))
 
 
-def gen_source_code_error_pointing((module, func_name, _, [(:file, file), (:line, line), (:error_info, _error_info)])):
+defp gen_source_code_error_pointing_for_line((module, func_name, _, [(:file, file), (:line, line), (:error_info, _error_info)])):
     module = module_name_as_string(module)
 
     source_code = get_module_source_code(module)
