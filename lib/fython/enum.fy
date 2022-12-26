@@ -13,6 +13,9 @@ def filter(enumerable, function):
 def join(enumerable):
     Elixir.Enum.join(enumerable)
 
+def join(enumerable, joiner):
+    Elixir.Enum.join(enumerable, joiner)
+
 def map(enumerable, function):
     Elixir.Enum.map(enumerable, function)
 

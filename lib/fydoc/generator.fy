@@ -1,13 +1,13 @@
 def gererate_docs(module_n_functions, project_path):
     module_n_functions
-        |> Elixir.Enum.map(lambda x: generate_doc(x, project_path))
+        |> Enum.map(lambda x: generate_doc(x, project_path))
 
 
 def generate_doc((module_name, functions), project_path):
     sumary = functions
-        |> Elixir.Enum.with_index()
-        |> Elixir.Enum.map(lambda (func, index):
-            Elixir.Enum.join([
+        |> Enum.with_index()
+        |> Enum.map(lambda (func, index):
+            Enum.join([
                 '<a href="#func', index, '" class="function-sumary-header">',
                 func,
                 '</a>'
@@ -15,9 +15,9 @@ def generate_doc((module_name, functions), project_path):
         )
 
     functions = functions
-        |> Elixir.Enum.with_index()
-        |> Elixir.Enum.map(lambda (func, index):
-            Elixir.Enum.join([
+        |> Enum.with_index()
+        |> Enum.map(lambda (func, index):
+            Enum.join([
                 '<h3 class="function-header" id="func', index,'">',
                 func,
                 '</h3>'
@@ -26,8 +26,8 @@ def generate_doc((module_name, functions), project_path):
 
     splited_module_name = module_name |> Elixir.String.split('.')
 
-    file_content = Elixir.Enum.join([
-        Elixir.Enum.join(["## ", module_name]),
+    file_content = Enum.join([
+        Enum.join(["## ", module_name]),
         "### Sumary",
         *sumary,
         "### Functions",
@@ -42,9 +42,9 @@ def generate_doc((module_name, functions), project_path):
 
 def generate_file_path(module_name, project_path):
     # returns docs/MyModule/ChildModule.md
-    Elixir.Enum.join([
+    Enum.join([
         project_path |> Elixir.String.replace_trailing("/", ""),
         "/docs/modules/",
-        module_name |> Elixir.String.split('.') |> Elixir.Enum.join('/'),
+        module_name |> Elixir.String.split('.') |> Enum.join('/'),
         ".md"
     ])

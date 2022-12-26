@@ -1,8 +1,8 @@
 def run_tests(test_functions_per_module):
     results = test_functions_per_module
-        |> Elixir.Enum.map(lambda (module, functions):
+        |> Enum.map(lambda (module, functions):
             results = functions
-                |> Elixir.Enum.map(
+                |> Enum.map(
                     lambda (test_name, arity):
                         execute_test(module, test_name, arity)
                 )

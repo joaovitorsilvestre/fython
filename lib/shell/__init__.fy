@@ -35,7 +35,7 @@ def start(count, state, env, config):
     current_line = user_input
     user_input = case is_multiline_command:
         False -> user_input
-        True -> Elixir.Enum.join([state['current_command'], '\n', user_input])
+        True -> Enum.join([state['current_command'], '\n', user_input])
 
     case:
         user_input == "" -> start(count, state, env, config)
@@ -52,38 +52,38 @@ def start(count, state, env, config):
                         |> Elixir.String.replace("\n", "")
                         |> Elixir.String.to_integer()
 
-                    text = state |> Elixir.Map.get("text_per_line") |> Elixir.Map.get(line_number)
+                    text = state |> Map.get("text_per_line") |> Map.get(line_number)
                     case text:
                         None -> raise "Line code not found"
                         _ ->
                             (result, new_env) = execute(text, env, config)
 
-                            state = state |> Elixir.Map.merge({"last_output": result})
+                            state = state |> Map.merge({"last_output": result})
 
                             (count + 1, state, new_env)
                 last_char == ':' ->
-                    state = Elixir.Map.merge(state, {'current_command': user_input})
+                    state = Map.merge(state, {'current_command': user_input})
                     (count, state, env)
                 (not is_multiline_command) or (is_multiline_command and current_line == '') ->
                     (result, new_env) = execute(user_input, env, config)
 
                     state = state
-                        |> Elixir.Map.merge({
+                        |> Map.merge({
                             "last_output": result,
                             'current_command': '', # reset multiline command
-                            "text_per_line": Elixir.Map.merge(state['text_per_line'], {count: user_input})
+                            "text_per_line": Map.merge(state['text_per_line'], {count: user_input})
                         })
 
                     (count + 1, state, new_env)
                 is_multiline_command ->
-                    state = Elixir.Map.merge(state, {'current_command': user_input})
+                    state = Map.merge(state, {'current_command': user_input})
                     (count, state, env)
 
             start(count, state, new_env, config)
 
 def execute(text, env, config):
     try:
-        config = Elixir.Map.put(config, 'env', env)
+        config = Map.put(config, 'env', env)
         (result, new_env) = Core.eval_string(text, config)
         case result:
             None -> None

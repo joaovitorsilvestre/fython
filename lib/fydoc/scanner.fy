@@ -6,7 +6,7 @@ def get_functions_defs(project_path):
 def get_modules_asts(project_path):
     # returns [(module_name, node)]
     Core.Code.get_fython_files_in_folder(project_path)
-        |> Elixir.Enum.map(lambda file:
+        |> Enum.map(lambda file:
             module_name = Core.Code.get_module_name(project_path, file)
             config = {'file': file}
 
@@ -18,7 +18,7 @@ def get_modules_asts(project_path):
 
 def extract_functions(modules_asts):
     modules_asts
-        |> Elixir.Enum.map(lambda (module_name, ast, text):
+        |> Enum.map(lambda (module_name, ast, text):
             state = {"def_func_nodes": [], 'text': text}
 
             [node, state] = Core.Parser.Traverse.run(
@@ -33,11 +33,11 @@ def get_functions_defs(node <- (:def, meta, _), state):
 
     text = state['text']
         |> Elixir.String.split('\n')
-        |> Elixir.Enum.at(ln)
+        |> Enum.at(ln)
         |> Elixir.String.replace_prefix('def ', '')
         |> Elixir.String.replace_suffix(':', '')
 
-    state = Elixir.Map.put(
+    state = Map.put(
         state,
         'def_func_nodes',
         Elixir.List.flatten([state['def_func_nodes'], text])
